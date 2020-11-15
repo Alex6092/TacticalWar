@@ -1,0 +1,19 @@
+﻿  CharacterView.cpp
+c:\users\edouard\desktop\tacticalwar-master\animationsandsoundlib\characterview.cpp(38): warning C4305: 'argument' : troncation de 'int' à '_Elem'
+          with
+          [
+              _Elem=char
+          ]
+c:\users\edouard\desktop\tacticalwar-master\animationsandsoundlib\characterview.cpp(38): warning C4309: 'argument' : troncation de valeur de constante
+c:\users\edouard\desktop\tacticalwar-master\animationsandsoundlib\characterview.cpp(80): warning C4244: '=' : conversion de 'double' en 'int', perte possible de données
+c:\users\edouard\desktop\tacticalwar-master\animationsandsoundlib\characterview.cpp(90): warning C4244: 'argument' : conversion de 'double' en '_Ty', perte possible de données
+          with
+          [
+              _Ty=int
+          ]
+c:\users\edouard\desktop\tacticalwar-master\animationsandsoundlib\characterview.cpp(97): warning C4244: 'argument' : conversion de 'double' en '_Ty', perte possible de données
+          with
+          [
+              _Ty=int
+          ]
+  AnimationsAndSoundLib.vcxproj -> C:\Users\Edouard\Desktop\TacticalWar-master\x64\Debug\AnimationsAndSoundLib.lib

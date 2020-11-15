@@ -18,6 +18,12 @@ namespace tw
 		sf::Sprite testSprite;
 		int testOffsetX;
 		int testOffsetY;
+		std::vector<int> myvector;
+		
+		double NbImg = -1, elsetime = 0;
+		float time;
+		int tabs[6] = {0};
+		char lignes[600] = { 0 }, ligneset[30][60] = { 0 };
 		
 	public:
 		CharacterView(BaseCharacterModel * model);
