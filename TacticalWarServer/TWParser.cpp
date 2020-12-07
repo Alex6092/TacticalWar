@@ -61,6 +61,7 @@ std::string TWParser::extractCompleteMessageFromBuffer(ClientState * client)
 
 void TWParser::parse(ClientState * client, std::vector<unsigned char> & receivedPacket)
 {
+	bool spectatorMode = false;
 	std::deque<unsigned char> & buffer = client->getBuffer();
 
 	for (int i = 0; i < receivedPacket.size(); i++)
@@ -112,6 +113,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 								// Retour en jeu (reconnexion en combat)
 								Battle * b = (Battle*)match->getBattlePayload();
 								// TODO : Notify that the player is back.
+								TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
 							}
 							else
 							{
@@ -121,13 +123,19 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 						}
 					}
 				}
+				else
+					spectatorMode = true;
 			}
 			else // Connexion spectateur
+				spectatorMode = true;
+
+			if (spectatorMode)
 			{
 				spectatorModeClientDiffusionList.push_back(client);
-				
+
 				std::vector<tw::Match*> playingMatch = tw::PlayerManager::getCurrentlyPlayingMatchs();
 				// TODO : Envoi de la liste des matchs en cours
+				TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
 			}
 			//TcpServer<TWParser, ClientState>::Send(client, (char*)"Hello\n", 6);
 		}
