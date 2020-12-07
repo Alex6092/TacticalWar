@@ -61,6 +61,8 @@ CharacterView::CharacterView(BaseCharacterModel * model)
 	animationsMap[Orientation::TOP_LEFT][Animation::ATTACK2] = loadAnimation(model->getGraphicsPath() + "topright-physical_attack-sheet", true);
 	animationsMap[Orientation::TOP_RIGHT][Animation::TAKE_DAMAGE] = loadAnimation(model->getGraphicsPath() + "topright-take_damage-sheet");
 	animationsMap[Orientation::TOP_LEFT][Animation::TAKE_DAMAGE] = loadAnimation(model->getGraphicsPath() + "topright-take_damage-sheet", true);
+
+	
 }
 
 std::vector<sf::Sprite*> CharacterView::loadAnimation(std::string filename, bool flip)
