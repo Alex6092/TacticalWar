@@ -1,0 +1,61 @@
+ballbig1_red.png
+size: 843, 804
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ef_20
+  rotate: false
+  xy: 0, 0
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 0
+ef_20
+  rotate: false
+  xy: 281, 0
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 1
+ef_20
+  rotate: false
+  xy: 562, 0
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 2
+ef_20
+  rotate: false
+  xy: 0, 268
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 3
+ef_20
+  rotate: false
+  xy: 281, 268
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 4
+ef_20
+  rotate: false
+  xy: 562, 268
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 5
+ef_20
+  rotate: false
+  xy: 0, 536
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 6
+ef_20
+  rotate: false
+  xy: 281, 536
+  size: 281, 268
+  orig: 281, 268
+  offset: 0, 0
+  index: 7

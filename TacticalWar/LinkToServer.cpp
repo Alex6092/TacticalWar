@@ -19,6 +19,8 @@ LinkToServer::LinkToServer()
 	maxRecv = 1024;
 	effRecv = 0;
 	bufIndex = 0;
+
+	isConnected = false;
 }
 
 LinkToServer::~LinkToServer()
@@ -33,15 +35,19 @@ bool LinkToServer::Connect()
 	{
 		// erreur...
 		std::cout << "Erreur de connexion" << std::endl;
+		isConnected = false;
 		return false;
 	}
 
+	isConnected = true;
 	return true;
 }
 
 bool LinkToServer::Disconnect()
 {
-	socket.disconnect();
+	if(isConnected)
+		socket.disconnect();
+	isConnected = false;
 	return true;
 }
 
@@ -52,6 +58,7 @@ void LinkToServer::Send(sf::String sContent)
 	socket.send(utf8Content.c_str(), utf8Content.length());
 }
 
+/*
 sf::String LinkToServer::Receive()
 {
 	sf::String receivedData = "";
@@ -100,4 +107,62 @@ sf::String LinkToServer::Receive()
 	}
 
 	return receivedData;
+}
+*/
+
+void LinkToServer::UpdateReceivedData()
+{
+	socket.setBlocking(false);
+	
+	sf::String receivedData = "";
+	bool bReceivedSomething = false;
+
+	int bufCapability = 10240 - bufIndex;
+	std::size_t maxToRecv = bufCapability < maxRecv ? bufCapability : maxRecv;
+	sf::Socket::Status status = socket.receive(&buffer[bufIndex], maxToRecv, effRecv);
+	if (status == sf::Socket::Status::Disconnected)
+	{
+		notifyDisconnected();
+	}
+	else if (status == sf::Socket::Status::Done)
+	{
+		bufIndex += effRecv;
+
+		do
+		{
+			receivedData = "";
+			bReceivedSomething = false;
+			int recvEndIndex = -1;
+			for (int i = 0; i < bufIndex; i++)
+			{
+				if (buffer[i] == '\n')
+				{
+					bReceivedSomething = true;
+					recvEndIndex = i;
+					break;
+				}
+				else
+				{
+					receivedData += buffer[i];
+				}
+			}
+
+			if (bReceivedSomething)
+			{
+				std::cout << "Received " << receivedData.toAnsiString() << std::endl;
+				std::cout << receivedData.getSize() << std::endl;
+
+				for (int i = recvEndIndex + 1; i < 10240 && i < bufIndex; i++)
+				{
+					buffer[i - (recvEndIndex + 1)] = buffer[i];
+				}
+
+				bufIndex -= (recvEndIndex + 1);
+
+				notifyMessage(receivedData.toAnsiString());
+			}
+		} while (bReceivedSomething);
+	}
+
+	socket.setBlocking(true);
 }

@@ -3,4 +3,8 @@
 
 - WANTELEZ florian
 - FLAQUET edouard
+<<<<<<< HEAD
 - Bouet valentin
+=======
+- SENE clement
+>>>>>>> b0a39906e3846f38bd3e4117759770ae4b6f5afa

@@ -5,10 +5,12 @@
 
 class ClientState
 {
+private:
 	SOCKET sock;
 	std::deque<unsigned char> buffer;
 
 	std::string pseudo;
+	bool isAdm;
 
 public:
 	ClientState(SOCKET sock);
@@ -35,6 +37,16 @@ public:
 	inline bool isSpectator()
 	{
 		return pseudo.length() == 0;
+	}
+
+	inline bool isAdmin()
+	{
+		return isAdm;
+	}
+
+	inline void setIsAdmin(bool bAdmin)
+	{
+		this->isAdm = bAdmin;
 	}
 };
 

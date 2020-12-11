@@ -117,13 +117,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\lib\SFML-2.5.1\lib;..\lib\TGUI-0.8\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;sfml-network-d.lib;tgui-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio-d.lib;sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;sfml-network-d.lib;tgui-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
@@ -137,7 +138,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,25 +147,45 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\lib\SFML-2.5.1\lib;..\lib\TGUI-0.8\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sfml-graphics.lib;sfml-system.lib;sfml-window.lib;sfml-network.lib;tgui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-graphics.lib;sfml-system.lib;sfml-window.lib;sfml-network.lib;tgui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AdminScreen.cpp" />
     <ClCompile Include="BattleScreen.cpp" />
+    <ClCompile Include="ClassSelectionScreen.cpp" />
     <ClCompile Include="LinkToServer.cpp" />
     <ClCompile Include="LoginScreen.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MatchView.cpp" />
+    <ClCompile Include="MusicManager.cpp" />
+    <ClCompile Include="PlayerStatusView.cpp" />
     <ClCompile Include="Screen.cpp" />
     <ClCompile Include="ScreenManager.cpp" />
+    <ClCompile Include="ServerMessageListener.cpp" />
+    <ClCompile Include="SpectatorModeScreen.cpp" />
     <ClCompile Include="TestCharacterModel.cpp" />
     <ClCompile Include="TWColorator.cpp" />
+    <ClCompile Include="WaitMatchScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ClassesLib\ClassesLib.vcxproj">
+      <Project>{2ec46bdc-a3bb-4af9-bdfb-519e2974822e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\EnvironmentPersistanceLib\EnvironmentPersistanceLib.vcxproj">
+      <Project>{fad2f01a-a414-4665-88b2-1191eac5f5c1}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\IsometricRendererLib\IsometricRendererLib.vcxproj">
       <Project>{616dd023-6d4b-4e87-9f8a-a548a3e691ab}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MatchmakingLib\MatchmakingLib.vcxproj">
+      <Project>{212f22a8-d95f-460e-bd47-346bffd85c9c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">
+      <Project>{f579ad13-4a80-40f5-aba4-88e8e8739a71}</Project>
     </ProjectReference>
     <ProjectReference Include="..\TacticalWarClientCommonLib\TacticalWarClientCommonLib.vcxproj">
       <Project>{b62c37fc-cdbb-4c56-a9da-15c134509611}</Project>
@@ -174,15 +196,26 @@
     <ProjectReference Include="..\UtilsLib\UtilsLib.vcxproj">
       <Project>{1d67c839-b5d5-4a87-8fdb-0ff8f2aed605}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\ZoneAndSightLib\ZoneAndSightLib.vcxproj">
+      <Project>{92a13653-9a4d-478b-96d5-414c0133b381}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AdminScreen.h" />
     <ClInclude Include="BattleScreen.h" />
+    <ClInclude Include="ClassSelectionScreen.h" />
     <ClInclude Include="LinkToServer.h" />
     <ClInclude Include="LoginScreen.h" />
+    <ClInclude Include="MatchView.h" />
+    <ClInclude Include="MusicManager.h" />
+    <ClInclude Include="PlayerStatusView.h" />
     <ClInclude Include="Screen.h" />
     <ClInclude Include="ScreenManager.h" />
+    <ClInclude Include="ServerMessageListener.h" />
+    <ClInclude Include="SpectatorModeScreen.h" />
     <ClInclude Include="TestCharacterModel.h" />
     <ClInclude Include="TWColorator.h" />
+    <ClInclude Include="WaitMatchScreen.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

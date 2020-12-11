@@ -1,0 +1,71 @@
+//Pour un sort avec pattern en +
+
+void damageZone(int xSpell, int ySpell, int range){
+	for(i = xSpell; i == range; i++){
+		case[ySpell][i]->damage();
+	}
+	for(i = xSpell; i == xSpell-range; i--){
+		case[ySpell][i]->damage();
+	}
+	for(i = ySpell; i == range; i++){
+		case[i][xSpell]->damage();
+	}
+	for(i = ySpell; i == ySpell-range; i--){
+		case[i][xSpell]->damage();
+	}
+}
+
+//Pour un sort avec pattern en X
+
+void damageZone(int xSpell, int ySpell, int range){
+	for(i = 0; i == range; i++){
+		x = xSpell + 1;
+		y = ySpell + 1;
+		case[y][x]->damage();
+
+		x = xSpell - 1;
+		y = ySpell - 1;
+		case[y][x]->damage();
+
+		x = xSpell + 1;
+		y = ySpell - 1;
+		case[y][x]->damage();
+
+		x = xSpell - 1;
+		y = ySpell + 1;
+		case[y][x]->damage();
+	}
+}
+
+//Pour un sort avec pattern en diamant carré de coté 3 cases
+
+void damageZone(int xSpell, int ySpell){
+	for(i = xSpell; i == 2; i++){
+		case[ySpell][i]->damage();
+	}
+	for(i = xSpell; i == xSpell-2; i--){
+		case[ySpell][i]->damage();
+	}
+	for(i = ySpell; i == 2; i++){
+		case[i][xSpell]->damage();
+	}
+	for(i = ySpell; i == ySpell-2; i--){
+		case[i][xSpell]->damage();
+	}
+
+	x = xSpell + 1;
+	y = ySpell + 1;
+	case[y][x]->damage();
+
+	x = xSpell - 1;
+	y = ySpell - 1;
+	case[y][x]->damage();
+
+	x = xSpell + 1;
+	y = ySpell - 1;
+	case[y][x]->damage();
+
+	x = xSpell - 1;
+	y = ySpell + 1;
+	case[y][x]->damage();
+} 

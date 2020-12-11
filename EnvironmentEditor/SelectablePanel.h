@@ -20,11 +20,11 @@ namespace EnvironmentEditor {
 			return Panel::IsInputKey(keyData);
 		}
 	protected: System::Void OnEnter(EventArgs ^e) override {
-			this->Invalidate();
+			//this->Invalidate();
 			Panel::OnEnter(e);
 		}
 	protected: System::Void OnLeave(EventArgs ^e) override {
-			this->Invalidate();
+			//this->Invalidate();
 			Panel::OnLeave(e);
 		}
 	protected: System::Void OnPaint(PaintEventArgs ^pe) override {

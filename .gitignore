@@ -43,6 +43,7 @@
 *.iobj
 *.ipdb
 *.ilk
+*.lastcodeanalysissucceeded
 
 AnimationsAndSoundLib/x64/
 EnvironmentEditor/x64/
@@ -63,3 +64,9 @@ EnvironmentPersistanceLib/x64/
 UtilsLib/x64/
 x64/Debug/assets
 x64/Release/assets
+PathfindingTestModule/x64/
+ZoneAndSightTestModule/x64/
+ClassesLib/x64/
+ClassesTestModule/x64/
+ZSightTestModule/x64/
+AnimationTestModule/x64/

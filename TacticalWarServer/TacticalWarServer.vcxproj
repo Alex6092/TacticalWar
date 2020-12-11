@@ -115,7 +115,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,7 +134,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,6 +165,9 @@
     <ClInclude Include="ThreadSafeQueue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ClassesLib\ClassesLib.vcxproj">
+      <Project>{2ec46bdc-a3bb-4af9-bdfb-519e2974822e}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\EnvironmentPersistanceLib\EnvironmentPersistanceLib.vcxproj">
       <Project>{fad2f01a-a414-4665-88b2-1191eac5f5c1}</Project>
     </ProjectReference>

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "IsometricRenderer.h"
 #include <CharacterView.h>
-
+#include <math.h>
 #include <iostream>
 
 using namespace tw;
@@ -32,18 +32,18 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 		// check the type of the event...
 		switch (e.type)
 		{
-		/*
-		case sf::Event::LostFocus:
-			std::cout << "Lost focus" << std::endl;
-			hasFocus = false;
-			break;
+			/*
+			case sf::Event::LostFocus:
+				std::cout << "Lost focus" << std::endl;
+				hasFocus = false;
+				break;
 
-		case sf::Event::GainedFocus:
-			std::cout << "Gain focus" << std::endl;
-			hasFocus = true;
-			
-			break;
-		*/
+			case sf::Event::GainedFocus:
+				std::cout << "Gain focus" << std::endl;
+				hasFocus = true;
+
+				break;
+			*/
 			// window closed
 		case sf::Event::Closed:
 			window->close();
@@ -51,7 +51,7 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 
 			// key pressed
 		case sf::Event::KeyPressed:
-			
+
 			break;
 
 		case sf::Event::MouseButtonPressed:
@@ -60,14 +60,18 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 				int x = e.mouseButton.x;
 				int y = e.mouseButton.y;
 
-				int cellX = x / 64;
-				int cellY = y / 64;
+				sf::Vector2f unprojected = window->mapPixelToCoords(sf::Vector2i(x, y));
+				sf::Vector2i isoCoords = screenCoordinatesToIsoGridCoordinates(unprojected.x, unprojected.y);
+
+
+				int cellX = isoCoords.x;
+				int cellY = isoCoords.y;
 
 				if (cellX >= 0 && cellX < environment->getWidth()
 					&&
 					cellY >= 0 && cellY < environment->getHeight())
 				{
-					if(hasFocus)
+					if (hasFocus)
 						notifyCellClicked(cellX, cellY);
 				}
 			}
@@ -76,6 +80,8 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 		default:
 			break;
 		}
+
+		notifyEvent(&e);
 	}
 
 	// Gestion du focus :
@@ -99,27 +105,54 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 		}
 	}
 
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+	sf::Vector2i position = sf::Mouse::getPosition(*window);
+	if (position.x >= 0 && position.y >= 0)
 	{
-		sf::Vector2i position = sf::Mouse::getPosition(*window);
-		if (position.x >= 0 && position.y >= 0)
+		sf::Vector2f unprojected = window->mapPixelToCoords(position);
+		sf::Vector2i isoCoords = screenCoordinatesToIsoGridCoordinates(unprojected.x, unprojected.y);
+
+		int cellX = isoCoords.x;
+		int cellY = isoCoords.y;
+
+		if (cellX >= 0 && cellX < environment->getWidth()
+			&&
+			cellY >= 0 && cellY < environment->getHeight())
 		{
-			int cellX = position.x / 64;
-			int cellY = position.y / 64;
-			if (cellX >= 0 && cellX < environment->getWidth()
-				&&
-				cellY >= 0 && cellY < environment->getHeight())
+			if (hasFocus)
 			{
-				if (hasFocus)
+				if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+				{
 					notifyCellMouseDown(cellX, cellY);
+				}
+
+				notifyCellHover(cellX, cellY);
 			}
-		}
+		}		
 	}
+}
+	
+sf::Vector2i IsometricRenderer::screenCoordinatesToIsoGridCoordinates(int screenX, int screenY)
+{
+	screenY -= 30;
+
+	int calcX = floor((screenY/60.0) + (screenX/120.0));
+	int calcY = ceil((screenY/60.0) - (screenX/120.0));
+	//return sf::Vector2i((screenX/120 + screenY/120)*2, (screenY / 60 - screenX/60)*2);
+	//return sf::Vector2i((screenX/120 - screenY/120)*64, (screenX/60+screenY/60)*64);
+	return sf::Vector2i(calcX, calcY);
 }
 
 void IsometricRenderer::render(Environment* environment, std::vector<BaseCharacterModel*> & characters, float deltatime)
 {
 	manageEvents(environment, characters);
+
+	sf::View view = window->getView();
+	float centerX = environment->getWidth() / 2;
+	float centerY = environment->getHeight() / 2;
+	int viewCenterX = (centerX * 120.0 - centerY * 120.0) / 2;
+	int viewCenterY = (centerY * 60.0 + centerY * 60.0) / 2;
+	view.setCenter(viewCenterX + 60.0, viewCenterY + 30.0);
+	window->setView(view);
 
 	sf::Sprite spriteGrass;
 	sf::Sprite spriteStone;
@@ -151,7 +184,6 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 			}
 			else if (cell->getIsWalkable())
 			{
-
 				spriteToDraw = spriteGrass;
 				borderX = -128 * 0.05;
 				borderY = -310 * 0.05;
@@ -161,9 +193,10 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 				borderX = -194 * 0.05;
 				borderY = -260 * 0.05;
 				spriteToDraw = spriteWater;
+				borderY += 10;
 			}
 
-			int isoX = (i*120 - j*120)/2;
+			int isoX = (i*120 - j*120)/2; // Cordonnées
 			int isoY = (i*60 + j*60)/2;
 
 			sf::Color toApply = sf::Color::White;
@@ -189,13 +222,13 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		int isoX = (m->getInterpolatedX() * 120 - m->getInterpolatedY() * 120) / 2;
 		int isoY = (m->getInterpolatedX() * 60 + m->getInterpolatedY() * 60) / 2;
 
-		s->setPosition(isoX + 60, isoY - 7);
+		s->setPosition(isoX + 60, isoY + 30);
 	
 
 		sf::IntRect rect = s->getTextureRect();
 		bool flipped = s->getScale().x < 0;
-		float scaleX = 64.0 / (float)rect.width;
-		float scaleY = 64.0 / (float)rect.height;
+		float scaleX = 0.4;
+		float scaleY = 0.4;
 		s->setScale(flipped ? -scaleX : scaleX, scaleY);
 		window->draw(*s);
 	}

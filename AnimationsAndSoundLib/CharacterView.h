@@ -10,16 +10,6 @@
 
 namespace tw
 {
-	enum class Animation
-	{
-		IDLE,
-		RUN,
-		ATTACK1,
-		ATTACK2,
-		DIE,
-		TAKE_DAMAGE
-	};
-
 	class CharacterView : public AbstractCharacterView<sf::Sprite*>
 	{
 	private:

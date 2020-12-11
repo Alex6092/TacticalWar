@@ -13,6 +13,7 @@ namespace tw
 		BOTTOM_LEFT
 	};
 
+	/*
 	class Position
 	{
 	private:
@@ -40,6 +41,9 @@ namespace tw
 			return y;
 		}
 	};
+	*/
+
+	
 	
 	class Pathfinder
 	{
@@ -53,7 +57,9 @@ namespace tw
 
 		static Pathfinder * getInstance();
 
-		Orientation getOrientationFromPosition(Position p1, Position p2);
-		std::vector<Position> getPath(Position startPosition, Position endPosition, Environment * environment, std::vector<Obstacle*> obstacles);
+		Orientation getOrientationFromPosition(Point2D p1, Point2D p2);
+		std::vector<Point2D> getPath(Point2D startPosition, Point2D endPosition, Environment * environment, std::vector<Obstacle*> obstacles);
+		bool isNotDynamicObstacle(CellData * voisinDroite, std::vector<Obstacle*> obstacles);
+		int TotalCostFromStartToEnd();
 	};
 }

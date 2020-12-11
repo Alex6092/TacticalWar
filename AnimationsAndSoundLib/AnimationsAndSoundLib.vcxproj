@@ -125,6 +125,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\UtilsLib;..\TacticalWarCommonLib;..\PathfindingLib;..\lib\SFML-2.5.1\include;..\TacticalWarClientCommonLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -143,6 +144,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\UtilsLib;..\TacticalWarCommonLib;..\PathfindingLib;..\lib\SFML-2.5.1\include;..\TacticalWarClientCommonLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -153,18 +155,48 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnimationManager.h" />
+    <ClInclude Include="BattleActionToAnimation.h" />
+    <ClInclude Include="BattleEndAction.h" />
+    <ClInclude Include="ChangeTurnAction.h" />
+    <ClInclude Include="CharacterDieAction.h" />
+    <ClInclude Include="CharacterMoveAction.h" />
     <ClInclude Include="CharacterView.h" />
+    <ClInclude Include="ClientDisconnected.h" />
+    <ClInclude Include="ClientReconnected.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="IActionAnimationEventListener.h" />
+    <ClInclude Include="IScreenActionCallback.h" />
+    <ClInclude Include="LaunchSpellAction.h" />
+    <ClInclude Include="NoDurationAction.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="SpellView.h" />
+    <ClInclude Include="TakeDamage.h" />
+    <ClInclude Include="TeleportAction.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnimationManager.cpp" />
+    <ClCompile Include="BattleActionToAnimation.cpp" />
+    <ClCompile Include="BattleEndAction.cpp" />
+    <ClCompile Include="ChangeTurnAction.cpp" />
+    <ClCompile Include="CharacterDieAction.cpp" />
+    <ClCompile Include="CharacterMoveAction.cpp" />
     <ClCompile Include="CharacterView.cpp" />
+    <ClCompile Include="ClientDisconnected.cpp" />
+    <ClCompile Include="ClientReconnected.cpp" />
+    <ClCompile Include="IActionAnimationEventListener.cpp" />
+    <ClCompile Include="IScreenActionCallback.cpp" />
+    <ClCompile Include="LaunchSpellAction.cpp" />
+    <ClCompile Include="NoDurationAction.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SpellView.cpp" />
+    <ClCompile Include="TakeDamage.cpp" />
+    <ClCompile Include="TeleportAction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">

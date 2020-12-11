@@ -6,12 +6,15 @@
 class TWColorator : public tw::CellColorator
 {
 	std::vector<tw::Point2D> pathZone;
+	std::vector<tw::Point2D> pathToHighlight;
 	sf::Color pathZoneColor;
+	sf::Color pathHighlightColor;
 
 public:
-	TWColorator(sf::Color pathZoneColor)
+	TWColorator(sf::Color pathZoneColor, sf::Color pathHighlightColor)
 	{
 		this->pathZoneColor = pathZoneColor;
+		this->pathHighlightColor = pathHighlightColor;
 	}
 
 	virtual sf::Color getColorForCell(tw::CellData * cell);
@@ -22,5 +25,13 @@ public:
 	}
 
 	sf::Color getPathZoneColor() { return pathZoneColor; }
+
+
+	void setPathToHighlight(std::vector<tw::Point2D> pathToHighlight)
+	{
+		this->pathToHighlight = pathToHighlight;
+	}
+
+	sf::Color getPathHighlightColor() { return pathHighlightColor; }
 };
 

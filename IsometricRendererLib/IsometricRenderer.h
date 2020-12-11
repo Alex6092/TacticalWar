@@ -30,6 +30,7 @@ namespace tw
 		sf::Texture textureStone;
 		sf::Texture textureTree;
 
+		sf::Vector2i screenCoordinatesToIsoGridCoordinates(int screenX, int screenY);
 
 	public:
 		IsometricRenderer(sf::RenderWindow * window);

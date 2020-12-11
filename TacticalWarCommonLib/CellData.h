@@ -34,6 +34,11 @@ namespace tw
 			return isObstacle;
 		}
 
+		inline int getTeamStartPointNumber()
+		{
+			return teamStartPoint;
+		}
+
 		inline void setIsObstacle(bool isObstacle) {
 			this->isObstacle = isObstacle;
 		}

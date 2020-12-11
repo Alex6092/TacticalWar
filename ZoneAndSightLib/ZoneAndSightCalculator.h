@@ -2,23 +2,19 @@
 #include <Point2D.h>
 #include <vector>
 #include <Obstacle.h>
+#include <TypeZoneLaunch.h>
 
 namespace tw
 {
-	enum class TypeZoneLaunch {
-		LINE,
-		DIAGONAL,
-		STAR,
-		NORMAL
-	};
-
-
 	class ZoneAndSightCalculator
 	{
 	private:
 		ZoneAndSightCalculator();
 		~ZoneAndSightCalculator();
 		static ZoneAndSightCalculator * instance;
+
+		bool isObstacle(int x, int y, std::vector<Obstacle*> obstacles);
+
 	public:
 		static ZoneAndSightCalculator * getInstance();
 

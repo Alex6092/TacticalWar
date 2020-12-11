@@ -9,6 +9,9 @@ int main(int argc, char** argv)
 {
 	sf::RenderWindow window(sf::VideoMode(800, 600), "Coloration test module");
 
+	sf::Shader shader;
+	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/fragment.frag");
+
 	sf::Texture Source;
 	sf::Texture Assets;
 	if (!Source.loadFromFile("assets/Warrior/bottomright-sheet.png")) { std::cout << "Impossible de charger Grass texture" << std::endl; }
@@ -101,7 +104,15 @@ int main(int argc, char** argv)
 		}
 		
 		window.clear();
+
+		shader.setUniform("mask", Source);
+		shader.setUniform("color1", sf::Glsl::Vec4(toApplyarmure));
+		shader.setUniform("color2", sf::Glsl::Vec4(toApplycheveux));
+		shader.setUniform("color3", sf::Glsl::Vec4(toApplypeau));
+
+		sf::Shader::bind(&shader);
 		window.draw(perso);
+		sf::Shader::bind(NULL);
 		window.display();
 	}
 

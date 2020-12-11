@@ -5,7 +5,7 @@
 
 namespace tw
 {
-	class Obstacle : Point2D
+	class Obstacle : public Point2D
 	{
 		bool isTargettable;
 

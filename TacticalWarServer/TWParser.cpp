@@ -5,9 +5,15 @@
 #include <StringUtils.h>
 #include <PlayerManager.h>
 #include <Match.h>
+#include <CharacterFactory.h>
+#include <EnvironmentManager.h>
 
 TWParser::TWParser()
 {
+	srand(time(NULL));
+	
+	loadEnvironments();
+	
 	players = tw::PlayerManager::loadPlayers();
 	std::cout << players.size() << " joueurs charges :" << std::endl;
 
@@ -18,8 +24,23 @@ TWParser::TWParser()
 		playersMap[players[i]->getPseudo()] = players[i];
 		teamIdToPlayerList[players[i]->getTeamNumber()].push_back(players[i]);
 	}
+
+	admin = NULL;
+	//tw::PlayerManager::subscribeToAllMatchEvent(this);
 }
 
+void TWParser::loadEnvironments()
+{
+	std::vector<int> envIds = tw::EnvironmentManager::getInstance()->getAlreadyExistingIds();
+	for (int i = 0; i < envIds.size(); i++)
+	{
+		tw::Environment * e = tw::EnvironmentManager::getInstance()->loadEnvironment(envIds[i]);
+		if (e != NULL)
+		{
+			environments.push_back(e);
+		}
+	}
+}
 
 TWParser::~TWParser()
 {
@@ -75,9 +96,12 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 	{
 		std::string toParse = extractCompleteMessageFromBuffer(client);
 
+		// Connexion d'un client (login joueur ou spectateur)
 		if (StringUtils::startsWith(toParse, "HG"))
 		{
 			std::string payload = toParse.substr(2);
+
+			bool wrongIds = false;
 
 			// Connexion joueur :
 			if (payload.length() > 0)
@@ -88,7 +112,20 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 					std::string pseudo = data[0];
 					std::string password = data[1];
 
-					if (playersMap.find(pseudo) != playersMap.end())
+					if (pseudo == "admin" && password == "admin")
+					{
+						if (admin != NULL)
+						{
+							kick(admin);
+						}
+
+						client->setIsAdmin(true);
+						admin = client;
+						TcpServer<TWParser, ClientState>::Send(client, (char*)"AD\n", 3);
+						notifyPlanifiedAndPlayingMatch(admin);
+						notifyTeamList(admin);
+					}
+					else if (playersMap.find(pseudo) != playersMap.end())
 					{
 						tw::Player * p = playersMap[pseudo];
 
@@ -108,20 +145,49 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 							connectedPlayerMap[p] = client;
 
 							tw::Match * match = tw::PlayerManager::getCurrentOrNextMatchForPlayer(p);
-							if (match->getStatus() == tw::MatchStatus::STARTED)
+							// Un match existe pour ce joueur :
+							if (match != NULL)
 							{
-								// Retour en jeu (reconnexion en combat)
-								Battle * b = (Battle*)match->getBattlePayload();
-								// TODO : Notify that the player is back.
-								TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
+								if (match->getStatus() == tw::MatchStatus::STARTED)
+								{
+									// Retour en jeu (reconnexion en combat)
+									Battle * b = (Battle*)match->getBattlePayload();
+									// TODO : Notify that the player is back.
+									TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
+									TcpServer<TWParser, ClientState>::Send(client, (char*)"CA\n", 3);
+									TcpServer<TWParser, ClientState>::Send(client, (char*)"CS\n", 3);
+								}
+								else
+								{
+									// Envoi vers l'écran de choix de classe
+									TcpServer<TWParser, ClientState>::Send(client, (char*)"HC\n", 3);
+									p->setHasJoinBattle(true);
+									notifyMatchConnectedPlayerChanged(match);
+
+									// Si la classe a déjà été verrouillée précédemment :
+									if (p->getCharacter() != NULL)
+									{
+										notifyClassChoiceLocked(client);
+									}
+
+									//match->setMatchStatus(tw::MatchStatus::STARTED);	// For test purpose
+								}
 							}
 							else
 							{
-								// Détail du match à venir : proposer de rejoindre le match
-								TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
+								// Aucun match pour le moment :
+								// Envoi vers l'écran d'attente de match
+								TcpServer<TWParser, ClientState>::Send(client, (char*)"HW\n", 3);
 							}
 						}
+						else
+							wrongIds = true;
 					}
+					else wrongIds = true;
+				}
+				else if (data.size() >= 1)
+				{
+					wrongIds = true;
 				}
 				else
 					spectatorMode = true;
@@ -129,30 +195,294 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 			else // Connexion spectateur
 				spectatorMode = true;
 
-			if (spectatorMode)
+			if (wrongIds)
+			{
+				TcpServer<TWParser, ClientState>::Send(client, (char*)"HK\n", 3);	// Kick
+			}
+			else if (spectatorMode)
 			{
 				spectatorModeClientDiffusionList.push_back(client);
-
-				std::vector<tw::Match*> playingMatch = tw::PlayerManager::getCurrentlyPlayingMatchs();
-				// TODO : Envoi de la liste des matchs en cours
-				TcpServer<TWParser, ClientState>::Send(client, (char*)"HG\n", 3);
+				TcpServer<TWParser, ClientState>::Send(client, (char*)"HS\n", 3);
+				
+				notifyPlayingMatchList();
 			}
-			//TcpServer<TWParser, ClientState>::Send(client, (char*)"Hello\n", 6);
 		}
-
-		/*
-		long sentenceLength = buffer.size();
-		unsigned char * sentence = new unsigned char[sentenceLength];
-
-		for (int i = 0; i < sentenceLength; i++)
+		// Demande de la liste des matchs en cours :
+		else if (StringUtils::startsWith(toParse, "ML"))
 		{
-			sentence[i] = buffer[i];
+			notifyPlayingMatchList(client);
+		}
+		// Demande de la liste des équipes :
+		else if (StringUtils::startsWith(toParse, "TL"))
+		{
+			notifyTeamList(client);
+		}
+		// Demande de la liste des match créés (planifiés et en cours) :
+		else if (StringUtils::startsWith(toParse, "MC"))
+		{
+			notifyPlanifiedAndPlayingMatch(client);
+		}
+		// Demande la création d'un match :
+		else if (StringUtils::startsWith(toParse, "CM"))
+		{
+			// Seul un administrateur est autorisé à réaliser cette opération :
+			if (client->isAdmin())
+			{
+				std::string payload = toParse.substr(2);
+
+				std::vector<std::string> matchData = StringUtils::explode(payload, ';');
+
+				std::string name = matchData[0];
+				int team1 = std::atoi(matchData[1].c_str());
+				int team2 = std::atoi(matchData[2].c_str());
+
+				if (team1 != team2)
+				{
+					tw::Match * m = new tw::Match(name);
+
+					int team1Status = isTeamAvailableForMatchCreation(team1);
+					int team2Status = isTeamAvailableForMatchCreation(team2);
+
+					// Les 2 equipes sont libres pour un match à venir :
+					if (team1Status == 0 && team2Status == 0)
+					{
+						std::vector<tw::Player*> teamA = teamIdToPlayerList[team1];
+						std::vector<tw::Player*> teamB = teamIdToPlayerList[team2];
+
+						m->setTeam1Players(teamA[0], teamA[1]);
+						m->setTeam2Players(teamB[0], teamB[1]);
+
+						m->setEnvironment(environments[rand() % environments.size()]);
+
+						m->addEventListener(this);
+						tw::PlayerManager::addMatch(m);
+						notifyMatchCreated(m);
+						TcpServer<TWParser, ClientState>::Send(client, (char*)"CO\n", 3);
+					}
+					else
+					{
+						TcpServer<TWParser, ClientState>::Send(client, (char*)"CN\n", 3);
+					}
+				}
+				else
+				{
+					TcpServer<TWParser, ClientState>::Send(client, (char*)"CF\n", 3);
+				}
+			}
+		}
+		// Validation du choix de la classe :
+		else if (StringUtils::startsWith(toParse, "PC"))
+		{
+			if (client->getPseudo().size() > 0)
+			{
+				tw::Player * p = playersMap[client->getPseudo()];
+
+				if (p->getHasJoinBattle())
+				{
+					std::string classIdStr = toParse.substr(2);
+					int classId = std::atoi(classIdStr.c_str());
+					std::vector<int> classes = CharacterFactory::getInstance()->getClassesIds();
+					// La classe existe :
+					if (std::find(classes.begin(), classes.end(), classId) != classes.end())
+					{
+						if (p->getCharacter() == NULL)
+						{
+							tw::Match * m = tw::PlayerManager::getCurrentOrNextMatchForPlayer(p);
+							if (m != NULL)
+							{
+								bool isTeam1 = m->playerIsInTeam1(p);
+
+								std::vector<tw::Player*> team = isTeam1 ? m->getTeam1() : m->getTeam2();
+								std::vector<tw::Point2D> alreadyUsedStartCells;
+								for (int i = 0; i < team.size(); i++)
+								{
+									tw::Player * coTeam = team[i];
+									if (coTeam != p)
+									{
+										if (coTeam->getCharacter() != NULL)
+										{
+											alreadyUsedStartCells.push_back(tw::Point2D(coTeam->getCharacter()->getCurrentX(), coTeam->getCharacter()->getCurrentY()));
+										}
+									}
+								}
+
+								tw::Point2D cell = m->getRandomAvailableCellForTeam((isTeam1 ? 1 : 2), alreadyUsedStartCells);
+
+								if (cell.getX() != -1 && cell.getY() != -1)
+								{
+									p->setCharacter(CharacterFactory::getInstance()->constructCharacter(m->getEnvironment(), classId, (isTeam1 ? 1 : 2), cell.getX(), cell.getY()));
+									
+									notifyClassChoiceLocked(client);
+									// TODO : Si tout le monde est prêt : démarrage du combat.
+								}
+								else
+								{
+									std::cout << "[ERREUR] Probleme environment : Il n'y a pas de cellule de demarrage pour l'equipe !" << std::endl;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void TWParser::notifyClassChoiceLocked(ClientState * c)
+{
+	if (c->getPseudo().size() > 0)
+	{
+		tw::Player * p = playersMap[c->getPseudo()];
+		tw::BaseCharacterModel * character = p->getCharacter();
+		if (p != NULL)
+		{
+			std::string sentence = "PO" + std::to_string(character->getClassId()) + "\n";
+			TcpServer<TWParser, ClientState>::Send(c, (char*)sentence.c_str(), sentence.size());
+		}
+	}
+}
+
+//	Valeur de retour = Code d'erreur
+//		0	: La team existe et est disponible.
+//		-1	: La team existe mais est déjà en attente pour commencer un match
+//		-2	: La team n'existe pas
+int TWParser::isTeamAvailableForMatchCreation(int teamId)
+{
+	int result = 0;
+
+	std::map<int, std::vector<tw::Player*>>::iterator it = teamIdToPlayerList.find(teamId);
+
+	// La team existe
+	if (it != teamIdToPlayerList.end())
+	{
+		std::vector<tw::Match *> matchs = tw::PlayerManager::getAllMatchsForPlayer((*it).second[0]);
+
+		for (int i = 0; i < matchs.size(); i++)
+		{
+			tw::Match * match = matchs[i];
+			// Il y a déjà un match en attente de démarrage pour cette équipe ...
+			if (match->getStatus() == tw::MatchStatus::NOT_STARTED || match->getStatus() == tw::MatchStatus::STARTED)
+			{
+				result = -1;
+				break;
+			}
+		}
+	}
+	else
+	{
+		// La team n'existe pas :
+		result = -2;
+	}
+
+	return result;
+}
+
+void TWParser::notifyMatchCreated(tw::Match * m)
+{
+	notifyPlayingMatchList();
+	notifyPlanifiedAndPlayingMatch(admin);
+	
+	// Switch the connected player to the class selection screen :
+	notifySwitchToClassSelectionToConnectedPlayer(m->getTeam1());
+	notifySwitchToClassSelectionToConnectedPlayer(m->getTeam2());
+
+	// Notify the match players status :
+	notifyMatchConnectedPlayerChanged(m);
+}
+
+void TWParser::notifySwitchToClassSelectionToConnectedPlayer(std::vector<tw::Player*> team)
+{
+	for (int i = 0; i < team.size(); i++)
+	{
+		tw::Player * p = team[i];
+		// Notification des clients déjà connectés (entrée en mode choix de classe)
+		if (connectedPlayerMap.find(p) != connectedPlayerMap.end())
+		{
+			ClientState * client = connectedPlayerMap[p];
+			TcpServer<TWParser, ClientState>::Send(client, (char*)"HC\n", 3);
+			p->setHasJoinBattle(true);
+		}
+	}
+}
+
+void TWParser::notifyPlanifiedAndPlayingMatch(ClientState * c)
+{
+	// Envoi de la liste des matchs en cours
+	std::vector<tw::Match*> playingMatch = tw::PlayerManager::getPlanifiedAndPlayingMatchs();
+
+	std::string matchData = "";
+
+	for (int i = 0; i < playingMatch.size(); i++)
+	{
+		if (i != 0)
+			matchData += ';';
+		matchData += playingMatch[i]->serialize();
+	}
+
+	matchData = "MC" + matchData + '\n';
+
+	// Si envoi à un client spécifique, envoi uniquement au client passé en paramètre
+	if (c != NULL)
+	{
+		TcpServer<TWParser, ClientState>::Send(c, (char*)matchData.c_str(), matchData.size());
+	}
+}
+
+void TWParser::notifyTeamList(ClientState * c)
+{
+	std::string data = "TL";
+	int i = 0;
+	for (std::map<int, std::vector<tw::Player*>>::iterator it = teamIdToPlayerList.begin(); it != teamIdToPlayerList.end(); it++)
+	{
+		if (i > 0)
+		{
+			data += ";";
 		}
 
-		TcpServer<TWParser, ClientState>::Send(client, (char*)sentence, sentenceLength);
-		delete sentence;
-		buffer.clear();
-		*/
+		int teamId = (*it).first;
+		std::vector<tw::Player*> team = (*it).second;
+
+		
+	
+		data += std::to_string(teamId) + ",";
+		data += tw::Match::serializeTeam(team, '¨', '^');
+
+		i++;
+	}
+
+	data += "\n";
+
+	TcpServer<TWParser, ClientState>::Send(c, (char*)data.c_str(), data.length());
+}
+
+void TWParser::notifyPlayingMatchList(ClientState * c)
+{
+	// Envoi de la liste des matchs en cours
+	std::vector<tw::Match*> playingMatch = tw::PlayerManager::getCurrentlyPlayingMatchs();
+	
+	std::string matchData = "";
+
+	for (int i = 0; i < playingMatch.size(); i++)
+	{
+		if (i != 0)
+			matchData += ';';
+		matchData += playingMatch[i]->serialize();
+	}
+
+	matchData = "ML" + matchData + '\n';
+
+	// Si envoi à un client spécifique, envoi uniquement au client passé en paramètre
+	if (c != NULL)
+	{
+		TcpServer<TWParser, ClientState>::Send(c, (char*)matchData.c_str(), matchData.size());
+	}
+	// Envoi à tout le monde (mise à jour de la liste suite à une modif)
+	else
+	{
+		for (int i = 0; i < spectatorModeClientDiffusionList.size(); i++)
+		{
+			TcpServer<TWParser, ClientState>::Send(spectatorModeClientDiffusionList[i], (char*)matchData.c_str(), matchData.size());
+		}
 	}
 }
 
@@ -180,11 +510,25 @@ void TWParser::onClientDisconnected(SOCKET sock)
 
 void TWParser::onClientDisconnected(ClientState * client)
 {
+	if (client == admin)
+	{
+		admin = NULL;
+	}
+
+	// If spectator, clear it from the spectator diffusion list :
+	std::vector<ClientState*>::iterator it = std::find(spectatorModeClientDiffusionList.begin(), spectatorModeClientDiffusionList.end(), client);
+	if (it != spectatorModeClientDiffusionList.end())
+	{
+		spectatorModeClientDiffusionList.erase(it);
+	}
+	
 	// Clear connected player map :
 	if (client->getPseudo().length() > 0 && playersMap.find(client->getPseudo()) != playersMap.end())
 	{
 		tw::Player * p = playersMap[client->getPseudo()];
 		
+		p->setHasJoinBattle(false);
+
 		if (playerToBattleMap.find(p) != playerToBattleMap.end())
 		{
 			std::cout << "Notify battle that connection is lost with " << p->getPseudo().c_str() << std::endl;
@@ -194,6 +538,7 @@ void TWParser::onClientDisconnected(ClientState * client)
 		}
 
 		connectedPlayerMap.erase(p);
+		notifyMatchConnectedPlayerChanged(tw::PlayerManager::getCurrentOrNextMatchForPlayer(p));
 		std::cout << "Client " << p->getPseudo().c_str() << " disconnected ..." << std::endl;
 	}
 	Parser<ClientState>::onClientDisconnected(client);	
@@ -203,9 +548,57 @@ void TWParser::onClientDisconnected(ClientState * client)
 void TWParser::onMatchStatusChanged(tw::Match * match, tw::MatchStatus oldStatus, tw::MatchStatus newStatus)
 {
 	// Notify spectator mode clients
-	for (int i = 0; i < spectatorModeClientDiffusionList.size(); i++)
+	notifyPlayingMatchList();
+
+	// Notify admin
+	notifyPlanifiedAndPlayingMatch(admin);
+}
+
+
+void TWParser::notifyMatchConnectedPlayerChanged(tw::Match * match)
+{
+	if (match != NULL)
 	{
-		ClientState * c = spectatorModeClientDiffusionList[i];
-		// TODO : Notify status changed (send data to clients)
+		std::vector<tw::Player*> team1 = match->getTeam1();
+		std::vector<tw::Player*> team2 = match->getTeam2();
+
+		std::string playerStatus;
+		std::vector<tw::Player*> diffusionList;
+
+		for (int i = 0; i < team1.size(); i++)
+		{
+			if (i > 0)
+				playerStatus += ";";
+			tw::Player * p = team1[i];
+			playerStatus += p->getPseudo() + "," + std::to_string((p->getHasJoinBattle() ? 1 : 0));
+
+			if (p->getHasJoinBattle())
+				diffusionList.push_back(p);
+		}
+
+		playerStatus += ";";
+
+		for (int i = 0; i < team2.size(); i++)
+		{
+			if (i > 0)
+				playerStatus += ";";
+			tw::Player * p = team2[i];
+			playerStatus += p->getPseudo() + "," + std::to_string((p->getHasJoinBattle() ? 1 : 0));
+
+			if (p->getHasJoinBattle())
+				diffusionList.push_back(p);
+		}
+
+		playerStatus = "PS" + playerStatus + "\n";
+
+		// Notify online players :
+		for (int i = 0; i < diffusionList.size(); i++)
+		{
+			ClientState * c = connectedPlayerMap[diffusionList[i]];
+			if (c != NULL)
+			{
+				TcpServer<TWParser, ClientState>::Send(c, (char*)playerStatus.c_str(), playerStatus.size());
+			}
+		}
 	}
 }
