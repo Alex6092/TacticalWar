@@ -660,7 +660,7 @@ void TWParser::checkBattleEnd(tw::Match * m)
 	bool endOfBattle = false;
 	if (!aliveInTeam1)
 	{
-		str = "BE" + std::to_string(team2[0]->getTeamNumber()) + "\n";
+		str = "BE" + std::to_string(/*team2[0]->getTeamNumber()*/2) + "\n";
 		sendToMatch(m, str);
 		m->setWinnerTeam(2);
 		endOfBattle = true;
@@ -668,7 +668,7 @@ void TWParser::checkBattleEnd(tw::Match * m)
 
 	if (!aliveInTeam2)
 	{
-		str = "BE" + std::to_string(team1[0]->getTeamNumber()) + "\n";
+		str = "BE" + std::to_string(/*team1[0]->getTeamNumber()*/1) + "\n";
 		sendToMatch(m, str);
 		m->setWinnerTeam(1);
 		endOfBattle = true;

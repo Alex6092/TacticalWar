@@ -3,6 +3,9 @@
 
 MatchView::MatchView(tw::Match m, bool isSpectator)
 {
+	std::vector<tw::Player> team1 = m.clientGetTeam1();
+	std::vector<tw::Player> team2 = m.clientGetTeam2();
+
 	tgui::Label::Ptr matchName = tgui::Label::create();
 	sf::String statusStr = " (";
 	switch (m.getStatus())
@@ -16,17 +19,14 @@ MatchView::MatchView(tw::Match m, bool isSpectator)
 		break;
 
 	case tw::MatchStatus::FINISHED:
-		statusStr += "Eq. " + std::to_string(m.getWinnerTeamId()) + " gagnante";
+		statusStr += "Eq. " + std::to_string(m.getWinnerTeamId() == 1 ? team1[0].getTeamNumber() : team2[0].getTeamNumber()) + " gagnante";
 		break;
 	}
 	statusStr += ")";
 	matchName->setText("Match : " + sf::String(m.getMatchName()) + (isSpectator ? "" : statusStr));
 	matchName->getRenderer()->setTextColor(sf::Color::Black);
 	add(matchName);
-	matchName->setPosition(5, 5);
-
-	std::vector<tw::Player> team1 = m.clientGetTeam1();
-	std::vector<tw::Player> team2 = m.clientGetTeam2();
+	matchName->setPosition(5, 5);	
 
 	tgui::Label::Ptr vsMessage = tgui::Label::create();
 	vsMessage->setText("Equipe " + std::to_string(team1[0].getTeamNumber()) + " VS équipe " + std::to_string(team2[0].getTeamNumber()));
