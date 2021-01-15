@@ -254,8 +254,10 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y, obstacles) == 2 && x == targetX && y == targetY) {
-						targettableCells.push_back(Point2D(x, y));
+					else if (this->isObstacle(x, y, obstacles) == 2) {
+						if(x == targetX && y == targetY)
+							targettableCells.push_back(Point2D(x, y));
+
 						break;
 					}
 					else if (x == targetX && y == targetY) {
@@ -268,8 +270,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y, obstacles) == 2 && x == targetX && y == targetY) {
-						targettableCells.push_back(Point2D(x, y));
+					else if (this->isObstacle(x, y, obstacles) == 2) {
+						if (x == targetX && y == targetY)
+							targettableCells.push_back(Point2D(x, y));
 						break;
 					}
 					else if (x == targetX && y == targetY) {
@@ -278,8 +281,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y1, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y1, obstacles) == 2 && x == targetX && y1 == targetY) {
-						targettableCells.push_back(Point2D(x, y));
+					else if (this->isObstacle(x, y1, obstacles) == 2) {
+						if (x == targetX && y1 == targetY)
+							targettableCells.push_back(Point2D(x, y1));
 						break;
 					}
 					else if (x == targetX && y1 == targetY) {
@@ -295,8 +299,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y, obstacles) == 2 && x == targetX && y == targetY) {
-						targettableCells.push_back(Point2D(x, y));
+					else if (this->isObstacle(x, y, obstacles) == 2) {
+						if (x == targetX && y == targetY)
+							targettableCells.push_back(Point2D(x, y));
 						break;
 					}
 					else if(x == targetX && y == targetY){
@@ -309,8 +314,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y, obstacles) == 2 && x == targetX && y == targetY) {
-						targettableCells.push_back(Point2D(x, y));
+					else if (this->isObstacle(x, y, obstacles) == 2) {
+						if (x == targetX && y == targetY)
+							targettableCells.push_back(Point2D(x, y));
 						break;
 					}
 					else if (x == targetX && y == targetY) {
@@ -319,8 +325,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(x, y1, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(x, y1, obstacles) == 2 && x == targetX && y1 == targetY) {
-						targettableCells.push_back(Point2D(x, y1));
+					else if (this->isObstacle(x, y1, obstacles) == 2) {
+						if (x == targetX && y1 == targetY)
+							targettableCells.push_back(Point2D(x, y1));
 						break;
 					}
 					else if (x == targetX && y1 == targetY) {
@@ -335,8 +342,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(targetX, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(targetX, y, obstacles) == 2 && y == targetY) {
-						targettableCells.push_back(Point2D(targetX, y));
+					else if (this->isObstacle(targetX, y, obstacles) == 2) {
+						if (y == targetY)
+							targettableCells.push_back(Point2D(targetX, y));
 						break;
 					}
 					else if (y == targetY) {
@@ -349,8 +357,9 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 					if (this->isObstacle(targetX, y, obstacles) == 1) {
 						break;
 					}
-					else if (this->isObstacle(targetX, y, obstacles) == 2 && y == targetY) {
-						targettableCells.push_back(Point2D(targetX, y));
+					else if (this->isObstacle(targetX, y, obstacles) == 2) {
+						if (y == targetY)
+							targettableCells.push_back(Point2D(targetX, y));
 						break;
 					}
 					else if (y == targetY) {
