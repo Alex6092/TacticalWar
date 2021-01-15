@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 2, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new CharacterMoveAction(screen, 1, path2));
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 3, 11, 11));
-	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 4, 11, 11));
+	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 2, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 1, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new CharacterMoveAction(screen, 1, path3));
 	AnimationManager::getInstance()->addAnimation(new TakeDamage(screen, 1, 45));
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 2, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new CharacterMoveAction(screen, 1, path2));
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 3, 11, 11));
-	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 4, 11, 11));
+	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 2, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(screen, 1, 1, 11, 11));
 	AnimationManager::getInstance()->addAnimation(new CharacterMoveAction(screen, 1, path3));
 	//AnimationManager::getInstance()->addAnimation(new CharacterDieAction(screen, 1));

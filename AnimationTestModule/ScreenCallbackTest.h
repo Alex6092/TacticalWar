@@ -4,6 +4,7 @@
 #include <iostream>
 #include <Mage.h>
 #include <BaseCharacterModel.h>
+#include <CharacterFactory.h>
 
 using namespace std;
 
@@ -19,8 +20,8 @@ public:
 	ScreenCallbackTest(tw::Environment * environment)
 	{
 		this->environment = environment;
-		c1 = new Mage(environment, 1, 9, 9, NULL);
-		c2 = new Mage(environment, 2, 11, 11, NULL);
+		c1 = CharacterFactory::getInstance()->constructCharacter(environment, 1, 1, 9, 9, NULL);
+		c2 = CharacterFactory::getInstance()->constructCharacter(environment, 1, 2, 11, 11, NULL);
 
 		p1 = new tw::Player("Peon 1", "", 1);
 		p1->setCharacter(c1);
