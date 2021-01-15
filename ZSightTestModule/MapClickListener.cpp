@@ -28,9 +28,9 @@ void MapClickListener::onCellClicked(int x, int y)
 		startPointSelected = true;
 	}
 
-	std::vector<tw::Point2D> zoneToTest = tw::ZoneAndSightCalculator::getInstance()->generateZone(x, y, 2, 4, TypeZoneLaunch::NORMAL);
-	colorator->setPathToHighlight(zoneToTest);
-	//colorator->setPathToHighlight(tw::ZoneAndSightCalculator::getInstance()->processLineOfSight(x, y, zoneToTest, environment->getObstacles()));
+	std::vector<tw::Point2D> zoneToTest = tw::ZoneAndSightCalculator::getInstance()->generateZone(x, y, 5, 8, TypeZoneLaunch::NORMAL);
+	//colorator->setPathToHighlight(zoneToTest);
+	colorator->setPathToHighlight(tw::ZoneAndSightCalculator::getInstance()->processLineOfSight(x, y, zoneToTest, environment->getObstacles()));
 	/*
 	else if (!endPointSelected)
 	{
