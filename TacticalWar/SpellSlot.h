@@ -52,6 +52,19 @@ public:
 			spellPicture->getRenderer()->setTexture(*spellTexture);
 			spellPicture->setSize(getSize().x - 4, getSize().y - 4);
 			setPosition(getPosition());
+
+			// Update tooltip text :
+			tgui::Label::Ptr text = std::dynamic_pointer_cast<tgui::Label, tgui::Widget>(spellPicture->getToolTip());
+			text->getRenderer()->setBackgroundColor(tgui::Color::Black);
+			text->getRenderer()->setTextColor(tgui::Color::White);
+			text->setMaximumTextWidth(200);
+
+			std::string str = "";
+			str += model->getSpellName(attackNumber) + " (Coût : " + std::to_string(model->getAttackPACost(attackNumber)) + " PA)\n";
+			if (model->getAttackCooldown(attackNumber) > 0) str += "Interval de relance : " + std::to_string(model->getAttackCooldown(attackNumber)) + " tour(s)\n";
+			str += "\n" + model->getSpellDescription(attackNumber);
+
+			text->setText(str);
 		}
 	}
 
@@ -79,6 +92,10 @@ public:
 		}
 
 		tgui::Picture::draw(target, states);
+		spellPicture->draw(target, states);
+
+		if(spellCooldownTxt->isVisible())
+			spellCooldownTxt->draw(target, states);
 	}
 
 	virtual void setSize(const tgui::Layout2d & size)
@@ -91,6 +108,29 @@ public:
 		{
 			spellCooldownTxt->setPosition(getPosition().x + (getSize().x / 2.0) - (spellCooldownTxt->getSize().x / 2.0), getPosition().y + (getSize().y / 2.0) - (spellCooldownTxt->getSize().y / 2.0));
 		}
+	}
+
+
+	virtual bool mouseOnWidget(tgui::Vector2f pos) const
+	{
+		return (tgui::Picture::mouseOnWidget(pos) || spellPicture->mouseOnWidget(pos) || spellCooldownTxt->mouseOnWidget(pos));
+	}
+
+	void setCooldownVisible(bool bVisible)
+	{
+		spellCooldownTxt->setVisible(bVisible);
+	}
+
+	virtual Widget::Ptr askToolTip(tgui::Vector2f mousePos)
+	{
+		Widget::Ptr result = Picture::askToolTip(mousePos);
+		if (result != nullptr)
+		{
+			float height = result->getSize().y;
+			tgui::ToolTip::setDistanceToMouse({ 12, -height });
+		}
+
+		return result;
 	}
 };
 

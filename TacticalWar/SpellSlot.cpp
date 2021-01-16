@@ -12,8 +12,15 @@ SpellSlot::SpellSlot(tw::BaseCharacterModel * model, int attackNumber, std::stri
 	this->attackNumber = attackNumber;
 	this->getRenderer()->setTexture(*getCachedTexture("./assets/ui/slot/ActionBar_MainSlot_Background.png"));
 
+	tgui::Label::Ptr tooltip = tgui::Label::create();
+
+	this->setToolTip(tooltip);
+
 	spellPicture = tgui::Picture::create();
-	updateSpellPicture();
+	//tgui::ToolTip::setInitialDelay(sf::milliseconds(300));
+	
+	spellPicture->setToolTip(tooltip);
+
 
 	spellCooldownTxt = tgui::Label::create();
 	spellCooldownTxt->setInheritedFont(font);
@@ -22,4 +29,7 @@ SpellSlot::SpellSlot(tw::BaseCharacterModel * model, int attackNumber, std::stri
 	spellCooldownTxt->getRenderer()->setTextOutlineColor(tgui::Color::Black);
 	spellCooldownTxt->getRenderer()->setTextOutlineThickness(2);
 	spellCooldownTxt->setText("");
+	spellCooldownTxt->setToolTip(tooltip);
+
+	updateSpellPicture();
 }

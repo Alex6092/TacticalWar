@@ -849,6 +849,50 @@ namespace tw
 			return "";
 		}
 
+		std::string getSpellName(int spellId)
+		{
+			if (spellId == 1)
+			{
+				return getSpell1Name();
+			}
+			else if (spellId == 2)
+			{
+				return getSpell2Name();
+			}
+			else if (spellId == 3)
+			{
+				return getSpell3Name();
+			}
+			else if (spellId == 4)
+			{
+				return getSpell4Name();
+			}
+
+			return "Undefined";
+		}
+
+		std::string getSpellDescription(int spellId)
+		{
+			if (spellId == 1)
+			{
+				return getSpell1Description();
+			}
+			else if (spellId == 2)
+			{
+				return getSpell2Description();
+			}
+			else if (spellId == 3)
+			{
+				return getSpell3Description();
+			}
+			else if (spellId == 4)
+			{
+				return getSpell4Description();
+			}
+
+			return "Undefined";
+		}
+
 		void setOrientationToLookAt(int targetX, int targetY)
 		{
 			for (int i = 0; i < listeners.size(); i++)

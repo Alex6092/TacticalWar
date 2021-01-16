@@ -97,8 +97,6 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 		{
 			std::shared_ptr<SpellSlot> spellSlot1 = std::make_shared<SpellSlot>(activeCharacter, 1, activeCharacter->getSpell1IconPath());
 			gui->add(spellSlot1, "spellSlot1");
-			gui->add(spellSlot1->getSpellPicture(), "spellSlot1Picture");
-			gui->add(spellSlot1->getSpellCooldownTxt(), "spellSlot1CooldownTxt");
 			spellSlot1->setSize(tgui::Layout2d(100, 100));
 			spellSlot1->setPosition(tgui::Layout2d(150, window->getSize().y - 110));
 			spellSlot1->getSpellPicture()->connect("Clicked", [&]() {
@@ -107,8 +105,6 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 			std::shared_ptr<SpellSlot> spellSlot2 = std::make_shared<SpellSlot>(activeCharacter, 2, activeCharacter->getSpell2IconPath());
 			gui->add(spellSlot2, "spellSlot2");
-			gui->add(spellSlot2->getSpellPicture(), "spellSlot2Picture");
-			gui->add(spellSlot2->getSpellCooldownTxt(), "spellSlot2CooldownTxt");
 			spellSlot2->setSize(tgui::Layout2d(100, 100));
 			spellSlot2->setPosition(tgui::Layout2d(150 + 110, window->getSize().y - 110));
 			spellSlot2->getSpellPicture()->connect("Clicked", [&]() {
@@ -117,8 +113,6 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 			std::shared_ptr<SpellSlot> spellSlot3 = std::make_shared<SpellSlot>(activeCharacter, 3, activeCharacter->getSpell3IconPath());
 			gui->add(spellSlot3, "spellSlot3");
-			gui->add(spellSlot3->getSpellPicture(), "spellSlot3Picture");
-			gui->add(spellSlot3->getSpellCooldownTxt(), "spellSlot3CooldownTxt");
 			spellSlot3->setSize(tgui::Layout2d(100, 100));
 			spellSlot3->setPosition(tgui::Layout2d(150 + 220, window->getSize().y - 110));
 			spellSlot3->getSpellPicture()->connect("Clicked", [&]() {
@@ -127,8 +121,6 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 			std::shared_ptr<SpellSlot> spellSlot4 = std::make_shared<SpellSlot>(activeCharacter, 4, activeCharacter->getSpell4IconPath());
 			gui->add(spellSlot4, "spellSlot4");
-			gui->add(spellSlot4->getSpellPicture(), "spellSlot4Picture");
-			gui->add(spellSlot4->getSpellCooldownTxt(), "spellSlot4CooldownTxt");
 			spellSlot4->setSize(tgui::Layout2d(100, 100));
 			spellSlot4->setPosition(tgui::Layout2d(150 + 330, window->getSize().y - 110));
 			spellSlot4->getSpellPicture()->connect("Clicked", [&]() {

@@ -81,6 +81,12 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	std::shared_ptr<SpellSlot> spell2 = std::make_shared<SpellSlot>(classesInstances[0], 2, "");
 	std::shared_ptr<SpellSlot> spell3 = std::make_shared<SpellSlot>(classesInstances[0], 3, "");
 	std::shared_ptr<SpellSlot> spell4 = std::make_shared<SpellSlot>(classesInstances[0], 4, "");
+
+	spell1->setCooldownVisible(false);
+	spell2->setCooldownVisible(false);
+	spell3->setCooldownVisible(false);
+	spell4->setCooldownVisible(false);
+
 	tgui::Picture::Ptr card = tgui::Picture::create();
 	std::shared_ptr<PictureCharacterView> classCharacterView = std::make_shared<PictureCharacterView>();
 
@@ -198,13 +204,9 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	gui->add(defLabel, "defLabel");
 	gui->add(description, "description");
 	gui->add(spell1, "spell1");
-	gui->add(spell1->getSpellPicture(), "spell1Picture");
 	gui->add(spell2, "spell2");
-	gui->add(spell2->getSpellPicture(), "spell2Picture");
 	gui->add(spell3, "spell3");
-	gui->add(spell3->getSpellPicture(), "spell3Picture");
 	gui->add(spell4, "spell4");
-	gui->add(spell4->getSpellPicture(), "spell4Picture");
 
 	gui->add(spell1description, "spell1Description");
 	gui->add(spell2description, "spell2Description");
