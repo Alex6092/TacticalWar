@@ -170,6 +170,7 @@
     <ClCompile Include="SpectatorModeScreen.cpp" />
     <ClCompile Include="SpellSlot.cpp" />
     <ClCompile Include="TestCharacterModel.cpp" />
+    <ClCompile Include="TimelineView.cpp" />
     <ClCompile Include="TWColorator.cpp" />
     <ClCompile Include="WaitMatchScreen.cpp" />
   </ItemGroup>
@@ -224,6 +225,7 @@
     <ClInclude Include="SpectatorModeScreen.h" />
     <ClInclude Include="SpellSlot.h" />
     <ClInclude Include="TestCharacterModel.h" />
+    <ClInclude Include="TimelineView.h" />
     <ClInclude Include="TWColorator.h" />
     <ClInclude Include="WaitMatchScreen.h" />
   </ItemGroup>

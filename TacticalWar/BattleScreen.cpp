@@ -23,6 +23,7 @@
 #include <BattleEndAction.h>
 #include "ClassSelectionScreen.h"
 #include "WaitMatchScreen.h"
+#include "TimelineView.h"
 
 
 using namespace tw;
@@ -68,7 +69,19 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
 
 	gui->add(readyButton, "readyButton");
 
+
+	// Battle message label :
+	msgLabel = tgui::Label::create("");
+	msgLabel->setInheritedFont(font);
+	msgLabel->setTextSize(30);
+	msgLabel->getRenderer()->setTextColor(tgui::Color::Red);
+	msgLabel->getRenderer()->setTextOutlineColor(tgui::Color::Black);
+	msgLabel->getRenderer()->setTextOutlineThickness(1.0);
+	gui->add(msgLabel, "msgLabel");
+	msgRemainingTime = 0;
+
 	gui->add(PlayerStatusView::getInstance());
+	gui->add(TimelineView::getInstance());
 
 	LinkToServer::getInstance()->addListener(this);
 	MusicManager::getInstance()->setBattleMusic();
@@ -77,6 +90,12 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
 BattleScreen::~BattleScreen()
 {
 	LinkToServer::getInstance()->removeListener(this);
+	for (auto it = characters.begin(); it != characters.end(); it++)
+		delete (*it).second;
+
+	delete colorator;
+	delete renderer;
+	delete environment;
 }
 
 void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
@@ -86,6 +105,8 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 	tgui::Button::Ptr readyButton = gui->get<tgui::Button>("readyButton");
 	readyButton->setPosition(window->getSize().x / 2. - readyButton->getSize().x / 2., window->getSize().y - readyButton->getSize().y - 20);
+
+	msgLabel->setPosition(window->getSize().x / 2.0 - msgLabel->getSize().x / 2.0, window->getSize().y / 2.0 - msgLabel->getSize().y / 2.0);
 
 	
 
@@ -145,6 +166,13 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 			skipTurnButton->setVisible(colorator->getBattleState() == BattleState::BATTLE_PHASE_ACTIVE_PLAYER_TURN);
 		}
 	}
+}
+
+void tw::BattleScreen::setMessage(std::string message)
+{
+	msgLabel->setText(message);
+	msgLabel->setPosition(window->getSize().x / 2.0 - msgLabel->getSize().x / 2.0, window->getSize().y / 2.0 - msgLabel->getSize().y / 2.0);
+	msgRemainingTime = 2.0;
 }
 
 void tw::BattleScreen::calculateAndSetSpellZone()
@@ -213,6 +241,16 @@ void BattleScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
 
+	if (msgRemainingTime > 0)
+	{
+		msgRemainingTime -= deltatime;
+		if (msgRemainingTime < 0)
+		{
+			msgRemainingTime = 0;
+			msgLabel->setText("");
+		}
+	}
+
 	for (int i = 0; i < characters.size(); i++)
 	{
 		characters[i]->update(deltatime);
@@ -253,6 +291,8 @@ void BattleScreen::update(float deltatime)
 
 void BattleScreen::render(sf::RenderWindow * window)
 {
+	msgLabel->setVisible(msgRemainingTime > 0);
+	
 	renderer->modifyWindow(window);
 	std::vector<BaseCharacterModel*> aliveCharacters;
 	
@@ -628,6 +668,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 
 		BaseCharacterModel * c = CharacterFactory::getInstance()->constructCharacter(environment, classId, teamId, currentX, currentY, this);
 		characters[characterId] = c;
+		timeline.push_back(c);
 		c->setCurrentLife(currentLife);
 		c->setCurrentPA(currentPA);
 		c->setCurrentPM(currentPM);
@@ -644,6 +685,8 @@ void BattleScreen::onMessageReceived(std::string msg)
 		{
 			onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
 		}
+
+		TimelineView::getInstance()->setTimeline(timeline);
 	}
 	else if (str.substring(0, 2) == "CS")	// Set active character
 	{
@@ -825,6 +868,9 @@ void tw::BattleScreen::applyChangeTurn(float remaining, int idPerso, std::string
 {
 	turnToken = idPerso;
 	characters[idPerso]->turnStart();
+
+	TimelineView::getInstance()->setActiveCharacter(characters[idPerso]);
+	setMessage(message);
 
 	if (characters[idPerso] == activeCharacter)
 	{

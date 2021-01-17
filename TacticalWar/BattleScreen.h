@@ -22,7 +22,7 @@ namespace tw
 		BaseCharacterModel * activeCharacter;
 
 		std::map<int, tw::BaseCharacterModel*> characters;
-		//std::vector<tw::BaseCharacterModel*> characters;
+		std::vector<tw::BaseCharacterModel*> timeline;
 		sf::Font font;
 		sf::Text FPS;
 
@@ -72,6 +72,10 @@ namespace tw
 
 		bool redirectToBattlePreparation;
 		std::vector<AbstractSpellView<sf::Sprite*>*> animationsToDisplay;
+
+		float msgRemainingTime;
+		tgui::Label::Ptr msgLabel;
+		void setMessage(std::string message);
 
 	public:
 		BattleScreen(tgui::Gui * gui, int environmentId);
