@@ -62,6 +62,31 @@ public:
 			std::string str = "";
 			str += model->getSpellName(attackNumber) + " (Coût : " + std::to_string(model->getAttackPACost(attackNumber)) + " PA)\n";
 			if (model->getAttackCooldown(attackNumber) > 0) str += "Interval de relance : " + std::to_string(model->getAttackCooldown(attackNumber)) + " tour(s)\n";
+			str += "Portée min : " + std::to_string(model->getSpellMinPO(attackNumber)) + "\n";
+			str += "Portée max : " + std::to_string(model->getSpellMaxPO(attackNumber)) + "\n";
+
+			std::string zoneType = "Undefined"; 
+			
+			switch (model->getSpellLaunchZoneType(attackNumber))
+			{
+			case TypeZoneLaunch::NORMAL:
+				zoneType = "Standard";
+				break;
+
+			case TypeZoneLaunch::LINE:
+				zoneType = "En ligne";
+				break;
+
+			case TypeZoneLaunch::DIAGONAL:
+				zoneType = "En diagonale";
+				break;
+
+			case TypeZoneLaunch::STAR:
+				zoneType = "En étoile";
+				break;
+			}
+			str += "Type de lancer : " + zoneType + "\n";
+
 			str += "\n" + model->getSpellDescription(attackNumber);
 
 			text->setText(str);

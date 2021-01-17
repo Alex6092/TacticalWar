@@ -893,6 +893,72 @@ namespace tw
 			return "Undefined";
 		}
 
+		int getSpellMinPO(int spellId)
+		{
+			if (spellId == 1)
+			{
+				return getSpell1MinPO();
+			}
+			else if (spellId == 2)
+			{
+				return getSpell2MinPO();
+			}
+			else if (spellId == 3)
+			{
+				return getSpell3MinPO();
+			}
+			else if (spellId == 4)
+			{
+				return getSpell4MinPO();
+			}
+
+			return 0;
+		}
+
+		int getSpellMaxPO(int spellId)
+		{
+			if (spellId == 1)
+			{
+				return getSpell1MaxPO();
+			}
+			else if (spellId == 2)
+			{
+				return getSpell2MaxPO();
+			}
+			else if (spellId == 3)
+			{
+				return getSpell3MaxPO();
+			}
+			else if (spellId == 4)
+			{
+				return getSpell4MaxPO();
+			}
+
+			return 0;
+		}
+
+		TypeZoneLaunch getSpellLaunchZoneType(int spellId)
+		{
+			if (spellId == 1)
+			{
+				return getSpell1LaunchZoneType();
+			}
+			else if (spellId == 2)
+			{
+				return getSpell2LaunchZoneType();
+			}
+			else if (spellId == 3)
+			{
+				return getSpell3LaunchZoneType();
+			}
+			else if (spellId == 4)
+			{
+				return getSpell4LaunchZoneType();
+			}
+
+			return TypeZoneLaunch::NORMAL;
+		}
+
 		void setOrientationToLookAt(int targetX, int targetY)
 		{
 			for (int i = 0; i < listeners.size(); i++)
