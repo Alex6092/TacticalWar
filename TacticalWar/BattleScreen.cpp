@@ -120,7 +120,7 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 			gui->add(spellSlot1, "spellSlot1");
 			spellSlot1->setSize(tgui::Layout2d(100, 100));
 			spellSlot1->setPosition(tgui::Layout2d(150, window->getSize().y - 110));
-			spellSlot1->getSpellPicture()->connect("Clicked", [&]() {
+			spellSlot1->connect("Clicked", [&]() {
 				setSelectedSpell(1);
 			});
 
@@ -128,7 +128,7 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 			gui->add(spellSlot2, "spellSlot2");
 			spellSlot2->setSize(tgui::Layout2d(100, 100));
 			spellSlot2->setPosition(tgui::Layout2d(150 + 110, window->getSize().y - 110));
-			spellSlot2->getSpellPicture()->connect("Clicked", [&]() {
+			spellSlot2->connect("Clicked", [&]() {
 				setSelectedSpell(2);
 			});
 
@@ -136,7 +136,7 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 			gui->add(spellSlot3, "spellSlot3");
 			spellSlot3->setSize(tgui::Layout2d(100, 100));
 			spellSlot3->setPosition(tgui::Layout2d(150 + 220, window->getSize().y - 110));
-			spellSlot3->getSpellPicture()->connect("Clicked", [&]() {
+			spellSlot3->connect("Clicked", [&]() {
 				setSelectedSpell(3);
 			});
 
@@ -144,9 +144,10 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 			gui->add(spellSlot4, "spellSlot4");
 			spellSlot4->setSize(tgui::Layout2d(100, 100));
 			spellSlot4->setPosition(tgui::Layout2d(150 + 330, window->getSize().y - 110));
-			spellSlot4->getSpellPicture()->connect("Clicked", [&]() {
+			spellSlot4->connect("Clicked", [&]() {
 				setSelectedSpell(4);
 			});
+			
 
 			tgui::Button::Ptr skipTurnBtn = tgui::Button::create("Passer le tour");
 			gui->add(skipTurnBtn, "skipTurnBtn");
