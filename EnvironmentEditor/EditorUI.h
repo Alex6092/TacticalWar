@@ -364,6 +364,23 @@ namespace EnvironmentEditor {
 		renderer->ellapseTime((float)timer1->Interval / 1000.0);
 		renderer->render(environment, *characters, std::vector<tw::AbstractSpellView<sf::Sprite*>*>(), 0);
 		window->display();
+
+		// Update window title (display the edited map ID)
+		int mapId = -1;
+		if (environment != nullptr)
+		{
+			mapId = environment->getId();
+		}
+
+		if (mapId >= 0)
+		{
+			String^ windowTitle = L"Map editor - Editing map " + mapId;
+			this->Text = windowTitle;
+		}
+		else
+		{
+			this->Text = L"Map editor";
+		}
 	}
 	private: System::Void sfmlRenderingSurface_Resize(System::Object^  sender, System::EventArgs^  e) {
 		reinitializeRenderer();
