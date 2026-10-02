@@ -45,6 +45,7 @@ namespace tw
 		void drawCharacter(BaseCharacterModel * model, float deltatime);
 		void drawCharacterSprite(BaseCharacterModel * model, sf::RenderTarget & target, bool mirrored);
 		void drawCharacterOverlay(BaseCharacterModel * model);
+		void drawSpell(AbstractSpellView<sf::Sprite*> * spell);
 
 		// Liquides (eau, lave) : shader animé ; reflets des personnages et du décor voisin dans l'eau,
 		// dessinés à l'envers dans une texture de la taille de la fenêtre.

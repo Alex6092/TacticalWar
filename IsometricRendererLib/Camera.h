@@ -28,6 +28,8 @@ namespace tw
 		void followCell(float cellX, float cellY);
 		// Centre immédiatement la vue sur une case.
 		void centerOn(float cellX, float cellY);
+		// Zoom (taille de la vue par rapport à la fenêtre : moins de 1 grossit), borné.
+		void setZoom(float value);
 
 		void apply(IsometricRenderer & renderer) const;
 
