@@ -40,6 +40,7 @@
     <ClInclude Include="JsonFile.h" />
     <ClInclude Include="LegacyImport.h" />
     <ClInclude Include="PasswordHasher.h" />
+    <ClInclude Include="ReplayStore.h" />
     <ClInclude Include="ServerConfig.h" />
     <ClInclude Include="Team.h" />
     <ClInclude Include="TeamStore.h" />
@@ -50,6 +51,7 @@
     <ClCompile Include="JsonFile.cpp" />
     <ClCompile Include="LegacyImport.cpp" />
     <ClCompile Include="PasswordHasher.cpp" />
+    <ClCompile Include="ReplayStore.cpp" />
     <ClCompile Include="ServerConfig.cpp" />
     <ClCompile Include="TeamStore.cpp" />
     <ClCompile Include="TournamentService.cpp" />

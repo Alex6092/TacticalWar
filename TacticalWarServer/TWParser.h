@@ -11,6 +11,8 @@
 #include <ServerConfig.h>
 #include <TeamStore.h>
 #include <TournamentService.h>
+#include <ReplayStore.h>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 class HttpFrontend;
@@ -129,6 +131,31 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 
 	// Tournois (TWParserTournament.cpp) :
 	tw::TournamentService tournaments;
+
+	// Rediffusions (TWParserReplay.cpp) : enregistrement de chaque combat et relecture
+	// pour les spectateurs (même flux de messages qu'un combat en direct).
+	struct ReplayRecording
+	{
+		std::unique_ptr<tw::store::ReplayWriter> writer;
+		std::int64_t startMs = 0;
+	};
+	struct ReplayPlayback
+	{
+		tw::store::Replay replay;
+		std::vector<std::int64_t> due;	// Moment d'envoi de chaque lot (ms après le début)
+		std::size_t next = 0;
+		std::int64_t startMs = 0;
+	};
+	tw::store::ReplayLibrary replays;
+	std::map<int, ReplayRecording> recordings;
+	std::map<tw::net::ConnId, ReplayPlayback> playbacks;
+	nlohmann::json battleSnapshot(BattleSession * session, int fighterId);
+	void startRecording(BattleSession * session);
+	void recordBatch(BattleSession * session, const nlohmann::json & batch);
+	void stopRecording(BattleSession * session, const nlohmann::json & end, bool keep);
+	void handleReplayMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void stopPlayback(ClientState * client);
+	void tickReplays(std::int64_t now);
 	int adminWatchedTournament;
 	void loadTournaments();
 	std::string teamName(int teamId);

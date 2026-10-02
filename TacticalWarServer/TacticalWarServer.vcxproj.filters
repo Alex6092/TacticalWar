@@ -56,4 +56,7 @@
   <ItemGroup>
     <ClCompile Include="TWParserSpectator.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserReplay.cpp" />
+  </ItemGroup>
 </Project>

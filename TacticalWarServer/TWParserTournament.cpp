@@ -370,6 +370,8 @@ void TWParser::finishWithoutBattle(BattleSession * session, int winnerSide, Resu
 void TWParser::cancelSession(BattleSession * session)
 {
 	tw::Match * match = session->getMatch();
+	// Combat annulé : sa rediffusion n'a pas d'intérêt.
+	stopRecording(session, nlohmann::json::object(), false);
 	session->markEnded();
 	match->setBattlePayload(NULL);
 

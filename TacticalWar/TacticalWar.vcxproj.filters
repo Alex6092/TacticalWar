@@ -129,4 +129,8 @@
     <ClCompile Include="LiveSessionsPanel.cpp" />
     <ClInclude Include="LiveSessionsPanel.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ReplaysPanel.cpp" />
+    <ClInclude Include="ReplaysPanel.h" />
+  </ItemGroup>
 </Project>

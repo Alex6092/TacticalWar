@@ -88,7 +88,9 @@ namespace tw
 			// Mode spectateur (contenu JSON)
 			{ "SL", Direction::BOTH, Role::SPECTATOR, "Combats en cours (S->C : {sessions})" },
 			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
-			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder" },
+			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder (combat ou rediffusion)" },
+			{ "RL", Direction::BOTH, Role::SPECTATOR, "Rediffusions des combats terminés (S->C : {replays})" },
+			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat)" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },

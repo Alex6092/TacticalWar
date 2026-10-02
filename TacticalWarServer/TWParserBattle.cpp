@@ -81,6 +81,7 @@ void TWParser::startBattle(BattleSession * session)
 
 	// Les clients reçoivent l'état complet : les événements produits jusqu'ici y sont déjà.
 	session->getEngine()->flushEvents();
+	startRecording(session);
 
 	for (tw::Player * player : session->getParticipants())
 	{
@@ -104,13 +105,18 @@ void TWParser::sendBattleState(BattleSession * session, ClientState * client, tw
 	}
 
 	int fighterId = player != NULL ? session->fighterIdOf(player) : -1;
+	send(client, encode("BI", battleSnapshot(session, fighterId)));
+}
+
+nlohmann::json TWParser::battleSnapshot(BattleSession * session, int fighterId)
+{
 	nlohmann::json snapshot = session->getEngine()->snapshot(fighterId, nowMs());
 
 	// Noms des équipes et du match, pour l'affichage (bandeau spectateur, écran de fin).
 	tw::Match * match = session->getMatch();
 	snapshot["teams"] = nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) });
 	snapshot["title"] = match->getMatchName();
-	send(client, encode("BI", snapshot));
+	return snapshot;
 }
 
 void TWParser::handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body)
@@ -176,7 +182,9 @@ void TWParser::broadcastBattleEvents(BattleSession * session)
 	if (engine == NULL || !engine->hasPendingEvents())
 		return;
 
-	std::string message = encode("BV", engine->flushEvents());
+	nlohmann::json batch = engine->flushEvents();
+	recordBatch(session, batch);
+	std::string message = encode("BV", batch);
 	for (tw::Player * player : session->getParticipants())
 	{
 		ClientState * client = getClientStateFromPlayer(player);
@@ -211,6 +219,7 @@ void TWParser::finishBattle(BattleSession * session)
 	else if (state.endReason == tw::battle::EndReason::ADMIN)
 		reason = tw::tournament::ResultReason::ADMIN;
 	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round);
+	stopRecording(session, { { "winner", state.winnerTeam }, { "reason", tw::battle::toString(state.endReason) }, { "rounds", state.round } }, true);
 
 	session->markEnded();
 	match->setBattlePayload(NULL);

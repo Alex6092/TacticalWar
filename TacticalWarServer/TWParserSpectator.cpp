@@ -100,7 +100,11 @@ void TWParser::removeSpectator(ClientState * client)
 
 void TWParser::handleSpectatorMessage(ClientState * client, const std::string & op, const nlohmann::json & body)
 {
-	if (op == "SL")
+	if (op == "RL" || op == "RP")
+	{
+		handleReplayMessage(client, op, body);
+	}
+	else if (op == "SL")
 	{
 		notifySessionList(client);
 	}
@@ -115,6 +119,7 @@ void TWParser::handleSpectatorMessage(ClientState * client, const std::string & 
 		}
 
 		removeSpectator(client);
+		stopPlayback(client);
 		it->second->spectators.insert(client->getConnId());
 		sendGameData(client);
 		sendBattleState(it->second, client, NULL, true);
@@ -122,6 +127,7 @@ void TWParser::handleSpectatorMessage(ClientState * client, const std::string & 
 	else if (op == "SU")
 	{
 		removeSpectator(client);
+		stopPlayback(client);
 		notifySessionList(client);
 	}
 }

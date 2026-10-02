@@ -18,7 +18,8 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	teamStore(tw::store::joinPath(config.dataDir, "teams.json")),
 	credentials(tw::store::joinPath(config.dataDir, "exports/credentials.json"), tw::store::joinPath(config.dataDir, "exports/fiches-equipes.html")),
 	teamStoreReadOnly(false),
-	tournaments(config.dataDir)
+	tournaments(config.dataDir),
+	replays(tw::store::joinPath(config.dataDir, "replays"))
 {
 	srand((unsigned int)time(NULL));
 	net = NULL;
@@ -103,7 +104,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 	}
 
 	// Mode spectateur (contenu JSON) :
-	if (op == "SL" || op == "SW" || op == "SU" || (op == "BR" && getPlayerFromClientState(client) == NULL))
+	if (op == "SL" || op == "SW" || op == "SU" || op == "RL" || op == "RP" || (op == "BR" && getPlayerFromClientState(client) == NULL))
 	{
 		tw::protocol::Message message;
 		nlohmann::json body = nlohmann::json::object();
@@ -570,6 +571,7 @@ void TWParser::onMessage(tw::net::ConnId id, const std::string & line)
 void TWParser::onTick(tw::net::Clock::time_point now)
 {
 	tickBattles();
+	tickReplays(nowMs());
 }
 
 void TWParser::onDisconnected(tw::net::ConnId id)
@@ -593,6 +595,7 @@ void TWParser::onDisconnected(tw::net::ConnId id)
 		spectatorModeClientDiffusionList.erase(it);
 	}
 	removeSpectator(client);
+	playbacks.erase(client->getConnId());
 
 	// Clear connected player map (only if this connection is still the one bound to the account) :
 	if (client->getPseudo().length() > 0 && playersMap.find(client->getPseudo()) != playersMap.end())

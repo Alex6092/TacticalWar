@@ -27,7 +27,9 @@
    (l'adresse du serveur se règle sur l'écran de connexion).
 3. **Écran projeté** :
    - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11) ;
-   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré).
+   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré) ;
+   - temps forts : chaque combat est enregistré (`dataeplays\`) et peut être revu depuis l'écran
+     spectateur, onglet « Rediffusions » (client connecté sans identifiants).
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres.
 

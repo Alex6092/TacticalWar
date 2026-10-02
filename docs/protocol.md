@@ -81,7 +81,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 |---|---|---|---|
 | `SL` | C ↔ S | spectateur | Combats en cours (S-&gt;C : {sessions}) |
 | `SW` | C → S | spectateur | Regarder un combat {session} (réponse : HG puis BI, puis le flux BV) |
-| `SU` | C → S | spectateur | Arrêter de regarder |
+| `SU` | C → S | spectateur | Arrêter de regarder (combat ou rediffusion) |
+| `RL` | C ↔ S | spectateur | Rediffusions des combats terminés (S-&gt;C : {replays}) |
+| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat) |
 
 ## Création de match manuelle
 

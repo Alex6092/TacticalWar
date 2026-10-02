@@ -156,6 +156,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TWParserReplay.cpp" />
     <ClCompile Include="TWParserSpectator.cpp" />
     <ClCompile Include="TWParserPublic.cpp" />
     <ClCompile Include="http\HttpFrontend.cpp" />

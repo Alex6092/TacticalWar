@@ -48,6 +48,7 @@
     <ClCompile Include="BattleEngineTests.cpp" />
     <ClCompile Include="MapTests.cpp" />
     <ClCompile Include="ProtocolTests.cpp" />
+    <ClCompile Include="ReplayTests.cpp" />
     <ClCompile Include="StoreTests.cpp" />
     <ClCompile Include="TeamTests.cpp" />
     <ClCompile Include="TournamentServiceTests.cpp" />

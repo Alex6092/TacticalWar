@@ -8,6 +8,7 @@
 #include <Message.h>
 
 bool SpectatorModeScreen::directorMode = false;
+sf::String SpectatorModeScreen::currentTab = L"En direct";
 
 SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 	: Screen(), gui(gui), sinceRefresh(0), watchPending(0)
@@ -40,6 +41,21 @@ SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 	sessionsPanel.reset(new LiveSessionsPanel(gui, font));
 	sessionsPanel->onWatch = [this](int session) { watch(session); };
 
+	replaysPanel.reset(new ReplaysPanel(gui, font));
+	replaysPanel->onWatch = [this](const std::string & id) {
+		watchPending = 5.f;
+		LinkToServer::getInstance()->SendRaw("RP" + nlohmann::json({ { "id", id } }).dump());
+	};
+
+	tabs = tgui::Tabs::create();
+	tabs->setInheritedFont(font);
+	tabs->setTextSize(18);
+	tabs->setTabHeight(34);
+	tabs->add(L"En direct", false);
+	tabs->add(L"Rediffusions", false);
+	tabs->connect("TabSelected", [this](const sf::String & tab) { showTab(tab); });
+	gui->add(tabs);
+
 	directorBox = tgui::CheckBox::create(L"Mode réalisateur");
 	directorBox->setInheritedFont(font);
 	directorBox->setTextSize(18);
@@ -59,6 +75,8 @@ SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 
 	LinkToServer::getInstance()->addListener(this);
 	LinkToServer::getInstance()->SendRaw("SL{}");
+	if (!tabs->select(currentTab))
+		tabs->select(0);
 
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
 }
@@ -66,6 +84,16 @@ SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 SpectatorModeScreen::~SpectatorModeScreen()
 {
 	LinkToServer::getInstance()->removeListener(this);
+}
+
+void SpectatorModeScreen::showTab(const sf::String & tab)
+{
+	currentTab = tab;
+	bool replays = tab == L"Rediffusions";
+	sessionsPanel->setVisible(!replays);
+	replaysPanel->setVisible(replays);
+	if (replays)
+		LinkToServer::getInstance()->SendRaw("RL{}");
 }
 
 void SpectatorModeScreen::watch(int session)
@@ -80,12 +108,14 @@ void SpectatorModeScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gu
 {
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
 	subtitle.setPosition(window->getSize().x / 2 - subtitle.getLocalBounds().width / 2, 10 + 128 + 10);
-	sessionsPanel->layout(window->getSize(), 270);
+	sessionsPanel->layout(window->getSize(), 300);
+	replaysPanel->layout(window->getSize(), 300);
 
 	float panelLeft = sessionsPanel->getGroup()->getPosition().x;
-	directorBox->setPosition(panelLeft, 230);
+	directorBox->setPosition(panelLeft, 214);
 	directorBox->setSize(22, 22);
-	directorHelp->setPosition(panelLeft + 260, 233);
+	directorHelp->setPosition(panelLeft + 260, 217);
+	tabs->setPosition(panelLeft, 252);
 
 	sf::Event event;
 	while (window->pollEvent(event))
@@ -113,7 +143,7 @@ void SpectatorModeScreen::update(float deltatime)
 
 	// Mode réalisateur : dès qu'un combat est regardable, on le rejoint.
 	sinceRefresh += deltatime;
-	if (directorMode && watchPending <= 0 && sinceRefresh > 2.f)
+	if (directorMode && watchPending <= 0 && sinceRefresh > 2.f && currentTab != L"Rediffusions")
 	{
 		sinceRefresh = 0;
 		int session = sessionsPanel->mostContestedSession();
@@ -160,12 +190,22 @@ void SpectatorModeScreen::onMessageReceived(std::string msg)
 		if (message.parseJson(body))
 			sessionsPanel->onSessionList(body);
 	}
+	else if (message.op == "RL")
+	{
+		nlohmann::json body;
+		if (message.parseJson(body))
+			replaysPanel->onReplayList(body);
+	}
 	else if (message.op == "ER")
 	{
 		nlohmann::json body;
 		watchPending = 0;
 		if (message.parseJson(body))
-			sessionsPanel->setStatus(fromServerText(body.value("message", std::string())), sf::Color(255, 120, 100));
+		{
+			sf::String error = fromServerText(body.value("message", std::string()));
+			sessionsPanel->setStatus(error, sf::Color(255, 120, 100));
+			replaysPanel->setStatus(error, sf::Color(255, 120, 100));
+		}
 	}
 	else if (message.op == "HG")
 	{
