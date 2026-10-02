@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Pathfinder.h"
 #include <cstdlib>
 #include <limits>
@@ -36,9 +36,9 @@ int Pathfinder::TotalCostFromStartToEnd() //calcul du cout total du point de dep
 
 Orientation Pathfinder::getOrientationFromPosition(Point2D p1, Point2D p2)
 {
-	// TODO : Implémenter le calcul de l'orientation du personnage à partir des positions passées en paramètres.
-	// Les positions passées en paramètre représentent le mouvement du personnage de p1 vers p2.
-	// A partir de ces deux positions, vous devez déterminer l'orientation résultante du mouvement.
+	// TODO : ImplÃ©menter le calcul de l'orientation du personnage Ã  partir des positions passÃ©es en paramÃ¨tres.
+	// Les positions passÃ©es en paramÃ¨tre reprÃ©sentent le mouvement du personnage de p1 vers p2.
+	// A partir de ces deux positions, vous devez dÃ©terminer l'orientation rÃ©sultante du mouvement.
 	return Orientation::BOTTOM_RIGHT;
 }
 
@@ -56,7 +56,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 		{
 			CellData * cell = environment->getMapData(i, j);
 
-			d[cell] = std::numeric_limits<float>::max(); //sommet à +infini
+			d[cell] = std::numeric_limits<float>::max(); //sommet Ã  +infini
 			
 
 			if (cell->getIsObstacle() || !cell->getIsWalkable() || !isNotDynamicObstacle(cell, obstacles))
@@ -71,7 +71,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 	float PlusCourteDistance = std::numeric_limits<float>::max();
 	float NewDistance;
 
-	while(P.size() != d.size())	//on itère tant que qu'il existe un sommet hors de P donc tant que P ne fait pas la même taille que le nombre total de sommets
+	while(P.size() != d.size())	//on itÃ¨re tant que qu'il existe un sommet hors de P donc tant que P ne fait pas la mÃªme taille que le nombre total de sommets
 	{
 		PlusCourteDistance = std::numeric_limits<float>::max();
 		CellData * a = NULL;
@@ -86,7 +86,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 					if (d[cell] < PlusCourteDistance)
 					{
 						PlusCourteDistance = d[cell];
-						a = cell;		//on ajoute la cellule à l'ensemble P car elle est parcourue
+						a = cell;		//on ajoute la cellule Ã  l'ensemble P car elle est parcourue
 					}
 				}
 			}
@@ -178,11 +178,11 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 		//}
 	}
 
-	// TODO : Implémenter un algorithme de recherche de plus court chemin entre startPosition et endPosition
+	// TODO : ImplÃ©menter un algorithme de recherche de plus court chemin entre startPosition et endPosition
 	// qui tient compte de la topologie de l'environnement (environment : case "non marchable"; obstacles, etc...)
 	// et des obstacles "dynamique" (les personnages, etc...)
-	// Vous représenterez le résultat de votre calcul sous forme d'une liste de position 
-	// s'enchainant de la position de départ à la position d'arrivée.
+	// Vous reprÃ©senterez le rÃ©sultat de votre calcul sous forme d'une liste de position 
+	// s'enchainant de la position de dÃ©part Ã  la position d'arrivÃ©e.
 
 	return path;
 }

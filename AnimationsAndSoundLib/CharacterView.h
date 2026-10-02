@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "pch.h"
 #include <AbstractCharacterView.h>
@@ -110,7 +110,7 @@ namespace tw
 
 			// Vecteur nord = [1;-1];
 
-			if (diffX != 0 || diffY != 0) {  // Si c'est pas un lancer sur soi-m�me
+			if (diffX != 0 || diffY != 0) {  // Si c'est pas un lancer sur soi-même
 				double normeVecteur = sqrt((diffX * diffX) + (diffY * diffY));
 				double normeNorth = sqrt(2.0);
 				double scalaire = (diffX * 1) + (diffY * -1);

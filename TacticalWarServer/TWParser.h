@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Parser.h"
 #include "ParserEventListener.h"
@@ -24,7 +24,7 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 	std::map<tw::Player*, Battle*> playerToBattleMap;
 	std::map<int, std::vector<tw::Player*>> teamIdToPlayerList;
 
-	// Liste des clients en mode spectateur (pour mettre � jour la liste des match en cours) :
+	// Liste des clients en mode spectateur (pour mettre à jour la liste des match en cours) :
 	std::vector<ClientState*> spectatorModeClientDiffusionList;
 
 	void notifyPlayingMatchList(ClientState * c = NULL);

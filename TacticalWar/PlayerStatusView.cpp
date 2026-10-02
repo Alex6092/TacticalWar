@@ -1,4 +1,4 @@
-#include "PlayerStatusView.h"
+﻿#include "PlayerStatusView.h"
 #include <StringUtils.h>
 #include "LinkToServer.h"
 
@@ -52,7 +52,7 @@ void PlayerStatusView::onMessageReceived(std::string msg)
 			std::string stateStr = "";
 			if (state == 1)
 			{
-				stateStr = "Connect�";
+				stateStr = "Connecté";
 			}
 			else
 			{

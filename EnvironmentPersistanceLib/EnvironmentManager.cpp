@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "EnvironmentManager.h"
 #include <stdlib.h>
 #include <iostream>
@@ -108,8 +108,8 @@ tw::Environment * tw::EnvironmentManager::loadEnvironment(int environmentId)
 		fclose(fichier);
 	
 
-	// Equipe éditeur de map : Il faudra charger les données depuis le fichier environmentId.txt
-	// situé dans le dossier /assets/map/ et construire une variable de type Environment que vous retournerez.
+	// Equipe Ã©diteur de map : Il faudra charger les donnÃ©es depuis le fichier environmentId.txt
+	// situÃ© dans le dossier /assets/map/ et construire une variable de type Environment que vous retournerez.
 	
 	//createTestEnvironmentIfNotExists();
 	return environment;
@@ -117,8 +117,8 @@ tw::Environment * tw::EnvironmentManager::loadEnvironment(int environmentId)
 
 void tw::EnvironmentManager::saveEnvironment(Environment * environment)
 {
-	// Equipe éditeur de map : Il faudra enregistrer dans un fichier la map
-	// passée en paramètre dans le dossier /assets/map/.
+	// Equipe Ã©diteur de map : Il faudra enregistrer dans un fichier la map
+	// passÃ©e en paramÃ¨tre dans le dossier /assets/map/.
 	// L'extension du fichier sera .txt
 	FILE* fichier;
 	std::string filepath = "./assets/map/" + std::to_string(environment->getId()) + ".txt";
@@ -131,7 +131,7 @@ void tw::EnvironmentManager::saveEnvironment(Environment * environment)
 		
 	
 		
-		for (int i = 0; i < environment->getWidth(); i++) //pour avoir les coordonnées de chaque cellule
+		for (int i = 0; i < environment->getWidth(); i++) //pour avoir les coordonnÃ©es de chaque cellule
 		{
 			for (int j = 0; j < environment->getHeight(); j++)
 			{

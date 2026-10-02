@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <vector>
 #include <Player.h>
@@ -25,7 +25,7 @@ namespace tw
 	{
 	private:
 		//-------------------------------------------------------
-		// Ne pas se soucier de �a :
+		// Ne pas se soucier de ça :
 		std::vector<Player> team1Client;
 		std::vector<Player> team2Client;
 		void clientSetTeam1(std::vector<Player> team)

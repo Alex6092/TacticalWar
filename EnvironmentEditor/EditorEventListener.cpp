@@ -1,4 +1,4 @@
-#include "EditorEventListener.h"
+ï»¿#include "EditorEventListener.h"
 #include "EditorUI.h"
 
 #include <iostream>
@@ -16,8 +16,8 @@ EditorEventListener::~EditorEventListener()
 
 void EditorEventListener::onCellClicked(int x, int y)
 {	
-	// Clic sur la cellule X;Y indique à l'éditeur 
-	// qu'il faut modifier l'environnement à cette position
+	// Clic sur la cellule X;Y indique Ã  l'Ã©diteur 
+	// qu'il faut modifier l'environnement Ã  cette position
 	hmi->editCell(x, y);
 }
 

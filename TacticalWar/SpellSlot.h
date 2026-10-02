@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <TGUI/TGUI.hpp>
 #include <BaseCharacterModel.h>
@@ -60,10 +60,10 @@ public:
 			text->setMaximumTextWidth(200);
 
 			std::string str = "";
-			str += model->getSpellName(attackNumber) + " (Coût : " + std::to_string(model->getAttackPACost(attackNumber)) + " PA)\n";
+			str += model->getSpellName(attackNumber) + " (CoÃ»t : " + std::to_string(model->getAttackPACost(attackNumber)) + " PA)\n";
 			if (model->getAttackCooldown(attackNumber) > 0) str += "Interval de relance : " + std::to_string(model->getAttackCooldown(attackNumber)) + " tour(s)\n";
-			str += "Portée min : " + std::to_string(model->getSpellMinPO(attackNumber)) + "\n";
-			str += "Portée max : " + std::to_string(model->getSpellMaxPO(attackNumber)) + "\n";
+			str += "PortÃ©e min : " + std::to_string(model->getSpellMinPO(attackNumber)) + "\n";
+			str += "PortÃ©e max : " + std::to_string(model->getSpellMaxPO(attackNumber)) + "\n";
 
 			std::string zoneType = "Undefined"; 
 			
@@ -82,7 +82,7 @@ public:
 				break;
 
 			case TypeZoneLaunch::STAR:
-				zoneType = "En étoile";
+				zoneType = "En Ã©toile";
 				break;
 			}
 			str += "Type de lancer : " + zoneType + "\n";

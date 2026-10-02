@@ -1,4 +1,4 @@
-#include <PlayerManager.h>
+ï»¿#include <PlayerManager.h>
 #include <iostream>
 #include <string>
 #include <map>
@@ -63,7 +63,7 @@ int main(int argc, char ** argv)
 			for (int i = 0; i < equipe; i++)
 			{
 				if (teamIdToPlayers == TeamRest) {
-					// Si une équipe n'a pas d'adversaire on mes l'équipe sur le banc sinon on l'a fait joué contre une autre équipe.
+					// Si une Ã©quipe n'a pas d'adversaire on mes l'Ã©quipe sur le banc sinon on l'a fait jouÃ© contre une autre Ã©quipe.
 					if (TeamRest.find(indexTeam + 1) == TeamRest.end())
 					{
 						indexTeam = TeamRest.size();
@@ -76,9 +76,9 @@ int main(int argc, char ** argv)
 					{
 						cout << "Tour " << indexTour << " - ";
 						cout << "equipe " << TeamRest[indexTeam][0]->getTeamNumber() << " vs " << "equipe " << TeamRest[indexTeam + 1][0]->getTeamNumber() << endl;
-						// On force la 1ere equipe à win.
+						// On force la 1ere equipe Ã  win.
 						TeamWinMatch[i+1] = TeamRest[indexTeam];
-						// On force la seconde à lose.
+						// On force la seconde Ã  lose.
 						TeamLosMatch[i+1] = TeamRest[indexTeam + 1];
 						indexTeam += 2;
 					}
@@ -132,7 +132,7 @@ int main(int argc, char ** argv)
 							if (TeamRest.size() & 1)
 							{
 								idmax = 1;
-								// TODO calcul à faire. (ptetre)
+								// TODO calcul Ã  faire. (ptetre)
 							}
 							// Tant qu'il ne reste pas une equipe en jeu onn continu de faire des matchs.
 							if (TeamRest.size() == 1) {

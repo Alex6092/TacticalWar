@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
@@ -26,19 +26,19 @@ public:
 		return "./assets/Protecteur/";
 	}
 
-	// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+	// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 	virtual int getBaseMaxLife()
 	{
 		return 75;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePa()
 	{
 		return 6;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePm()
 	{
 		return 3;
@@ -125,31 +125,31 @@ public:
 	{
 		BaseCharacterModel::turnStart();
 
-		// Décrémentation des cooldowns :
+		// DÃ©crÃ©mentation des cooldowns :
 		if (compt1 > 0)
 			compt1--;
 	}
 
-	//Passif : +3 HP sur soi-même pour chaque auto attaque
+	//Passif : +3 HP sur soi-mÃªme pour chaque auto attaque
 	virtual std::vector<tw::AttackDamageResult> doAttack1(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 1 : Réanimation (Mana : 5 / Ciblé / DPS : 0 / Cd : usage unique)
+	//Sort 1 : RÃ©animation (Mana : 5 / CiblÃ© / DPS : 0 / Cd : usage unique)
 	virtual std::vector<tw::AttackDamageResult> doAttack2(int targetX, int targetY)
 	{
 
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 2 : Heal (Mana : 5 / Ciblé / Heal : +20% des HP max / Cd : 3t / )
+	//Sort 2 : Heal (Mana : 5 / CiblÃ© / Heal : +20% des HP max / Cd : 3t / )
 	virtual std::vector<tw::AttackDamageResult> doAttack3(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 3 : Purification d'âme (Mana : 2 / Pigme (4) / DPS : 10 / Cd : 2t) Supprime 1 tour de malus chez les alliés touchés
+	//Sort 3 : Purification d'Ã¢me (Mana : 2 / Pigme (4) / DPS : 10 / Cd : 2t) Supprime 1 tour de malus chez les alliÃ©s touchÃ©s
 	virtual std::vector<tw::AttackDamageResult> doAttack4(int targetX, int targetY)
 	{
 		std::vector<tw::AttackDamageResult> result;
@@ -164,7 +164,7 @@ public:
 		return result;
 	}
 
-	//Auto attaque (Mana : 0 / Corps à corps / DPS : 5 / Cd : 0t)
+	//Auto attaque (Mana : 0 / Corps Ã  corps / DPS : 5 / Cd : 0t)
 	virtual std::vector<tw::AttackDamageResult> doAttack5(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
@@ -180,7 +180,7 @@ public:
 	}
 
 
-	// Méthodes rajoutées :
+	// MÃ©thodes rajoutÃ©es :
 
 	virtual std::string getClassName()
 	{
@@ -189,7 +189,7 @@ public:
 
 	virtual std::string getClassDescription()
 	{
-		return "Qui vise à protéger, à sauvegarder : Société protectrice des animaux. Qui marque un désir de protection condescendante : Prendre un ton protecteur. Se dit d'un système qui, par des prohibitions, des taxes à l'entrée sur les produits étrangers, favorise l'industrie nationale.";
+		return "Qui vise Ã  protÃ©ger, Ã  sauvegarder : SociÃ©tÃ© protectrice des animaux. Qui marque un dÃ©sir de protection condescendante : Prendre un ton protecteur. Se dit d'un systÃ¨me qui, par des prohibitions, des taxes Ã  l'entrÃ©e sur les produits Ã©trangers, favorise l'industrie nationale.";
 	}
 
 	virtual std::string getClassIconPath()

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
@@ -26,19 +26,19 @@ public:
 		return "./assets/Warrior/";
 	}
 
-	// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+	// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 	virtual int getBaseMaxLife()
 	{
 		return 95;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePa()
 	{
 		return 6;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePm()
 	{
 		return 3;
@@ -125,12 +125,12 @@ public:
 	{
 		BaseCharacterModel::turnStart();
 
-		// Décrémentation des cooldowns :
+		// DÃ©crÃ©mentation des cooldowns :
 		if (compt1 > 0)
 			compt1--;
 	}
 
-	//Passif : -50% d'HP -> +15% de dégâts ; -35% d'HP -> +25% de dégâts
+	//Passif : -50% d'HP -> +15% de dÃ©gÃ¢ts ; -35% d'HP -> +25% de dÃ©gÃ¢ts
 	virtual std::vector<tw::AttackDamageResult> doAttack1(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
@@ -142,7 +142,7 @@ public:
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 2 : Rempart (Mana : 4 / Zone 3x3 autour + Soi-même / DPS : 0 / Cd : 4t) : -30% de dégâts reçus sur soi-même / -15% de dégâts reçus sur les alliés
+	//Sort 2 : Rempart (Mana : 4 / Zone 3x3 autour + Soi-mÃªme / DPS : 0 / Cd : 4t) : -30% de dÃ©gÃ¢ts reÃ§us sur soi-mÃªme / -15% de dÃ©gÃ¢ts reÃ§us sur les alliÃ©s
 	virtual std::vector<tw::AttackDamageResult> doAttack3(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
@@ -163,7 +163,7 @@ public:
 		return result;
 	}
 
-	//Auto attaque (Mana : 0 / Corps à corps / DPS : 5 / Cd : 0t)
+	//Auto attaque (Mana : 0 / Corps Ã  corps / DPS : 5 / Cd : 0t)
 	virtual std::vector<tw::AttackDamageResult> doAttack5(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
@@ -178,7 +178,7 @@ public:
 		compt3 = 1;
 	}
 
-	// Méthodes rajoutées :
+	// MÃ©thodes rajoutÃ©es :
 
 	virtual std::string getClassName()
 	{
@@ -187,7 +187,7 @@ public:
 
 	virtual std::string getClassDescription()
 	{
-		return "Un guerrier est une personne spécialisée dans le combat ou la guerre, en particulier dans le contexte d'une société de culture guerrière tribale ou basée sur le clan qui reconnaît une classe ou une caste de guerriers distincte.";
+		return "Un guerrier est une personne spÃ©cialisÃ©e dans le combat ou la guerre, en particulier dans le contexte d'une sociÃ©tÃ© de culture guerriÃ¨re tribale ou basÃ©e sur le clan qui reconnaÃ®t une classe ou une caste de guerriers distincte.";
 	}
 
 	virtual std::string getClassIconPath()

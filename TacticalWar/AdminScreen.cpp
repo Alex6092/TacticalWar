@@ -1,4 +1,4 @@
-#include "AdminScreen.h"
+ï»¿#include "AdminScreen.h"
 #include "LinkToServer.h"
 #include <Match.h>
 #include "MatchView.h"
@@ -89,13 +89,13 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	matchCreate->setInheritedFont(font);
 	matchCreate->setTextSize(20);
 	matchCreate->getRenderer()->setTextColor(sf::Color::Yellow);
-	matchCreate->setText("Matchs créés :");
+	matchCreate->setText("Matchs crÃ©Ã©s :");
 
 	matchEnd = tgui::Label::create();
 	matchEnd->setInheritedFont(font);
 	matchEnd->setTextSize(20);
 	matchEnd->getRenderer()->setTextColor(sf::Color::Yellow);
-	matchEnd->setText("Matchs terminés :");
+	matchEnd->setText("Matchs terminÃ©s :");
 
 	createMatch = tgui::Button::create();
 	createMatch->setSize(150, 75);
@@ -284,7 +284,7 @@ void AdminScreen::onMessageReceived(std::string msg)
 			int teamId = std::atoi(teamData[0].c_str());
 			std::string teamInfo = teamData[1];
 
-			std::vector<tw::Player> team = tw::Match::deserializeTeam(teamInfo, '¨', '^');
+			std::vector<tw::Player> team = tw::Match::deserializeTeam(teamInfo, 'Â¨', '^');
 
 			teamIdToPlayer[teamId].clear();
 			teamIdToPlayer[teamId] = team;

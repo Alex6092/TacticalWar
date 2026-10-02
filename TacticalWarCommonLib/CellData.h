@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Point2D.h"
 
 namespace tw
@@ -10,10 +10,10 @@ namespace tw
 		bool isObstacle;
 
 		// Valeurs pour teamStartPoint :
-		// - 0 = Pas un point de départ
-		// - 1 = Point de départ de l'équipe 1
-		// - 2 = Point de départ de l'équipe 2
-		// - Par défaut = Pas un point de départ
+		// - 0 = Pas un point de dÃ©part
+		// - 1 = Point de dÃ©part de l'Ã©quipe 1
+		// - 2 = Point de dÃ©part de l'Ã©quipe 2
+		// - Par dÃ©faut = Pas un point de dÃ©part
 		int teamStartPoint;
 
 	public:

@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 #include <MoveActionAnimationEventListener.h>
 #include "BattleActionToAnimation.h"
 #include "IScreenActionCallback.h"
@@ -83,7 +83,7 @@ public:
 
 			spellSound.play();
 
-			screen->applyCharacterLaunchSpell(persoId, x, y, spellId);	// Notifie le screen pour affichage dans les ÈvÈnements de combat ...
+			screen->applyCharacterLaunchSpell(persoId, x, y, spellId);	// Notifie le screen pour affichage dans les √©v√©nements de combat ...
 			firstUpdate = false;
 		}
 
@@ -137,7 +137,7 @@ public:
 			for (int i = 0; i < impactedEntities.size(); i++)
 			{
 				impactedEntities[i].getCharacter()->resetAnimation();
-				impactedEntities[i].getCharacter()->modifyCurrentLife(-impactedEntities[i].getDamage());	// Applique les dÈgats ...
+				impactedEntities[i].getCharacter()->modifyCurrentLife(-impactedEntities[i].getDamage());	// Applique les d√©gats ...
 			}
 			notifyAnimationFinished(0);
 			delete this;

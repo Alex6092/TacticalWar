@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
@@ -30,19 +30,19 @@ public:
 		return "./assets/Mage/";
 	}
 
-	// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+	// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 	virtual int getBaseMaxLife()
 	{
 		return 80;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePa()
 	{
 		return 6;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePm()
 	{
 		return 3;
@@ -129,18 +129,18 @@ public:
 	{
 		BaseCharacterModel::turnStart();
 
-		// Décrémentation des cooldowns :
+		// DÃ©crÃ©mentation des cooldowns :
 		if (compt1 > 0)
 			compt1--;
 	}
 
-	//Passif : Réduction de mana pour les alliés dans la zone 3x3
+	//Passif : RÃ©duction de mana pour les alliÃ©s dans la zone 3x3
 	virtual std::vector<tw::AttackDamageResult> doAttack1(int targetX, int targetY) // appel class  effet
 	{
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 1 : Boule de feu (Mana : 4 / Zone étoile / DPS : 15-10(45%-25% de brûlure / Cd : 3t)
+	//Sort 1 : Boule de feu (Mana : 4 / Zone Ã©toile / DPS : 15-10(45%-25% de brÃ»lure / Cd : 3t)
 	virtual std::vector<tw::AttackDamageResult> doAttack2(int targetX, int targetY)
 	{
 		
@@ -153,7 +153,7 @@ public:
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 3 : Blizzard (Mana : 3 / Joueur au centre : carré de 3x3 autour du joueur / DPS : )
+	//Sort 3 : Blizzard (Mana : 3 / Joueur au centre : carrÃ© de 3x3 autour du joueur / DPS : )
 	virtual std::vector<tw::AttackDamageResult> doAttack4(int targetX, int targetY)
 	{
 		std::vector<tw::AttackDamageResult> result;
@@ -182,7 +182,7 @@ public:
 	}
 
 
-	// Méthodes rajoutées :
+	// MÃ©thodes rajoutÃ©es :
 
 	virtual std::string getClassName()
 	{
@@ -191,7 +191,7 @@ public:
 
 	virtual std::string getClassDescription()
 	{
-		return "Prêtres officiels perses. À l'époque achéménide, Darius Ier renverse le mage mède Gaumâta, qui vient de se proclamer roi de l'empire perse. Les mages exercent le monopole sacerdotal. Selon Xénophon, c'est Cyrus II le Grand qui installa officiellement les mages de Perse.";
+		return "PrÃªtres officiels perses. Ã€ l'Ã©poque achÃ©mÃ©nide, Darius Ier renverse le mage mÃ¨de GaumÃ¢ta, qui vient de se proclamer roi de l'empire perse. Les mages exercent le monopole sacerdotal. Selon XÃ©nophon, c'est Cyrus II le Grand qui installa officiellement les mages de Perse.";
 	}
 
 	virtual std::string getClassIconPath()

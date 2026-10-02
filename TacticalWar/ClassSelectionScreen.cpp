@@ -1,4 +1,4 @@
-#include "ClassSelectionScreen.h"
+ï»¿#include "ClassSelectionScreen.h"
 #include "LinkToServer.h"
 #include <Match.h>
 #include "MatchView.h"
@@ -33,7 +33,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 
 	subtitle.setFont(font);
 	subtitle.setCharacterSize(32);
-	subtitle.setString("Sélection de la classe");
+	subtitle.setString("SÃ©lection de la classe");
 	subtitle.setFillColor(sf::Color::Red);
 	subtitle.setOutlineColor(sf::Color(255, 215, 0));
 	subtitle.setOutlineThickness(1.5);
@@ -262,7 +262,7 @@ void ClassSelectionScreen::setClassView()
 	
 	std::string pm = std::to_string(model->getBasePm());
 	tgui::Label::Ptr pmLabel = gui->get<tgui::Label>("pmLabel");
-	pmLabel->setText("Point de déplacement: " + pm);
+	pmLabel->setText("Point de dÃ©placement: " + pm);
 	pmLabel->setTextSize(frontsize2);
 	pmLabel->setHorizontalAlignment(Horizontale_AlignementRight);
 
@@ -282,7 +282,7 @@ void ClassSelectionScreen::setClassView()
 
 	std::string def = std::to_string(model->getBaseDefense());
 	tgui::Label::Ptr defLabel = gui->get<tgui::Label>("defLabel");
-	defLabel->setText("Défense : " + def);
+	defLabel->setText("DÃ©fense : " + def);
 	defLabel->setTextSize(frontsize2);
 	defLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Right);
 
@@ -500,14 +500,14 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 {
 	sf::String m = msg;
 
-	// Le status des joueurs est géré dans PlayerStatusView (widget autonome)
+	// Le status des joueurs est gÃ©rÃ© dans PlayerStatusView (widget autonome)
 
-	// Choix classe verrouillé :
+	// Choix classe verrouillÃ© :
 	if (m.substring(0, 2) == "PO")
 	{
 		tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
 		lockButton->setEnabled(false);
-		lockButton->setText("Choix verrouillé");
+		lockButton->setText("Choix verrouillÃ©");
 		tgui::Button::Ptr previousButton = gui->get<tgui::Button>("buttonPrecedent");
 		previousButton->setEnabled(false);
 		previousButton->setVisible(false);

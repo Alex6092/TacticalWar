@@ -1,4 +1,4 @@
-// pch.h : Il s'agit d'un fichier d'en-tête précompilé.
+﻿// pch.h : Il s'agit d'un fichier d'en-tête précompilé.
 // Les fichiers listés ci-dessous sont compilés une seule fois, ce qui améliore les performances de génération des futures builds.
 // Cela affecte également les performances d'IntelliSense, notamment la complétion du code et de nombreuses fonctionnalités de navigation du code.
 // Toutefois, les fichiers listés ici sont TOUS recompilés si l'un d'entre eux est mis à jour entre les builds.

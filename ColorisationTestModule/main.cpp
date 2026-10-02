@@ -1,4 +1,4 @@
-
+﻿
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 	sf::Sprite mask;
 	sf::Uint8  *pixels = new sf::Uint8[800 * 600 * 4];
 
-	// Passage en image pour acc�der aux pixels :
+	// Passage en image pour accéder aux pixels :
 	sf::Image src = Source.copyToImage(); 
 	sf::Image img = Assets.copyToImage();
 

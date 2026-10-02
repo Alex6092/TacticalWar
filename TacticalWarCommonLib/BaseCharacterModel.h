@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Environment.h"
 #include <vector>
 #include "MoveActionAnimationEventListener.h"
@@ -85,7 +85,7 @@ namespace tw
 		int colorNumber;	// Colorisation
 
 		//---------------------------------
-		// Pour gérer le déplacement :
+		// Pour gÃ©rer le dÃ©placement :
 		float interpolatedX;
 		float interpolatedY;
 
@@ -152,7 +152,7 @@ namespace tw
 		MoveActionAnimationEventListener * currentMoveCallback;
 
 
-		// Liste des effets appliqués sur le personnage :
+		// Liste des effets appliquÃ©s sur le personnage :
 		std::vector<Effect *> appliedEffects;
 
 		// Gestion du mouvement (server side) :
@@ -265,7 +265,7 @@ namespace tw
 			return appliedEffects;
 		}
 
-		// Méthode permettant d'appliquer des effets sur le personnage
+		// MÃ©thode permettant d'appliquer des effets sur le personnage
 		void addEffects(std::vector<Effect*> effects)
 		{
 			// TODO ...
@@ -343,7 +343,7 @@ namespace tw
 		virtual int getClassId() = 0;
 		virtual std::string getGraphicsPath() = 0;
 
-		// Méthodes rajoutées :
+		// MÃ©thodes rajoutÃ©es :
 		virtual std::string getClassName() = 0;
 		virtual std::string getClassDescription() = 0;
 		virtual std::string getClassIconPath() = 0;
@@ -423,7 +423,7 @@ namespace tw
 		virtual Animation getSpell4AttackerAnimation() = 0;
 		//----------------------------------------------------------
 
-		// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+		// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 		virtual int getBaseMaxLife() = 0;
 		virtual int getBaseAttack() = 0;
 		virtual int getBaseDefense() = 0;
@@ -431,8 +431,8 @@ namespace tw
 		virtual int getBasePm() = 0;
 
 
-		// Ces méthodes permettent de lancer les attaques 
-		// (c'est à dire appliquer le cooldown quand il y en a un, 
+		// Ces mÃ©thodes permettent de lancer les attaques 
+		// (c'est Ã  dire appliquer le cooldown quand il y en a un, 
 		// trouver les cibles et leur appliquer les effets, etc...)
 		virtual std::vector<AttackDamageResult> doAttack1(int targetX, int targetY) = 0;
 		virtual std::vector<AttackDamageResult> doAttack2(int targetX, int targetY) = 0;
@@ -506,12 +506,12 @@ namespace tw
 
 			if (currentTargetX >= 0 && currentTargetY >= 0)
 			{
-				// 1) Déterminer la direction
-				// 2) Effectuer le mouvement dans la bonne direction sur les coordonnées interpolées
-				// 3) Déterminer si le mouvement vers la cible est terminé
-				// Si le mouvement est terminé :
-				//		4) Mettre à jour la position courante
-				//		5) Appeler setNoTargetPosition si le mouvement est terminé
+				// 1) DÃ©terminer la direction
+				// 2) Effectuer le mouvement dans la bonne direction sur les coordonnÃ©es interpolÃ©es
+				// 3) DÃ©terminer si le mouvement vers la cible est terminÃ©
+				// Si le mouvement est terminÃ© :
+				//		4) Mettre Ã  jour la position courante
+				//		5) Appeler setNoTargetPosition si le mouvement est terminÃ©
 
 				float moveXVector = 0;
 				float moveYVector = 0;
@@ -552,7 +552,7 @@ namespace tw
 
 					setNoTargetPosition();
 
-					// On ne notifie qu'à la fin du déplacement (but : éviter les freeze à chaque
+					// On ne notifie qu'Ã  la fin du dÃ©placement (but : Ã©viter les freeze Ã  chaque
 					// changement de cellule).
 					if (path.size() == 0)
 						notifyPositionChanged(currentX, currentY);
@@ -572,7 +572,7 @@ namespace tw
 			return lastMoveEndTime;
 		}
 
-		// Le mouvement n'est pas terminé si le temps n'est pas dépassé.
+		// Le mouvement n'est pas terminÃ© si le temps n'est pas dÃ©passÃ©.
 		inline bool isMoving()
 		{
 			return lastMoveEndTime > std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -693,8 +693,8 @@ namespace tw
 		}
 
 		// A redefinir dans les classes filles pour la gestion des cooldowns :
-		// Cette méthode ne prend pas en compte le nombre de PA disponible.
-		// Elle ne permet que de savoir si le cooldown est passé.
+		// Cette mÃ©thode ne prend pas en compte le nombre de PA disponible.
+		// Elle ne permet que de savoir si le cooldown est passÃ©.
 		virtual bool canDoAttack(int spellId) {
 			return true;
 		}

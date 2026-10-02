@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <BaseCharacterModel.h>
 
@@ -17,7 +17,7 @@ namespace tw
 			return "./assets/Warrior/";
 		}
 
-		// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+		// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 		virtual int getBaseMaxLife()
 		{
 			return 500;
@@ -75,7 +75,7 @@ namespace tw
 		}
 
 
-		// Méthodes rajoutées :
+		// MÃ©thodes rajoutÃ©es :
 
 		virtual std::string getClassName()
 		{

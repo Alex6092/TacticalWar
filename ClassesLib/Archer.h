@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
@@ -27,19 +27,19 @@ public:
 		return "./assets/Archer/";
 	}
 
-	// Retourne la valeur du maximum de point de vie de base (sans altération d'effet). C'est une caractéristique de base de la classe.
+	// Retourne la valeur du maximum de point de vie de base (sans altÃ©ration d'effet). C'est une caractÃ©ristique de base de la classe.
 	virtual int getBaseMaxLife()
 	{
 		return 80;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePa()
 	{
 		return 6;
 	}
 
-	//Fonction à ajouter
+	//Fonction Ã  ajouter
 	virtual int getBasePm()
 	{
 		return 4;
@@ -126,31 +126,31 @@ public:
 	{
 		BaseCharacterModel::turnStart();
 
-		// Décrémentation des cooldowns :
+		// DÃ©crÃ©mentation des cooldowns :
 		if (compt1 > 0)
 			compt1--;
 	}
 
-	//Passif : +1 de PD - fonction inutilisée
+	//Passif : +1 de PD - fonction inutilisÃ©e
 	virtual std::vector<tw::AttackDamageResult> doAttack1(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 1 : Flèche toxique : (Mana : 4 / Ligne 3x1 / DPS : 10 / Malus -3 HP / tour pendant 2 tour / Cd : 4t)
+	//Sort 1 : FlÃ¨che toxique : (Mana : 4 / Ligne 3x1 / DPS : 10 / Malus -3 HP / tour pendant 2 tour / Cd : 4t)
 	virtual std::vector<tw::AttackDamageResult> doAttack2(int targetX, int targetY)
 	{
 
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 2 : Flèche repousse (Mana : 3 / Ligne 3x1 / DPS : 4 / Repousse de 2 cases / Cd : 3t)
+	//Sort 2 : FlÃ¨che repousse (Mana : 3 / Ligne 3x1 / DPS : 4 / Repousse de 2 cases / Cd : 3t)
 	virtual std::vector<tw::AttackDamageResult> doAttack3(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
 	}
 
-	//Sort 3 : Tir précis (Mana : 2 / Ligne 4x1 / DPS : 7 / Cd : 1t)
+	//Sort 3 : Tir prÃ©cis (Mana : 2 / Ligne 4x1 / DPS : 7 / Cd : 1t)
 	virtual std::vector<tw::AttackDamageResult> doAttack4(int targetX, int targetY)
 	{
 		std::vector<tw::AttackDamageResult> result;
@@ -165,7 +165,7 @@ public:
 		return result;
 	}
 
-	//Auto attaque (Mana : 0 / Corps à corps / DPS : 5 / Cd : 0t)
+	//Auto attaque (Mana : 0 / Corps Ã  corps / DPS : 5 / Cd : 0t)
 	virtual std::vector<tw::AttackDamageResult> doAttack5(int targetX, int targetY)
 	{
 		return std::vector<tw::AttackDamageResult>();
@@ -181,7 +181,7 @@ public:
 	}
 
 
-	// Méthodes rajoutées :
+	// MÃ©thodes rajoutÃ©es :
 
 	virtual std::string getClassName()
 	{
@@ -190,7 +190,7 @@ public:
 
 	virtual std::string getClassDescription()
 	{
-		return "Lors de la bataille d'Azincourt en 1415, les archers, à l'abri de positions fortifiées, harcèlent le corps de bataille français qui tente de répondre par un assaut frontal. Embourbée et désorganisée, l'armée française subit de lourdes pertes.";
+		return "Lors de la bataille d'Azincourt en 1415, les archers, Ã  l'abri de positions fortifiÃ©es, harcÃ¨lent le corps de bataille franÃ§ais qui tente de rÃ©pondre par un assaut frontal. EmbourbÃ©e et dÃ©sorganisÃ©e, l'armÃ©e franÃ§aise subit de lourdes pertes.";
 	}
 
 	virtual std::string getClassIconPath()

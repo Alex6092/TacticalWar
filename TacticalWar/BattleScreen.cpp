@@ -1,4 +1,4 @@
-#include "BattleScreen.h"
+ï»¿#include "BattleScreen.h"
 #include "TestCharacterModel.h"
 #include <Pathfinder.h>
 #include <ZoneAndSightCalculator.h>
@@ -363,7 +363,7 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 				setSelectedSpell(-1);
 			}
 		}
-		// Déplacement :
+		// DÃ©placement :
 		else if (m != NULL && !m->hasTargetPosition())
 		{
 			bool isInPathZone = false;
@@ -737,7 +737,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 
 		if (characters[playerId] == activeCharacter)
 		{			
-			msg = "C'est à votre tour de jouer !";
+			msg = "C'est Ã  votre tour de jouer !";
 		}
 		else
 		{
@@ -840,7 +840,7 @@ void tw::BattleScreen::applyEndOfBattle(int winnerTeam)
 		}
 	}
 
-	msg += " ont gagné !";
+	msg += " ont gagnÃ© !";
 
 	tgui::Label::Ptr endLabel = tgui::Label::create(msg);
 	endLabel->setInheritedFont(font);
@@ -897,7 +897,7 @@ void tw::BattleScreen::applyCharacterDie(int idPerso)
 
 void tw::BattleScreen::applyCharacterLaunchSpell(int persoId, int x, int y, int spellId)
 {
-	// TODO : Ajouter un log des événements de combat ...
+	// TODO : Ajouter un log des Ã©vÃ©nements de combat ...
 }
 
 tw::BaseCharacterModel* tw::BattleScreen::getCharacter(int persoId)

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "IsometricRenderer.h"
 #include <CharacterView.h>
 #include <SpellView.h>
@@ -203,7 +203,7 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 				sf::Shader::bind(&waterShader);
 			}
 
-			int isoX = (i*120 - j*120)/2; // Cordonn�es
+			int isoX = (i*120 - j*120)/2; // Cordonnées
 			int isoY = (i*60 + j*60)/2;
 
 			sf::Color toApply = sf::Color::White;

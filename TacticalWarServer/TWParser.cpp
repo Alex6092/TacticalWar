@@ -1,4 +1,4 @@
-#include "TWParser.h"
+ï»¿#include "TWParser.h"
 #include <iostream>
 
 #include "TcpServer.h"
@@ -99,7 +99,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 		buffer.push_back(c);
 	}
 
-	// Implémentation du protocole :
+	// ImplÃ©mentation du protocole :
 	if (hasCompleteMessage(client))
 	{
 		std::string toParse = extractCompleteMessageFromBuffer(client);
@@ -142,7 +142,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 						{
 							std::cout << "Connexion du joueur " << pseudo.c_str() << std::endl;
 
-							// Si compte déjà utilisé : déconnexion du client précédent
+							// Si compte dÃ©jÃ  utilisÃ© : dÃ©connexion du client prÃ©cÃ©dent
 							if (connectedPlayerMap.find(p) != connectedPlayerMap.end())
 							{
 								std::cout << "Compte deja utilise, kick du client precedent" << std::endl;
@@ -175,12 +175,12 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 								}
 								else
 								{
-									// Envoi vers l'écran de choix de classe
+									// Envoi vers l'Ã©cran de choix de classe
 									TcpServer<TWParser, ClientState>::Send(client, (char*)"HC\n", 3);
 									p->setHasJoinBattle(true);
 									notifyMatchConnectedPlayerChanged(match);
 
-									// Si la classe a déjà été verrouillée précédemment :
+									// Si la classe a dÃ©jÃ  Ã©tÃ© verrouillÃ©e prÃ©cÃ©demment :
 									if (p->getCharacter() != NULL)
 									{
 										notifyClassChoiceLocked(client);
@@ -190,7 +190,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 							else
 							{
 								// Aucun match pour le moment :
-								// Envoi vers l'écran d'attente de match
+								// Envoi vers l'Ã©cran d'attente de match
 								TcpServer<TWParser, ClientState>::Send(client, (char*)"HW\n", 3);
 							}
 						}
@@ -226,20 +226,20 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 		{
 			notifyPlayingMatchList(client);
 		}
-		// Demande de la liste des équipes :
+		// Demande de la liste des Ã©quipes :
 		else if (StringUtils::startsWith(toParse, "TL"))
 		{
 			notifyTeamList(client);
 		}
-		// Demande de la liste des match créés (planifiés et en cours) :
+		// Demande de la liste des match crÃ©Ã©s (planifiÃ©s et en cours) :
 		else if (StringUtils::startsWith(toParse, "MC"))
 		{
 			notifyPlanifiedAndPlayingMatch(client);
 		}
-		// Demande la création d'un match :
+		// Demande la crÃ©ation d'un match :
 		else if (StringUtils::startsWith(toParse, "CM"))
 		{
-			// Seul un administrateur est autorisé à réaliser cette opération :
+			// Seul un administrateur est autorisÃ© Ã  rÃ©aliser cette opÃ©ration :
 			if (client->isAdmin())
 			{
 				std::string payload = toParse.substr(2);
@@ -257,7 +257,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 					int team1Status = isTeamAvailableForMatchCreation(team1);
 					int team2Status = isTeamAvailableForMatchCreation(team2);
 
-					// Les 2 equipes sont libres pour un match à venir :
+					// Les 2 equipes sont libres pour un match Ã  venir :
 					if (team1Status == 0 && team2Status == 0)
 					{
 						std::vector<tw::Player*> teamA = teamIdToPlayerList[team1];
@@ -314,7 +314,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 
 									notifyClassChoiceLocked(client);
 									
-									// Si tout le monde est prêt : démarrage du combat.
+									// Si tout le monde est prÃªt : dÃ©marrage du combat.
 									if (everybodyReadyForBattle(m))
 									{
 										Battle * b = new Battle(m);
@@ -332,7 +332,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 				}
 			}
 		}
-		else if (StringUtils::startsWith(toParse, "Cs"))	// Validation position (joueur prêt)
+		else if (StringUtils::startsWith(toParse, "Cs"))	// Validation position (joueur prÃªt)
 		{
 			if (client->getPseudo().size() > 0)
 			{
@@ -357,7 +357,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 						}
 
 
-						// Si tous les joueurs sont prêts : Démarrage du combat
+						// Si tous les joueurs sont prÃªts : DÃ©marrage du combat
 						if (m->allPlayersReady())
 						{
 							if (b != NULL)
@@ -369,7 +369,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 				}
 			}
 		}
-		else if (StringUtils::startsWith(toParse, "CP"))		// Demande un changement de position de départ
+		else if (StringUtils::startsWith(toParse, "CP"))		// Demande un changement de position de dÃ©part
 		{
 			if (client->getPseudo().size() > 0)
 			{
@@ -405,7 +405,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 				}
 			}
 		}
-		else if (StringUtils::startsWith(toParse, "Cm"))	// Demande de déplacement (mouvement)
+		else if (StringUtils::startsWith(toParse, "Cm"))	// Demande de dÃ©placement (mouvement)
 		{
 			if (client->getPseudo().size() > 0)
 			{
@@ -427,7 +427,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 								// Si le personnage a assez de PM :
 								if (p->getCharacter()->hasEnoughPM(path.size()))
 								{
-									// Check si la cellule de début du chemin est adjacente à la celle où se trouve le personnage :
+									// Check si la cellule de dÃ©but du chemin est adjacente Ã  la celle oÃ¹ se trouve le personnage :
 									tw::Point2D firstCell = path.back();
 									int characterX = p->getCharacter()->getCurrentX();
 									int characterY = p->getCharacter()->getCurrentY();
@@ -440,7 +440,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 										(firstCell.getX() == characterX - 1 && firstCell.getY() == characterY)
 										)
 									{
-										// Le déplacement demandé est valide :
+										// Le dÃ©placement demandÃ© est valide :
 										p->getCharacter()->serverSetPath(path);
 
 										std::string str = "Cm" + std::to_string(b->getIdForPlayer(p)) + ";" + data + "\n";
@@ -459,7 +459,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 				}
 			}
 		}
-		else if (StringUtils::startsWith(toParse, "Ct"))	// Le client indique qu'il a terminé son tour
+		else if (StringUtils::startsWith(toParse, "Ct"))	// Le client indique qu'il a terminÃ© son tour
 		{
 			if (client->getPseudo().size() > 0)
 			{
@@ -512,7 +512,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 									// Si le personnage a assez de PA :
 									if (attackPA != -1 && p->getCharacter()->hasEnoughPA(attackPA))
 									{
-										// Check si la cellule ciblée est dans les cellules ciblables :
+										// Check si la cellule ciblÃ©e est dans les cellules ciblables :
 										std::vector<tw::Point2D> targettable = calculateSpellZone(p->getCharacter(), spellId, m, m->getEnvironment());
 										bool isTargettable = false;
 										for (int i = 0; i < targettable.size(); i++)
@@ -720,7 +720,7 @@ void TWParser::switchParticipantToBattleState(Battle * b)
 	for (int i = 0; i < players.size(); i++)
 	{
 		ClientState * c = getClientStateFromPlayer(players[i]);
-		// Si le client est connecté :
+		// Si le client est connectÃ© :
 		if (c != NULL)
 		{
 			enterBattleState(b->getMatch(), c);
@@ -761,7 +761,7 @@ void TWParser::synchronizeBattleState(tw::Match * m, ClientState * c)
 												+ "\n";
 				TcpServer<TWParser, ClientState>::Send(c, (char*)addPlayerStr.c_str(), addPlayerStr.size());
 
-				// Informe le client de son personnage actif (celui qu'il contrôle) :
+				// Informe le client de son personnage actif (celui qu'il contrÃ´le) :
 				if (players[i] == p)
 				{
 					std::string activeCharacterStr = "CS" + std::to_string(i) + "\n";
@@ -854,7 +854,7 @@ void TWParser::notifyClassChoiceLocked(ClientState * c)
 
 //	Valeur de retour = Code d'erreur
 //		0	: La team existe et est disponible.
-//		-1	: La team existe mais est déjà en attente pour commencer un match
+//		-1	: La team existe mais est dÃ©jÃ  en attente pour commencer un match
 //		-2	: La team n'existe pas
 int TWParser::isTeamAvailableForMatchCreation(int teamId)
 {
@@ -870,7 +870,7 @@ int TWParser::isTeamAvailableForMatchCreation(int teamId)
 		for (int i = 0; i < matchs.size(); i++)
 		{
 			tw::Match * match = matchs[i];
-			// Il y a déjà un match en attente de démarrage pour cette équipe ...
+			// Il y a dÃ©jÃ  un match en attente de dÃ©marrage pour cette Ã©quipe ...
 			if (match->getStatus() == tw::MatchStatus::NOT_STARTED || match->getStatus() == tw::MatchStatus::STARTED)
 			{
 				result = -1;
@@ -906,7 +906,7 @@ void TWParser::notifySwitchToClassSelectionToConnectedPlayer(std::vector<tw::Pla
 	for (int i = 0; i < team.size(); i++)
 	{
 		tw::Player * p = team[i];
-		// Notification des clients déjà connectés (entrée en mode choix de classe)
+		// Notification des clients dÃ©jÃ  connectÃ©s (entrÃ©e en mode choix de classe)
 		if (connectedPlayerMap.find(p) != connectedPlayerMap.end())
 		{
 			ClientState * client = connectedPlayerMap[p];
@@ -932,7 +932,7 @@ void TWParser::notifyPlanifiedAndPlayingMatch(ClientState * c)
 
 	matchData = "MC" + matchData + '\n';
 
-	// Si envoi à un client spécifique, envoi uniquement au client passé en paramètre
+	// Si envoi Ã  un client spÃ©cifique, envoi uniquement au client passÃ© en paramÃ¨tre
 	if (c != NULL)
 	{
 		TcpServer<TWParser, ClientState>::Send(c, (char*)matchData.c_str(), matchData.size());
@@ -955,7 +955,7 @@ void TWParser::notifyFinishedMatch(ClientState * c)
 
 	matchData = "MF" + matchData + '\n';
 
-	// Si envoi à un client spécifique, envoi uniquement au client passé en paramètre
+	// Si envoi Ã  un client spÃ©cifique, envoi uniquement au client passÃ© en paramÃ¨tre
 	if (c != NULL)
 	{
 		TcpServer<TWParser, ClientState>::Send(c, (char*)matchData.c_str(), matchData.size());
@@ -979,7 +979,7 @@ void TWParser::notifyTeamList(ClientState * c)
 		
 	
 		data += std::to_string(teamId) + ",";
-		data += tw::Match::serializeTeam(team, '¨', '^');
+		data += tw::Match::serializeTeam(team, 'Â¨', '^');
 
 		i++;
 	}
@@ -1005,12 +1005,12 @@ void TWParser::notifyPlayingMatchList(ClientState * c)
 
 	matchData = "ML" + matchData + '\n';
 
-	// Si envoi à un client spécifique, envoi uniquement au client passé en paramètre
+	// Si envoi Ã  un client spÃ©cifique, envoi uniquement au client passÃ© en paramÃ¨tre
 	if (c != NULL)
 	{
 		TcpServer<TWParser, ClientState>::Send(c, (char*)matchData.c_str(), matchData.size());
 	}
-	// Envoi à tout le monde (mise à jour de la liste suite à une modif)
+	// Envoi Ã  tout le monde (mise Ã  jour de la liste suite Ã  une modif)
 	else
 	{
 		for (int i = 0; i < spectatorModeClientDiffusionList.size(); i++)
