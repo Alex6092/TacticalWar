@@ -76,3 +76,7 @@ AnimationTestModule/x64/
 data/
 x64/Debug/data/
 x64/Release/data/
+x64/*/server.json
+x64/*/client.json
+__pycache__/
+*/x64/

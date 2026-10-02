@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    Imported automatically by every project of the solution.
+    Header-only third-party libraries (nlohmann/json, cpp-httplib, doctest) live in lib/include.
+    The C++/CLI map editor (CLRSupport) is left untouched.
+  -->
+  <PropertyGroup>
+    <TwRootDir>$(MSBuildThisFileDirectory)</TwRootDir>
+    <TwThirdPartyInclude>$(MSBuildThisFileDirectory)lib\include</TwThirdPartyInclude>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(CLRSupport)' != 'true'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(TwThirdPartyInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NOMINMAX;_WIN32_WINNT=0x0A00;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
