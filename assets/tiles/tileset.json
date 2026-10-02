@@ -188,6 +188,17 @@
       "texture": "assets/tiles/generated/stone_volcanic.png",
       "anchor": [70.0, 59.0],
       "generated": true
+    },
+    {
+      "id": "bush_autumn",
+      "name": "Buisson d'automne",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "walkable": false,
+      "blocksLineOfSight": false,
+      "texture": "assets/tiles/generated/bush_autumn.png",
+      "anchor": [66.0, 68.9],
+      "generated": true
     }
   ]
 }

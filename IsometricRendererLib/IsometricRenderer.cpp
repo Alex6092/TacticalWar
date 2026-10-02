@@ -12,7 +12,10 @@ using namespace tw;
 IsometricRenderer::IsometricRenderer(sf::RenderWindow * window)
 {
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/fragment.frag");
-	waterShader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/water-animation.glsl");
+	liquidShaderReady = sf::Shader::isAvailable() && liquidShader.loadFromFile("./assets/shaders/liquid.vert", "./assets/shaders/liquid.frag");
+	reflectionsAvailable = liquidShaderReady;
+	reflectionsDrawn = false;
+	reflections = NULL;
 
 	hasFocus = true;
 	forcedFocus = false;
@@ -35,6 +38,22 @@ IsometricRenderer::IsometricRenderer(sf::RenderWindow * window)
 	this->ellapsedTime = 0;
 	this->hasCamera = false;
 	this->cameraZoom = 1.f;
+}
+
+IsometricRenderer::~IsometricRenderer()
+{
+	delete reflections;
+}
+
+namespace
+{
+	// Surface des liquides (texture Water_01 et ses variantes) : losange de 112 x 56 pixels,
+	// centré un peu sous le centre de la case (l'eau est en contrebas).
+	const sf::Vector2f LIQUID_SURFACE_OFFSET(-1.5f, 7.f);
+	const sf::Vector2f LIQUID_HALF_SIZE(56.f, 28.f);
+	// Les reflets sont symétriques par rapport à une ligne un peu sous le pied des personnages.
+	const float REFLECTION_AXIS = 20.f;
+	const float REFLECTION_STRENGTH = 0.45f;
 }
 
 void IsometricRenderer::manageEvents(Environment * environment, std::vector<BaseCharacterModel*> & characters)
@@ -199,12 +218,23 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 	float centerY = (x + y) * 30.f + 30.f;
 	tileSprite.setPosition(std::floor(centerX - anchorX), std::floor(centerY - anchorY));
 
-	if (tile != NULL && tile->shader == "water")
+	if (tile != NULL && tile->category == TileCategory::LIQUID && liquidShaderReady && texture != &missingTexture)
 	{
-		waterShader.setUniform("u_time", ellapsedTime);
-		waterShader.setUniform("u_widthFactor", (float)1.0);
-		waterShader.setUniform("u_textureHeight", (float)90.0);
-		window->draw(tileSprite, &waterShader);
+		bool lava = tile->shader == "lava";
+		liquidShader.setUniform("texture", sf::Shader::CurrentTexture);
+		liquidShader.setUniform("u_time", ellapsedTime);
+		liquidShader.setUniform("u_surface", sf::Vector2f(centerX, centerY) + LIQUID_SURFACE_OFFSET);
+		liquidShader.setUniform("u_half", LIQUID_HALF_SIZE);
+		liquidShader.setUniform("u_shore", sf::Glsl::Vec4(
+			isLiquid(environment, x + 1, y) ? 0.f : 1.f, isLiquid(environment, x - 1, y) ? 0.f : 1.f,
+			isLiquid(environment, x, y + 1) ? 0.f : 1.f, isLiquid(environment, x, y - 1) ? 0.f : 1.f));
+		liquidShader.setUniform("u_textureSize", sf::Vector2f(texture->getSize()));
+		liquidShader.setUniform("u_resolution", sf::Vector2f(window->getSize()));
+		liquidShader.setUniform("u_lava", lava ? 1.f : 0.f);
+		liquidShader.setUniform("u_reflectionStrength", (reflectionsDrawn && !lava) ? REFLECTION_STRENGTH : 0.f);
+		if (reflections != NULL)
+			liquidShader.setUniform("u_reflection", reflections->getTexture());
+		window->draw(tileSprite, &liquidShader);
 	}
 	else
 	{
@@ -230,6 +260,8 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		view.setCenter((centerX - centerY) * 60.f + 60.f, (centerX + centerY) * 30.f + 30.f);
 	}
 	window->setView(view);
+
+	reflectionsDrawn = renderReflections(environment, characters);
 
 	int width = environment->getWidth();
 	int height = environment->getHeight();
@@ -278,21 +310,117 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 	}
 }
 
+bool IsometricRenderer::isLiquid(Environment * environment, int x, int y)
+{
+	CellData * cell = environment->getMapData(x, y);
+	if (cell == NULL)
+		return false;
+	const TileDef * tile = TileRegistry::get().find(cell->getDisplayTile());
+	return tile != NULL && tile->category == TileCategory::LIQUID;
+}
+
+bool IsometricRenderer::renderReflections(Environment * environment, std::vector<BaseCharacterModel*> & characters)
+{
+	if (!reflectionsAvailable)
+		return false;
+
+	// Obstacles voisins d'un liquide, à refléter. Pas de liquide : rien à faire.
+	int width = environment->getWidth();
+	int height = environment->getHeight();
+	bool anyLiquid = false;
+	std::vector<sf::Vector2i> tall;
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			if (isLiquid(environment, x, y))
+			{
+				anyLiquid = true;
+				continue;
+			}
+			CellData * cell = environment->getMapData(x, y);
+			const TileDef * tile = TileRegistry::get().find(cell->getDisplayTile());
+			if (tile == NULL || tile->category != TileCategory::OBSTACLE)
+				continue;
+			bool nearLiquid = false;
+			for (int dx = -1; dx <= 1 && !nearLiquid; dx++)
+				for (int dy = -1; dy <= 1 && !nearLiquid; dy++)
+					nearLiquid = isLiquid(environment, x + dx, y + dy);
+			if (nearLiquid)
+				tall.push_back(sf::Vector2i(x, y));
+		}
+	}
+	if (!anyLiquid)
+		return false;
+
+	sf::Vector2u size = window->getSize();
+	if (reflections == NULL || reflections->getSize() != size)
+	{
+		delete reflections;
+		reflections = new sf::RenderTexture();
+		if (size.x == 0 || size.y == 0 || !reflections->create(size.x, size.y))
+		{
+			std::cout << "Reflets de l'eau désactivés (texture de rendu indisponible)." << std::endl;
+			delete reflections;
+			reflections = NULL;
+			reflectionsAvailable = false;
+			return false;
+		}
+	}
+
+	reflections->setView(window->getView());
+	reflections->clear(sf::Color::Transparent);
+
+	// Décor : la tuile retournée autour d'une ligne sous le centre de sa case.
+	for (const sf::Vector2i & cell : tall)
+	{
+		const TileDef * tile = TileRegistry::get().find(environment->getMapData(cell.x, cell.y)->getDisplayTile());
+		const sf::Texture & texture = getTileTexture(*tile);
+		if (&texture == &missingTexture)
+			continue;
+		sf::Sprite sprite(texture);
+		sprite.setOrigin(tile->anchorX, tile->anchorY);
+		float centerX = (cell.x - cell.y) * 60.f + 60.f;
+		float centerY = (cell.x + cell.y) * 30.f + 30.f;
+		sprite.setPosition(centerX, centerY + 2 * REFLECTION_AXIS);
+		sprite.setScale(1.f, -1.f);
+		reflections->draw(sprite);
+	}
+
+	for (BaseCharacterModel * model : characters)
+	{
+		if (model->isAlive())
+			drawCharacterSprite(model, *reflections, true);
+	}
+
+	reflections->display();
+	return true;
+}
+
 void IsometricRenderer::drawCharacter(BaseCharacterModel * m, float deltatime)
 {
 	CharacterView & v = getCharacterView(m);
 	v.update(deltatime);
+	drawCharacterSprite(m, *window, false);
+}
+
+void IsometricRenderer::drawCharacterSprite(BaseCharacterModel * m, sf::RenderTarget & target, bool mirrored)
+{
+	CharacterView & v = getCharacterView(m);
 	sf::Sprite * s = v.getImageToDraw();
 	sf::Texture * mask = v.getMaskToDraw();
+	if (s == NULL || mask == NULL)
+		return;
 
 	int isoX = (m->getInterpolatedX() * 120 - m->getInterpolatedY() * 120) / 2;
 	int isoY = (m->getInterpolatedX() * 60 + m->getInterpolatedY() * 60) / 2;
 
-	s->setPosition(isoX + 60, isoY + 30);
+	// Reflet : symétrie par rapport à une ligne sous les pieds.
+	s->setPosition(isoX + 60, isoY + 30 + (mirrored ? 2 * REFLECTION_AXIS : 0));
 	bool flipped = s->getScale().x < 0;
 	float scaleX = 0.4;
 	float scaleY = 0.4;
-	s->setScale(flipped ? -scaleX : scaleX, scaleY);
+	s->setScale(flipped ? -scaleX : scaleX, mirrored ? -scaleY : scaleY);
 
 	sf::Color toApplyarmure1 = sf::Color(0, 166, 214);
 	sf::Color toApplyarmure2 = sf::Color(120, 17, 17);
@@ -304,7 +432,9 @@ void IsometricRenderer::drawCharacter(BaseCharacterModel * m, float deltatime)
 	shader.setUniform("color2", sf::Glsl::Vec4(toApplycheveux));
 	shader.setUniform("color3", sf::Glsl::Vec4(toApplypeau));
 
-	window->draw(*s, &shader);
+	target.draw(*s, &shader);
+	if (mirrored)
+		s->setScale(flipped ? -scaleX : scaleX, scaleY);
 }
 
 void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)

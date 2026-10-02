@@ -83,7 +83,9 @@
     {
       "id": "tree_autumn", "name": "Arbre d'automne", "category": "obstacle", "group": "Obstacles", "base": "tree",
       "ops": [
-        { "op": "recolor", "mask": "leaves", "hue": 24, "sat": 1.15, "val": 0.95 }
+        { "op": "recolor", "mask": "leaves", "hue": 24, "sat": 1.15, "val": 0.95 },
+        { "op": "recolor", "mask": "top", "hue": 40, "sat": 1.05, "val": 1.0 },
+        { "op": "noise", "mask": "top", "amount": 0.08, "scale": 10 }
       ]
     },
     {
@@ -106,6 +108,16 @@
       "ops": [
         { "op": "overlay", "from": "tree", "mask": "leaves", "scale": 0.62, "at": [[0, 16]],
           "tint": { "hue": 95, "sat": 1.0, "val": 0.8 } }
+      ]
+    },
+    {
+      "id": "bush_autumn", "name": "Buisson d'automne", "category": "obstacle", "group": "Obstacles", "base": "grass",
+      "walkable": false, "blocksLineOfSight": false,
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 40, "sat": 1.05, "val": 1.0 },
+        { "op": "noise", "mask": "top", "amount": 0.08, "scale": 10 },
+        { "op": "overlay", "from": "tree", "mask": "leaves", "scale": 0.62, "at": [[0, 16]],
+          "tint": { "hue": 14, "sat": 1.1, "val": 0.85 } }
       ]
     },
     {

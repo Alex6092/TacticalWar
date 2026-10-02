@@ -43,12 +43,22 @@ namespace tw
 
 		void drawCell(Environment * environment, int x, int y);
 		void drawCharacter(BaseCharacterModel * model, float deltatime);
+		void drawCharacterSprite(BaseCharacterModel * model, sf::RenderTarget & target, bool mirrored);
 		void drawCharacterOverlay(BaseCharacterModel * model);
+
+		// Liquides (eau, lave) : shader animé ; reflets des personnages et du décor voisin dans l'eau,
+		// dessinés à l'envers dans une texture de la taille de la fenêtre.
+		bool isLiquid(Environment * environment, int x, int y);
+		bool renderReflections(Environment * environment, std::vector<BaseCharacterModel*> & characters);
+		sf::Shader liquidShader;
+		bool liquidShaderReady;
+		sf::RenderTexture * reflections;
+		bool reflectionsAvailable;
+		bool reflectionsDrawn;
 
 		sf::Vector2i screenCoordinatesToIsoGridCoordinates(float worldX, float worldY);
 
 		sf::Shader shader;
-		sf::Shader waterShader;
 
 		float ellapsedTime;
 
@@ -59,6 +69,7 @@ namespace tw
 
 	public:
 		IsometricRenderer(sf::RenderWindow * window);
+		~IsometricRenderer();
 		inline void modifyWindow(sf::RenderWindow * newWindow) { this->window = newWindow; }
 		virtual void render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime);
 
