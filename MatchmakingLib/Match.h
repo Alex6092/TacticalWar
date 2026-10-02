@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <string>
+#include <IMapKnowledge.h>
 #include <vector>
 #include <Player.h>
 #include "StringUtils.h"

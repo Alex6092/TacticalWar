@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -140,7 +140,7 @@ exit /b 0</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -205,9 +205,6 @@ exit /b 0</Command>
     </ProjectReference>
     <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">
       <Project>{f579ad13-4a80-40f5-aba4-88e8e8739a71}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TacticalWarBattleLib\TacticalWarBattleLib.vcxproj">
-      <Project>{c5a2fcbb-be73-4c99-9ed0-96ca39f959c0}</Project>
     </ProjectReference>
     <ProjectReference Include="..\TacticalWarClientCommonLib\TacticalWarClientCommonLib.vcxproj">
       <Project>{b62c37fc-cdbb-4c56-a9da-15c134509611}</Project>

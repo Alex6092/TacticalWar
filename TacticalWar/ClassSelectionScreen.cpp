@@ -70,7 +70,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	
 	for (int i = 0; i < classesIds.size(); i++)
 	{
-		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classesIds[i], 1, 0, 0, NULL));
+		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classesIds[i], 1, 0, 0));
 	}
 
 	indexClass = 0;
@@ -224,7 +224,7 @@ void ClassSelectionScreen::setClassView()
 	// Textes et chiffres : données de jeu envoyées par le serveur (assets/data/gamedata.json).
 	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(model->getClassId());
 
-	std::string pathClassPreview = classDef != NULL && !classDef->preview.empty() ? classDef->preview : model->getClassPreviewPath();
+	std::string pathClassPreview = classDef != NULL ? classDef->preview : std::string();
 	sf::Texture TextureClassPreview;
 	TextureClassPreview.loadFromFile(pathClassPreview);
 	TextureClassPreview.setSmooth(true);
@@ -232,7 +232,7 @@ void ClassSelectionScreen::setClassView()
 	previewClass->setPosition(PositionOfCardX, PositionOfCardY);
 	previewClass->getRenderer()->setTexture(TextureClassPreview);
 
-	std::string path = classDef != NULL && !classDef->icon.empty() ? classDef->icon : model->getClassIconPath();
+	std::string path = classDef != NULL ? classDef->icon : std::string();
 	sf::Texture TextureIconClass;
 	TextureIconClass.loadFromFile(path);
 	TextureIconClass.setSmooth(true);
@@ -247,7 +247,7 @@ void ClassSelectionScreen::setClassView()
 	stats->setTextSize(35);
 
 	tgui::Label::Ptr classNameLabel = gui->get<tgui::Label>("classNameLabel");
-	classNameLabel->setText(classDef != NULL ? fromServerText(classDef->name) : sf::String(model->getClassName()));
+	classNameLabel->setText(classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(model->getClassId()));
 	classNameLabel->setPosition(PositionOfCardX + 700, PositionOfCardY + 300);
 	classNameLabel->setTextSize(25);
 

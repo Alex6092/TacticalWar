@@ -352,7 +352,7 @@ void BattleScreen::syncView(const battle::Fighter & fighter)
 	BaseCharacterModel * view = viewOf(fighter.id);
 	if (view == NULL)
 	{
-		view = CharacterFactory::getInstance()->constructCharacter(environment, fighter.classId, fighter.team, fighter.position.x, fighter.position.y, this);
+		view = CharacterFactory::getInstance()->constructCharacter(environment, fighter.classId, fighter.team, fighter.position.x, fighter.position.y);
 		if (view == NULL)
 			return;
 		view->setColorNumber(fighter.team);
@@ -919,9 +919,4 @@ sf::String BattleScreen::fighterName(int fighterId) const
 {
 	const battle::Fighter * fighter = shown.findFighter(fighterId);
 	return fighter != NULL ? fromServerText(fighter->name) : sf::String("?");
-}
-
-std::vector<tw::BaseCharacterModel*> BattleScreen::getAliveCharactersInZone(std::vector<tw::Point2D> zone)
-{
-	return std::vector<tw::BaseCharacterModel*>();
 }

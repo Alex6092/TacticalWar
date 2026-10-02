@@ -15,7 +15,6 @@
 #include <Camera.h>
 #include <Environment.h>
 #include <BaseCharacterModel.h>
-#include <IMapKnowledge.h>
 #include <MoveActionAnimationEventListener.h>
 #include <SpellView.h>
 #include <BattleState.h>
@@ -26,7 +25,7 @@ namespace tw
 	// - "truth" est l'état du combat tel que le serveur l'a annoncé (mis à jour dès réception) ;
 	//   il sert aux prévisualisations (déplacement, zones de sort) avec les mêmes règles que le serveur ;
 	// - "shown" est l'état affiché, mis à jour au rythme des animations des événements.
-	class BattleScreen : public Screen, RendererEventListener, ServerMessageListener, IMapKnowledge, MoveActionAnimationEventListener
+	class BattleScreen : public Screen, RendererEventListener, ServerMessageListener, MoveActionAnimationEventListener
 	{
 	public:
 		// PLAYER : joueur du combat ; SPECTATOR / ADMIN : spectateur (retour à la liste des combats
@@ -49,9 +48,6 @@ namespace tw
 		// ServerMessageListener
 		virtual void onMessageReceived(std::string msg);
 		virtual void onDisconnected();
-
-		// IMapKnowledge (non utilisé : les règles sont appliquées par le serveur)
-		virtual std::vector<tw::BaseCharacterModel*> getAliveCharactersInZone(std::vector<tw::Point2D> zone);
 
 		// MoveActionAnimationEventListener
 		virtual void onMoveFinished();

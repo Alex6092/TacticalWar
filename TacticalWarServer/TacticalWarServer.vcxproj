@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -139,7 +139,7 @@ exit /b 0</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -199,9 +199,6 @@ exit /b 0</Command>
     </ProjectReference>
     <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">
       <Project>{f579ad13-4a80-40f5-aba4-88e8e8739a71}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TacticalWarBattleLib\TacticalWarBattleLib.vcxproj">
-      <Project>{c5a2fcbb-be73-4c99-9ed0-96ca39f959c0}</Project>
     </ProjectReference>
     <ProjectReference Include="..\TacticalWarCommonLib\TacticalWarCommonLib.vcxproj">
       <Project>{22afcd2a-5058-44cf-8264-ad1a26272a58}</Project>
