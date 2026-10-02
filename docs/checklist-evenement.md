@@ -1,0 +1,44 @@
+# Checklist de l'événement
+
+## Avant l'événement
+
+- [ ] Préparer les paquets : `powershell -ExecutionPolicy Bypass -File tools\package.ps1 -ServerHost <IP du serveur>`
+      (compile en Release, lance les tests, crée `dist\*.zip`).
+- [ ] **Réseau** : un réseau local filaire ou un point d'accès Wi-Fi dédié. Le Wi-Fi des établissements
+      isole souvent les postes entre eux (« isolation des clients ») : le jeu ne fonctionne pas dans ce cas.
+- [ ] Choisir le PC serveur, lui donner une adresse IP fixe si possible.
+- [ ] Sur le PC serveur, lancer `Ouvrir-pare-feu.bat` en administrateur (ports 12345 et 8080).
+- [ ] Lancer le serveur une première fois et **noter le mot de passe admin** affiché.
+- [ ] Créer les équipes (client connecté en `admin`, onglet Équipes), puis imprimer les fiches
+      d'identifiants générées dans `data\exports\fiches-equipes.html`.
+- [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
+- [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
+
+## Test grandeur nature sans joueurs
+
+1. Lancer le serveur, créer 4 à 8 équipes et un tournoi.
+2. Lancer un bot par joueur : `TacticalWarBot.exe --login <login> --password <mdp> --server <IP> --delay 800`.
+3. Suivre l'avancée sur `http://<IP>:8080/` et avec un client en mode réalisateur.
+
+## Le jour J
+
+1. Démarrer le serveur. Il affiche ses adresses sur le réseau local.
+2. Sur chaque PC joueur, lancer `TacticalWar.exe` et se connecter avec la fiche de l'équipe
+   (l'adresse du serveur se règle sur l'écran de connexion).
+3. **Écran projeté** :
+   - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11) ;
+   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré).
+4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
+   Les matchs se lancent automatiquement dès que les deux équipes sont libres.
+
+## En cas de problème
+
+| Situation | Que faire |
+|---|---|
+| Un joueur est déconnecté | Il se reconnecte avec les mêmes identifiants et retrouve son combat. Son tour passe automatiquement en attendant ; une équipe absente pendant 90 s perd par forfait. |
+| Le serveur s'est arrêté | Le relancer : le tournoi reprend, les matchs en cours sont rejoués. |
+| Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
+| Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
+| Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
+
+Sauvegarder le dossier `data\` du serveur après l'événement, puis supprimer les fiches d'identifiants.
