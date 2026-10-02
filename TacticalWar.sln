@@ -57,6 +57,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TournamentLib", "Tournament
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BattleEngineLib", "BattleEngineLib\BattleEngineLib.vcxproj", "{501A17CD-3A0D-4143-9C9C-4D2CF98C4B87}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TacticalWarBot", "TacticalWarBot\TacticalWarBot.vcxproj", "{5E0443AF-013A-44EF-852B-B6CCE6417E2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -295,6 +297,14 @@ Global
 		{501A17CD-3A0D-4143-9C9C-4D2CF98C4B87}.Release|x64.ActiveCfg = Release|x64
 		{501A17CD-3A0D-4143-9C9C-4D2CF98C4B87}.Release|x64.Build.0 = Release|x64
 		{501A17CD-3A0D-4143-9C9C-4D2CF98C4B87}.Release|x86.ActiveCfg = Release|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Debug|x64.ActiveCfg = Debug|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Debug|x64.Build.0 = Debug|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Debug|x86.ActiveCfg = Debug|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|Any CPU.ActiveCfg = Release|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x64.ActiveCfg = Release|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x64.Build.0 = Release|x64
+		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

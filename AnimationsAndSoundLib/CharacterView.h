@@ -54,7 +54,7 @@ namespace tw
 
 		sf::Text * getLifeText()
 		{
-			lifeTxt.setString(std::to_string(getModel()->getCurrentLife()) + "/" + std::to_string(getModel()->getBaseMaxLife()));
+			lifeTxt.setString(std::to_string(getModel()->getCurrentLife()) + "/" + std::to_string(getModel()->getDisplayMaxLife()));
 			return &lifeTxt;
 		}
 

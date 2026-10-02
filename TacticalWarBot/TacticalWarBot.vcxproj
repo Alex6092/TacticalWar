@@ -13,14 +13,14 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
-    <ProjectGuid>{501A17CD-3A0D-4143-9C9C-4D2CF98C4B87}</ProjectGuid>
+    <ProjectGuid>{5E0443AF-013A-44EF-852B-B6CCE6417E2D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>BattleEngineLib</RootNamespace>
+    <RootNamespace>TacticalWarBot</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -35,25 +35,35 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(TwRootDir)build\TwProject.props" />
   </ImportGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BattleEngine.h" />
-    <ClInclude Include="BattleMirror.h" />
-    <ClInclude Include="BattleRules.h" />
-    <ClInclude Include="BattleState.h" />
-    <ClInclude Include="EnvironmentMap.h" />
-    <ClInclude Include="GameData.h" />
+    <ClInclude Include="Bot.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BattleEffects.cpp" />
-    <ClCompile Include="BattleEngine.cpp" />
-    <ClCompile Include="BattleMirror.cpp" />
-    <ClCompile Include="BattleRules.cpp" />
-    <ClCompile Include="BattleState.cpp" />
-    <ClCompile Include="EnvironmentMap.cpp" />
-    <ClCompile Include="GameData.cpp" />
+    <ClCompile Include="Bot.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-
+    <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
+      <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\BattleEngineLib\BattleEngineLib.vcxproj">
+      <Project>{501a17cd-3a0d-4143-9c9c-4d2cf98c4b87}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\EnvironmentPersistanceLib\EnvironmentPersistanceLib.vcxproj">
+      <Project>{fad2f01a-a414-4665-88b2-1191eac5f5c1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\TacticalWarCommonLib\TacticalWarCommonLib.vcxproj">
+      <Project>{22afcd2a-5058-44cf-8264-ad1a26272a58}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\UtilsLib\UtilsLib.vcxproj">
+      <Project>{1d67c839-b5d5-4a87-8fdb-0ff8f2aed605}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

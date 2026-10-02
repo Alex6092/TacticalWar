@@ -1,15 +1,12 @@
-#include "BattleSession.h"
+﻿#include "BattleSession.h"
+
+#include <EnvironmentMap.h>
 
 #include <random>
 
-namespace
-{
-	const std::int64_t CLASS_SELECTION_MS = 90 * 1000;
-}
-
-BattleSession::BattleSession(int id, tw::Match * match, const tw::battle::GameData & data, tw::Environment * environment, std::int64_t nowMs)
+BattleSession::BattleSession(int id, tw::Match * match, const tw::battle::GameData & data, tw::Environment * environment, std::int64_t classSelectionDeadline)
 	: id(id), match(match), data(data), map(toBattleMap(environment)), mapId(environment->getId()),
-	phase(Phase::CLASS_SELECTION), classSelectionDeadline(nowMs + CLASS_SELECTION_MS)
+	phase(Phase::CLASS_SELECTION), classSelectionDeadline(classSelectionDeadline)
 {
 	for (tw::Player * player : match->getTeam1())
 		participants.push_back(player);
@@ -21,25 +18,7 @@ BattleSession::BattleSession(int id, tw::Match * match, const tw::battle::GameDa
 
 tw::battle::BattleMap BattleSession::toBattleMap(tw::Environment * environment)
 {
-	tw::battle::BattleMap battleMap(environment->getWidth(), environment->getHeight());
-	for (int x = 0; x < environment->getWidth(); x++)
-	{
-		for (int y = 0; y < environment->getHeight(); y++)
-		{
-			tw::CellData * cell = environment->getMapData(x, y);
-			if (cell == NULL)
-				continue;
-
-			bool obstacle = cell->getIsObstacle();
-			bool walkable = cell->getIsWalkable() && !obstacle;
-			battleMap.setCell({ x, y }, walkable, obstacle);
-
-			int team = cell->getTeamStartPointNumber();
-			if (walkable && (team == 1 || team == 2))
-				battleMap.startCells[team].push_back({ x, y });
-		}
-	}
-	return battleMap;
+	return tw::battle::battleMapFromEnvironment(environment);
 }
 
 int BattleSession::fighterIdOf(tw::Player * player) const

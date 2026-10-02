@@ -8,6 +8,8 @@ class ClientConfig
 public:
 	std::string serverHost = "127.0.0.1";
 	unsigned short serverPort = 12345;
+	// Musique et sons (désactivables, ex : poste de projection ou PC sans carte son).
+	bool soundEnabled = true;
 
 	// Connexion automatique au lancement (ligne de commande, non enregistrée) :
 	//   --server hote[:port]  --login X --password Y  ou  --spectator
@@ -35,5 +37,7 @@ public:
 
 private:
 	ClientConfig() {}
+	// Valeur enregistrée dans client.json (l'option --no-sound ne la modifie pas).
+	bool soundInFile = true;
 	void load();
 };

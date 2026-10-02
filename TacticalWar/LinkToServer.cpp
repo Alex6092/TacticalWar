@@ -1,5 +1,6 @@
 ﻿#include "LinkToServer.h"
 #include "ClientConfig.h"
+#include "ClientGameData.h"
 #include <Opcodes.h>
 #include <iostream>
 
@@ -100,6 +101,13 @@ void LinkToServer::UpdateReceivedData()
 		if (line == tw::protocol::KEEPALIVE_PING)
 		{
 			SendRaw(tw::protocol::KEEPALIVE_PONG);
+			continue;
+		}
+
+		// Données de jeu : conservées pour tous les écrans.
+		if (line.compare(0, 2, "GD") == 0)
+		{
+			ClientGameData::get().loadFromServer(line.substr(2));
 			continue;
 		}
 

@@ -101,6 +101,7 @@ namespace tw
 		int currentLife;
 		int currentPM;
 		int currentPA;
+		int displayMaxLife = -1;
 
 		void consumePM(int nb)
 		{
@@ -292,6 +293,17 @@ namespace tw
 		void setCurrentLife(int life)
 		{
 			currentLife = life;
+		}
+
+		// PV max affichés (côté client, fournis par le serveur : ils baissent avec l'érosion).
+		void setDisplayMaxLife(int maxLife)
+		{
+			displayMaxLife = maxLife;
+		}
+
+		int getDisplayMaxLife()
+		{
+			return displayMaxLife > 0 ? displayMaxLife : getBaseMaxLife();
 		}
 
 		bool hasEnoughPM(int neededPM)

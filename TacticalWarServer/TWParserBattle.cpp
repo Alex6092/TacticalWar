@@ -26,7 +26,8 @@ std::int64_t TWParser::nowMs() const
 
 void TWParser::createSession(tw::Match * match)
 {
-	BattleSession * session = new BattleSession(nextSessionId++, match, gameData, match->getEnvironment(), nowMs());
+	std::int64_t deadline = nowMs() + (std::int64_t)config.classSelectionSeconds * 1000;
+	BattleSession * session = new BattleSession(nextSessionId++, match, gameData, match->getEnvironment(), deadline);
 	sessions[session->getId()] = session;
 	match->setBattlePayload(session);
 }

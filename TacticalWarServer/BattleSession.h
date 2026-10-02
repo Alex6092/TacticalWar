@@ -22,7 +22,7 @@ public:
 		ENDED
 	};
 
-	BattleSession(int id, tw::Match * match, const tw::battle::GameData & data, tw::Environment * environment, std::int64_t nowMs);
+	BattleSession(int id, tw::Match * match, const tw::battle::GameData & data, tw::Environment * environment, std::int64_t classSelectionDeadline);
 
 	int getId() const { return id; }
 	Phase getPhase() const { return phase; }

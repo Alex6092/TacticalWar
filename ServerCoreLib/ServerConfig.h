@@ -27,6 +27,9 @@ namespace tw
 		int keepaliveIntervalSeconds = 10;
 		int keepaliveTimeoutSeconds = 30;
 
+		// Durée du choix des classes avant le combat (les classes manquantes sont tirées au hasard).
+		int classSelectionSeconds = 90;
+
 		AdminConfig admin;
 
 		nlohmann::json toJson() const;

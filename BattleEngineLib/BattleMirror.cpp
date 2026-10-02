@@ -111,6 +111,12 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.alive = value.value("alive", true);
 		fighter.ready = value.value("ready", false);
 		fighter.connected = value.value("connected", true);
+		for (const auto & stat : intMap(value.value("stats", json::object())))
+		{
+			Stat parsed;
+			if (parseStat(stat.first, parsed))
+				fighter.baseStats.set(parsed, stat.second);
+		}
 		fighter.cooldowns = intMap(value.value("cooldowns", json::object()));
 		fighter.castsThisTurn = intMap(value.value("casts", json::object()));
 		for (const json & effect : value.value("effects", json::array()))

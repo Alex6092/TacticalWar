@@ -11,6 +11,7 @@ nlohmann::json ServerConfig::toJson() const
 		{ "dataDir", dataDir },
 		{ "keepaliveIntervalSeconds", keepaliveIntervalSeconds },
 		{ "keepaliveTimeoutSeconds", keepaliveTimeoutSeconds },
+		{ "classSelectionSeconds", classSelectionSeconds },
 		{ "admin", {
 			{ "login", admin.login },
 			{ "passwordHash", admin.passwordHash },
@@ -27,6 +28,7 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.dataDir = json.value("dataDir", config.dataDir);
 	config.keepaliveIntervalSeconds = json.value("keepaliveIntervalSeconds", config.keepaliveIntervalSeconds);
 	config.keepaliveTimeoutSeconds = json.value("keepaliveTimeoutSeconds", config.keepaliveTimeoutSeconds);
+	config.classSelectionSeconds = json.value("classSelectionSeconds", config.classSelectionSeconds);
 
 	if (json.contains("admin") && json["admin"].is_object())
 	{

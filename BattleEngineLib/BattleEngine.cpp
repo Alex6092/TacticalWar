@@ -619,8 +619,13 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 	for (const ActiveEffect & effect : fighter.effects)
 		effects.push_back(effectJson(effect));
 
+	json stats = json::object();
+	for (int i = 0; i < STAT_COUNT; i++)
+		stats[toString((Stat)i)] = fighter.baseStats.get((Stat)i);
+
 	return {
 		{ "id", fighter.id },
+		{ "stats", stats },
 		{ "team", fighter.team },
 		{ "classId", fighter.classId },
 		{ "name", fighter.name },

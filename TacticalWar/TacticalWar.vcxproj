@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -140,7 +140,7 @@ exit /b 0</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -158,6 +158,9 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ClientGameData.cpp" />
+    <ClCompile Include="BattleColorator.cpp" />
+    <ClCompile Include="BattleHud.cpp" />
     <ClCompile Include="TeamsAdminPanel.cpp" />
     <ClCompile Include="ClientConfig.cpp" />
     <ClCompile Include="AdminScreen.cpp" />
@@ -174,13 +177,12 @@ exit /b 0</Command>
     <ClCompile Include="ScreenManager.cpp" />
     <ClCompile Include="ServerMessageListener.cpp" />
     <ClCompile Include="SpectatorModeScreen.cpp" />
-    <ClCompile Include="SpellSlot.cpp" />
-    <ClCompile Include="TestCharacterModel.cpp" />
-    <ClCompile Include="TimelineView.cpp" />
-    <ClCompile Include="TWColorator.cpp" />
     <ClCompile Include="WaitMatchScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BattleEngineLib\BattleEngineLib.vcxproj">
+      <Project>{501a17cd-3a0d-4143-9c9c-4d2cf98c4b87}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
       <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
     </ProjectReference>
@@ -219,6 +221,9 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClientGameData.h" />
+    <ClInclude Include="BattleColorator.h" />
+    <ClInclude Include="BattleHud.h" />
     <ClInclude Include="TeamsAdminPanel.h" />
     <ClInclude Include="ClientConfig.h" />
     <ClInclude Include="AdminScreen.h" />
@@ -234,10 +239,6 @@ exit /b 0</Command>
     <ClInclude Include="ScreenManager.h" />
     <ClInclude Include="ServerMessageListener.h" />
     <ClInclude Include="SpectatorModeScreen.h" />
-    <ClInclude Include="SpellSlot.h" />
-    <ClInclude Include="TestCharacterModel.h" />
-    <ClInclude Include="TimelineView.h" />
-    <ClInclude Include="TWColorator.h" />
     <ClInclude Include="WaitMatchScreen.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -41,13 +41,16 @@ void ClientConfig::load()
 
 	serverHost = json.value("serverHost", serverHost);
 	serverPort = json.value("serverPort", serverPort);
+	soundInFile = json.value("sound", soundInFile);
+	soundEnabled = soundInFile;
 }
 
 void ClientConfig::save() const
 {
 	nlohmann::json json = {
 		{ "serverHost", serverHost },
-		{ "serverPort", serverPort }
+		{ "serverPort", serverPort },
+		{ "sound", soundInFile }
 	};
 
 	std::ofstream file(CONFIG_PATH, std::ios::binary | std::ios::trunc);
@@ -92,6 +95,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--screenshot-after" && hasValue)
 		{
 			screenshotDelaySeconds = (float)std::atof(argv[++i]);
+		}
+		else if (arg == "--no-sound")
+		{
+			soundEnabled = false;
 		}
 		else if (arg == "--spectator")
 		{
