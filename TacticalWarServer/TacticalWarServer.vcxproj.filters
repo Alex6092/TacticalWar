@@ -40,4 +40,9 @@
   <ItemGroup>
     <ClCompile Include="TWParserTeams.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BattleSession.cpp" />
+    <ClCompile Include="TWParserBattle.cpp" />
+    <ClInclude Include="BattleSession.h" />
+  </ItemGroup>
 </Project>

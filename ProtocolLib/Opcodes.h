@@ -78,22 +78,21 @@ namespace tw
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe" },
-			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe : PC<classId>" },
+			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
+			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },
 
-			// Combat
-			{ "CA", Direction::SERVER_TO_CLIENT, Role::ANY, "Ajout d'un personnage" },
-			{ "CS", Direction::SERVER_TO_CLIENT, Role::ANY, "Personnage contrôlé par ce client" },
-			{ "BS", Direction::SERVER_TO_CLIENT, Role::ANY, "État du combat" },
-			{ "Cs", Direction::BOTH, Role::PLAYER, "Prêt" },
-			{ "CP", Direction::BOTH, Role::PLAYER, "Position de départ" },
-			{ "Cm", Direction::BOTH, Role::PLAYER, "Déplacement" },
-			{ "Ct", Direction::BOTH, Role::PLAYER, "Fin de tour / début du tour d'un personnage" },
-			{ "CL", Direction::BOTH, Role::PLAYER, "Lancer de sort" },
-			{ "Ca", Direction::SERVER_TO_CLIENT, Role::ANY, "PA d'un personnage" },
-			{ "Cp", Direction::SERVER_TO_CLIENT, Role::ANY, "PM d'un personnage" },
-			{ "BE", Direction::SERVER_TO_CLIENT, Role::ANY, "Fin de combat" },
+			// Combat (contenu JSON). Le serveur fait autorité : il valide et diffuse des événements.
+			{ "BI", Direction::SERVER_TO_CLIENT, Role::ANY, "État complet du combat {seq, you, phase, fighters...}" },
+			{ "BV", Direction::SERVER_TO_CLIENT, Role::ANY, "Lot d'événements de combat {seq, ev:[...]}" },
+			{ "ER", Direction::SERVER_TO_CLIENT, Role::ANY, "Action refusée {op, message}" },
+			{ "BR", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Demande de l'état complet (resynchronisation)" },
+			{ "CP", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Placement {x, y}" },
+			{ "Cs", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Prêt {ready}" },
+			{ "Cm", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Déplacement {path:[[x,y]...]} (sans la cellule de départ)" },
+			{ "CL", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Lancer de sort {slot (0 à 3), x, y}" },
+			{ "Ct", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Fin de tour" },
 		};
 
 		inline const OpcodeInfo * findOpcode(const char * op)

@@ -4,15 +4,15 @@
 #include "net/NetServer.h"
 #include <Player.h>
 #include <map>
-#include <Battle.h>
 #include <Match.h>
+#include "BattleSession.h"
 #include <Environment.h>
 #include <CredentialSheet.h>
 #include <ServerConfig.h>
 #include <TeamStore.h>
 #include <nlohmann/json.hpp>
 
-class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEventListener
+class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 {
 	tw::net::NetServer * net;
 	std::map<tw::net::ConnId, ClientState*> clients;
@@ -35,7 +35,6 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 	// Joueurs des équipes actives (login -> joueur) :
 	std::map<std::string, tw::Player*> playersMap;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
-	std::map<tw::Player*, Battle*> playerToBattleMap;
 	std::map<int, std::vector<tw::Player*>> teamIdToPlayerList;
 
 	// Liste des clients en mode spectateur (pour mettre à jour la liste des match en cours) :
@@ -49,27 +48,13 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 	void notifyPlanifiedAndPlayingMatch(ClientState * c);
 	void notifyFinishedMatch(ClientState * c);
 
-	void notifyClassChoiceLocked(ClientState * c);
 
 	int isTeamAvailableForMatchCreation(int teamId);
 
-	bool everybodyReadyForBattle(tw::Match * m);
-	void synchronizeBattleState(tw::Match * m, ClientState * c);
-	void enterBattleState(tw::Match * m, ClientState * c);
-
-	void notifyBattleState(ClientState * c, Battle * battle);
-	void notifyReadyState(ClientState * c, int playerId, tw::Player * p);
-	void notifyCharacterPositionChanged(ClientState * toNotify, int playerId, tw::Player * characterWhosePositionChanged);
-	void notifyPlayerTurnToken(Battle * b, ClientState * c);
-	void notifyActivePlayerPANumber(Battle * b, ClientState * c);
-	void notifyActivePlayerPMNumber(Battle * b, ClientState * c);
-
-	// Retourne true si le combat est terminé (le combat et les personnages sont alors détruits).
-	bool checkBattleEnd(tw::Match * m, tw::Player * actingPlayer);
-	bool isValidMovePath(tw::Match * m, tw::Player * p, const std::vector<tw::Point2D> & path);
 
 
-	std::vector<tw::Point2D> calculateSpellZone(tw::BaseCharacterModel * character, int selectedSpell, tw::Match * match, tw::Environment * environment);
+
+
 
 
 
@@ -99,7 +84,6 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 		return p;
 	}
 
-	void switchParticipantToBattleState(Battle * b);
 
 	ClientState * admin;
 
@@ -116,6 +100,25 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 	void rebuildPlayers();
 	bool teamHasPendingMatch(int teamId);
 	bool teamHasAnyMatch(int teamId);
+	// Combats (TWParserBattle.cpp) :
+	tw::battle::GameData gameData;
+	std::string gameDataMessage;
+	std::map<int, BattleSession*> sessions;
+	int nextSessionId;
+	std::int64_t nowMs() const;
+	void createSession(tw::Match * match);
+	BattleSession * sessionOfMatch(tw::Match * match);
+	BattleSession * sessionOfPlayer(tw::Player * player);
+	void sendGameData(ClientState * client);
+	void handlePickClass(ClientState * client, tw::Player * player, int classId);
+	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void startBattle(BattleSession * session);
+	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
+	void broadcastBattleEvents(BattleSession * session);
+	void finishBattle(BattleSession * session);
+	void onPlayerConnectionChanged(tw::Player * player, bool connected);
+	void tickBattles();
+
 	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());
 
@@ -136,8 +139,5 @@ public:
 	// MatchEventListener implementation :
 	virtual void onMatchStatusChanged(tw::Match * match, tw::MatchStatus oldStatus, tw::MatchStatus newStatus);
 
-	// BattleEventListener implementation :
-	virtual void onBattleStateChanged(tw::Match * m, BattleState state);
-	virtual void onPlayerTurnStart(tw::Match * match, tw::Player * player);
 };
 
