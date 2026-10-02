@@ -1,0 +1,48 @@
+
+ricochet.png
+size: 411, 186
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ricochet
+  rotate: false
+  xy: 0, 0
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 0
+ricochet
+  rotate: false
+  xy: 137, 0
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 1
+ricochet
+  rotate: false
+  xy: 274, 0
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 2
+ricochet
+  rotate: false
+  xy: 0, 93
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 3
+ricochet
+  rotate: false
+  xy: 137, 93
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 4
+ricochet
+  rotate: false
+  xy: 274, 93
+  size: 137, 93
+  orig: 137, 93
+  offset: 0, 0
+  index: 5

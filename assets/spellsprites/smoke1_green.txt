@@ -1,0 +1,125 @@
+
+smoke1_green.png
+size: 672, 594
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+smoke1_green
+  rotate: false
+  xy: 0, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 0
+smoke1_green
+  rotate: false
+  xy: 224, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 1
+smoke1_green
+  rotate: false
+  xy: 448, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 2
+smoke1_green
+  rotate: false
+  xy: 0, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 3
+smoke1_green
+  rotate: false
+  xy: 224, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 4
+smoke1_green
+  rotate: false
+  xy: 448, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 5
+smoke1_green
+  rotate: false
+  xy: 0, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 6
+smoke1_green
+  rotate: false
+  xy: 224, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 7
+smoke1_green
+  rotate: false
+  xy: 448, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 8
+smoke1_green
+  rotate: false
+  xy: 0, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 9
+smoke1_green
+  rotate: false
+  xy: 224, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 10
+smoke1_green
+  rotate: false
+  xy: 448, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 11
+smoke1_green
+  rotate: false
+  xy: 0, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 12
+smoke1_green
+  rotate: false
+  xy: 224, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 13
+smoke1_green
+  rotate: false
+  xy: 448, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 14
+smoke1_green
+  rotate: false
+  xy: 0, 495
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 15
+smoke1_green
+  rotate: false
+  xy: 224, 495
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 16

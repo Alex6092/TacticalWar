@@ -130,6 +130,23 @@ namespace tw
 			int size = 0;
 		};
 
+		// Visuels d'un sort (côté client, ignorés par le serveur). Les noms renvoient au
+		// catalogue d'effets assets/spellsprites/effects.json.
+		struct SpellVisual
+		{
+			std::string cast;				// Sur le lanceur, au lancement
+			std::string projectile;			// Du lanceur à la case visée
+			float projectileSpeed = 12.f;	// Cases par seconde
+			float projectileArc = 0.f;		// Hauteur de la trajectoire, en cases
+			std::string impact;				// À l'arrivée
+			std::string impactOn = "target";	// "target", "cells" (chaque case de la zone) ou "caster"
+			std::string status;				// En boucle sur un combattant tant qu'un effet du sort y reste
+			std::string tick;				// À chaque dégât ou soin périodique du sort
+			std::string glyph;				// En boucle sur chaque case d'un glyphe du sort
+			std::string glyphTrigger;		// Quand le glyphe se déclenche
+			std::string impactSound;		// Son joué à l'impact
+		};
+
 		struct SpellDef
 		{
 			std::string id;
@@ -152,9 +169,10 @@ namespace tw
 			std::vector<EffectDef> effects;
 
 			// Rendu côté client.
-			std::string fxSprite;
+			std::string fxSprite;			// Ancien format (une animation sur la case visée)
 			std::string sound;
 			std::string casterAnimation;	// "magical" ou "physical"
+			SpellVisual visual;
 		};
 
 		enum class PassiveType

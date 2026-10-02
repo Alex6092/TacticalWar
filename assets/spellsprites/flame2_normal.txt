@@ -1,0 +1,41 @@
+
+flame2_normal.png
+size: 672, 448
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+flame2_normal
+  rotate: false
+  xy: 0, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 0
+flame2_normal
+  rotate: false
+  xy: 224, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 1
+flame2_normal
+  rotate: false
+  xy: 448, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 2
+flame2_normal
+  rotate: false
+  xy: 0, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 3
+flame2_normal
+  rotate: false
+  xy: 224, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 4

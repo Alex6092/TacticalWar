@@ -1,0 +1,48 @@
+
+impact3_red.png
+size: 448, 321
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+impact3_red
+  rotate: false
+  xy: 0, 0
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 0
+impact3_red
+  rotate: false
+  xy: 224, 0
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 1
+impact3_red
+  rotate: false
+  xy: 0, 107
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 2
+impact3_red
+  rotate: false
+  xy: 224, 107
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 3
+impact3_red
+  rotate: false
+  xy: 0, 214
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 4
+impact3_red
+  rotate: false
+  xy: 224, 214
+  size: 224, 107
+  orig: 224, 107
+  offset: 0, 0
+  index: 5

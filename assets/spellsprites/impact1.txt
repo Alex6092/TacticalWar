@@ -1,0 +1,48 @@
+
+impact1.png
+size: 448, 267
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+impact1
+  rotate: false
+  xy: 0, 0
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 0
+impact1
+  rotate: false
+  xy: 224, 0
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 1
+impact1
+  rotate: false
+  xy: 0, 89
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 2
+impact1
+  rotate: false
+  xy: 224, 89
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 3
+impact1
+  rotate: false
+  xy: 0, 178
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 4
+impact1
+  rotate: false
+  xy: 224, 178
+  size: 224, 89
+  orig: 224, 89
+  offset: 0, 0
+  index: 5

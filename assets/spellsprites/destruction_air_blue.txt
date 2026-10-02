@@ -1,0 +1,111 @@
+
+destruction_air_blue.png
+size: 896, 592
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+destruction_air_blue
+  rotate: false
+  xy: 0, 0
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 0
+destruction_air_blue
+  rotate: false
+  xy: 224, 0
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 1
+destruction_air_blue
+  rotate: false
+  xy: 448, 0
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 2
+destruction_air_blue
+  rotate: false
+  xy: 672, 0
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 3
+destruction_air_blue
+  rotate: false
+  xy: 0, 148
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 4
+destruction_air_blue
+  rotate: false
+  xy: 224, 148
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 5
+destruction_air_blue
+  rotate: false
+  xy: 448, 148
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 6
+destruction_air_blue
+  rotate: false
+  xy: 672, 148
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 7
+destruction_air_blue
+  rotate: false
+  xy: 0, 296
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 8
+destruction_air_blue
+  rotate: false
+  xy: 224, 296
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 9
+destruction_air_blue
+  rotate: false
+  xy: 448, 296
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 10
+destruction_air_blue
+  rotate: false
+  xy: 672, 296
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 11
+destruction_air_blue
+  rotate: false
+  xy: 0, 444
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 12
+destruction_air_blue
+  rotate: false
+  xy: 224, 444
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 13
+destruction_air_blue
+  rotate: false
+  xy: 448, 444
+  size: 224, 148
+  orig: 224, 148
+  offset: 0, 0
+  index: 14

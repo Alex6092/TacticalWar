@@ -1,0 +1,62 @@
+
+impact5_blue.png
+size: 756, 448
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+impact5_blue
+  rotate: false
+  xy: 0, 0
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 0
+impact5_blue
+  rotate: false
+  xy: 189, 0
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 1
+impact5_blue
+  rotate: false
+  xy: 378, 0
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 2
+impact5_blue
+  rotate: false
+  xy: 567, 0
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 3
+impact5_blue
+  rotate: false
+  xy: 0, 224
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 4
+impact5_blue
+  rotate: false
+  xy: 189, 224
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 5
+impact5_blue
+  rotate: false
+  xy: 378, 224
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 6
+impact5_blue
+  rotate: false
+  xy: 567, 224
+  size: 189, 224
+  orig: 189, 224
+  offset: 0, 0
+  index: 7

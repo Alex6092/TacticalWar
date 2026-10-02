@@ -1,0 +1,118 @@
+
+explosion1_red.png
+size: 896, 784
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+explosion1_red
+  rotate: false
+  xy: 0, 0
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 0
+explosion1_red
+  rotate: false
+  xy: 224, 0
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 1
+explosion1_red
+  rotate: false
+  xy: 448, 0
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 2
+explosion1_red
+  rotate: false
+  xy: 672, 0
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 3
+explosion1_red
+  rotate: false
+  xy: 0, 196
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 4
+explosion1_red
+  rotate: false
+  xy: 224, 196
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 5
+explosion1_red
+  rotate: false
+  xy: 448, 196
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 6
+explosion1_red
+  rotate: false
+  xy: 672, 196
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 7
+explosion1_red
+  rotate: false
+  xy: 0, 392
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 8
+explosion1_red
+  rotate: false
+  xy: 224, 392
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 9
+explosion1_red
+  rotate: false
+  xy: 448, 392
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 10
+explosion1_red
+  rotate: false
+  xy: 672, 392
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 11
+explosion1_red
+  rotate: false
+  xy: 0, 588
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 12
+explosion1_red
+  rotate: false
+  xy: 224, 588
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 13
+explosion1_red
+  rotate: false
+  xy: 448, 588
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 14
+explosion1_red
+  rotate: false
+  xy: 672, 588
+  size: 224, 196
+  orig: 224, 196
+  offset: 0, 0
+  index: 15

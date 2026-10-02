@@ -1,0 +1,111 @@
+
+impact4_pink.png
+size: 896, 620
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+impact4_pink
+  rotate: false
+  xy: 0, 0
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 0
+impact4_pink
+  rotate: false
+  xy: 224, 0
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 1
+impact4_pink
+  rotate: false
+  xy: 448, 0
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 2
+impact4_pink
+  rotate: false
+  xy: 672, 0
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 3
+impact4_pink
+  rotate: false
+  xy: 0, 155
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 4
+impact4_pink
+  rotate: false
+  xy: 224, 155
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 5
+impact4_pink
+  rotate: false
+  xy: 448, 155
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 6
+impact4_pink
+  rotate: false
+  xy: 672, 155
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 7
+impact4_pink
+  rotate: false
+  xy: 0, 310
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 8
+impact4_pink
+  rotate: false
+  xy: 224, 310
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 9
+impact4_pink
+  rotate: false
+  xy: 448, 310
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 10
+impact4_pink
+  rotate: false
+  xy: 672, 310
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 11
+impact4_pink
+  rotate: false
+  xy: 0, 465
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 12
+impact4_pink
+  rotate: false
+  xy: 224, 465
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 13
+impact4_pink
+  rotate: false
+  xy: 448, 465
+  size: 224, 155
+  orig: 224, 155
+  offset: 0, 0
+  index: 14

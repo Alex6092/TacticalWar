@@ -1,0 +1,90 @@
+
+plazma.png
+size: 610, 672
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+plazma
+  rotate: false
+  xy: 0, 0
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 0
+plazma
+  rotate: false
+  xy: 122, 0
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 1
+plazma
+  rotate: false
+  xy: 244, 0
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 2
+plazma
+  rotate: false
+  xy: 366, 0
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 3
+plazma
+  rotate: false
+  xy: 488, 0
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 4
+plazma
+  rotate: false
+  xy: 0, 224
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 5
+plazma
+  rotate: false
+  xy: 122, 224
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 6
+plazma
+  rotate: false
+  xy: 244, 224
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 7
+plazma
+  rotate: false
+  xy: 366, 224
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 8
+plazma
+  rotate: false
+  xy: 488, 224
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 9
+plazma
+  rotate: false
+  xy: 0, 448
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 10
+plazma
+  rotate: false
+  xy: 122, 448
+  size: 122, 224
+  orig: 122, 224
+  offset: 0, 0
+  index: 11
