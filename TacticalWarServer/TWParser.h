@@ -7,7 +7,10 @@
 #include <Battle.h>
 #include <Match.h>
 #include <Environment.h>
-#include <Battle.h>
+#include <CredentialSheet.h>
+#include <ServerConfig.h>
+#include <TeamStore.h>
+#include <nlohmann/json.hpp>
 
 class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEventListener
 {
@@ -18,7 +21,18 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 
 	void loadEnvironments();
 
-	std::vector<tw::Player*> players;
+	tw::ServerConfig config;
+
+	// Équipes et comptes (source de vérité, persistée dans data/teams.json) :
+	tw::TeamStore teamStore;
+	tw::CredentialSheet credentials;
+	// true si teams.json n'a pas pu être lu : aucune modification n'est alors enregistrée.
+	bool teamStoreReadOnly;
+
+	// Tous les joueurs déjà créés (login -> joueur), y compris ceux d'équipes désactivées
+	// ou supprimées, encore référencés par des matchs.
+	std::map<std::string, tw::Player*> allPlayers;
+	// Joueurs des équipes actives (login -> joueur) :
 	std::map<std::string, tw::Player*> playersMap;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
 	std::map<tw::Player*, Battle*> playerToBattleMap;
@@ -93,9 +107,20 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEvent
 	void send(ClientState * client, const std::string & data);
 
 	void handleMessage(ClientState * client, const std::string & toParse);
+	bool isAuthorized(ClientState * client, const std::string & op);
+	bool isAdminLoginAllowed(ClientState * client);
+
+	// Gestion des équipes (TWParserTeams.cpp) :
+	void loadTeams();
+	bool saveTeams(std::string * error = nullptr);
+	void rebuildPlayers();
+	bool teamHasPendingMatch(int teamId);
+	bool teamHasAnyMatch(int teamId);
+	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());
 
 public:
-	TWParser();
+	TWParser(const tw::ServerConfig & config);
 	~TWParser();
 
 	void setNetServer(tw::net::NetServer * net);

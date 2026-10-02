@@ -36,12 +36,21 @@
     <Import Project="$(TwRootDir)build\TwProject.props" />
   </ImportGroup>
   <ItemGroup>
+    <ClInclude Include="CredentialSheet.h" />
     <ClInclude Include="JsonFile.h" />
+    <ClInclude Include="LegacyImport.h" />
+    <ClInclude Include="PasswordHasher.h" />
     <ClInclude Include="ServerConfig.h" />
+    <ClInclude Include="Team.h" />
+    <ClInclude Include="TeamStore.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CredentialSheet.cpp" />
     <ClCompile Include="JsonFile.cpp" />
+    <ClCompile Include="LegacyImport.cpp" />
+    <ClCompile Include="PasswordHasher.cpp" />
     <ClCompile Include="ServerConfig.cpp" />
+    <ClCompile Include="TeamStore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">

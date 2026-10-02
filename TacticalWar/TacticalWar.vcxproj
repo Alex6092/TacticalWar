@@ -158,6 +158,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TeamsAdminPanel.cpp" />
     <ClCompile Include="ClientConfig.cpp" />
     <ClCompile Include="AdminScreen.cpp" />
     <ClCompile Include="BattleScreen.cpp" />
@@ -218,6 +219,7 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="TeamsAdminPanel.h" />
     <ClInclude Include="ClientConfig.h" />
     <ClInclude Include="AdminScreen.h" />
     <ClInclude Include="BattleScreen.h" />

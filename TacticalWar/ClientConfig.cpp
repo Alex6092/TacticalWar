@@ -54,6 +54,54 @@ void ClientConfig::save() const
 	file << json.dump(2) << "\n";
 }
 
+void ClientConfig::applyCommandLine(int argc, char ** argv)
+{
+	for (int i = 1; i < argc; i++)
+	{
+		std::string arg = argv[i];
+		bool hasValue = i + 1 < argc;
+
+		if (arg == "--server" && hasValue)
+		{
+			if (!setServerAddress(argv[++i]))
+				std::cout << "Adresse de serveur invalide : " << argv[i] << std::endl;
+		}
+		else if (arg == "--login" && hasValue)
+		{
+			autoLogin = argv[++i];
+			autoConnect = true;
+		}
+		else if (arg == "--password" && hasValue)
+		{
+			autoPassword = argv[++i];
+		}
+		else if (arg == "--window" && hasValue)
+		{
+			std::string size = argv[++i];
+			std::size_t x = size.find('x');
+			if (x != std::string::npos)
+			{
+				windowWidth = (unsigned int)std::atoi(size.substr(0, x).c_str());
+				windowHeight = (unsigned int)std::atoi(size.substr(x + 1).c_str());
+			}
+		}
+		else if (arg == "--screenshot" && hasValue)
+		{
+			screenshotPath = argv[++i];
+		}
+		else if (arg == "--screenshot-after" && hasValue)
+		{
+			screenshotDelaySeconds = (float)std::atof(argv[++i]);
+		}
+		else if (arg == "--spectator")
+		{
+			autoLogin.clear();
+			autoPassword.clear();
+			autoConnect = true;
+		}
+	}
+}
+
 std::string ClientConfig::getServerAddress() const
 {
 	if (serverPort == 12345)

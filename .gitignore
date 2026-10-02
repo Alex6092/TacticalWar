@@ -80,3 +80,4 @@ x64/*/server.json
 x64/*/client.json
 __pycache__/
 */x64/
+*/*/x64/

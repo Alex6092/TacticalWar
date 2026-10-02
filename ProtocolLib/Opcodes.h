@@ -58,9 +58,18 @@ namespace tw
 
 			// Listes
 			{ "ML", Direction::BOTH, Role::SPECTATOR, "Matchs en cours" },
-			{ "TL", Direction::BOTH, Role::ADMIN, "Liste des équipes" },
+			{ "TL", Direction::BOTH, Role::ADMIN, "Liste des équipes (S->C : JSON {teams, readOnly, credentialSheet})" },
 			{ "MC", Direction::BOTH, Role::ADMIN, "Matchs planifiés et en cours" },
 			{ "MF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Matchs terminés" },
+
+			// Administration des équipes (contenu JSON)
+			{ "TC", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer une équipe {name, tag, seed, players:[{login, displayName, password?}]}" },
+			{ "TU", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Modifier une équipe {id, name, tag, seed, players}" },
+			{ "TD", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Supprimer une équipe {id} (désactivée si elle a déjà joué)" },
+			{ "TA", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Activer / désactiver une équipe {id, active}" },
+			{ "TK", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Générer un nouveau mot de passe {login}" },
+			{ "TI", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Importer assets/equipe.txt" },
+			{ "TR", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur les équipes {ok, message, passwords}" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },

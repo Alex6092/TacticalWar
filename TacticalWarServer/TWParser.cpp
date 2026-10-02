@@ -9,27 +9,24 @@
 #include <EnvironmentManager.h>
 #include <Pathfinder.h>
 #include <ZoneAndSightCalculator.h>
+#include <JsonFile.h>
+#include <Message.h>
+#include <Opcodes.h>
+#include <PasswordHasher.h>
 
 
-TWParser::TWParser()
-{	
+TWParser::TWParser(const tw::ServerConfig & config)
+	: config(config),
+	teamStore(tw::store::joinPath(config.dataDir, "teams.json")),
+	credentials(tw::store::joinPath(config.dataDir, "exports/credentials.json"), tw::store::joinPath(config.dataDir, "exports/fiches-equipes.html")),
+	teamStoreReadOnly(false)
+{
 	srand((unsigned int)time(NULL));
 	net = NULL;
-	loadEnvironments();
-	
-	players = tw::PlayerManager::loadPlayers();
-	std::cout << players.size() << " joueurs charges :" << std::endl;
-
-	// Construct player pseudo to player data map :
-	for (int i = 0; i < players.size(); i++)
-	{
-		std::cout << players[i]->getPseudo().c_str() << " (equipe " << players[i]->getTeamNumber() << ")" << std::endl;
-		playersMap[players[i]->getPseudo()] = players[i];
-		teamIdToPlayerList[players[i]->getTeamNumber()].push_back(players[i]);
-	}
-
 	admin = NULL;
-	//tw::PlayerManager::subscribeToAllMatchEvent(this);
+
+	loadEnvironments();
+	loadTeams();
 }
 
 void TWParser::loadEnvironments()
@@ -49,9 +46,57 @@ TWParser::~TWParser()
 {
 }
 
+bool TWParser::isAuthorized(ClientState * client, const std::string & op)
+{
+	const tw::protocol::OpcodeInfo * info = tw::protocol::findOpcode(op.c_str());
+	if (info == NULL || info->direction == tw::protocol::Direction::SERVER_TO_CLIENT)
+		return false;
+
+	switch (info->requiredRole)
+	{
+	case tw::protocol::Role::ANY:
+		return true;
+	case tw::protocol::Role::SPECTATOR:
+		return client->isAdmin() || getPlayerFromClientState(client) != NULL
+			|| std::find(spectatorModeClientDiffusionList.begin(), spectatorModeClientDiffusionList.end(), client) != spectatorModeClientDiffusionList.end();
+	case tw::protocol::Role::PLAYER:
+		return getPlayerFromClientState(client) != NULL;
+	case tw::protocol::Role::ADMIN:
+		return client->isAdmin();
+	}
+	return false;
+}
+
+bool TWParser::isAdminLoginAllowed(ClientState * client)
+{
+	const std::vector<std::string> & allowed = config.admin.allowedFrom;
+	return allowed.empty() || std::find(allowed.begin(), allowed.end(), client->getRemoteAddress()) != allowed.end();
+}
+
 void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 {
 	bool spectatorMode = false;
+
+	std::string op = toParse.substr(0, 2);
+	if (!isAuthorized(client, op))
+	{
+		std::cout << "Message " << op << " refuse pour " << client->getRemoteAddress() << std::endl;
+		return;
+	}
+
+	// Messages au format JSON (administration des équipes) :
+	if (op == "TC" || op == "TU" || op == "TD" || op == "TA" || op == "TK" || op == "TI")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload() && !message.parseJson(body))
+		{
+			sendTeamResult(client, false, "Requête invalide.");
+			return;
+		}
+		handleTeamAdminMessage(client, op, body);
+		return;
+	}
 
 	{
 		// Connexion d'un client (login joueur ou spectateur)
@@ -70,25 +115,32 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 					std::string pseudo = data[0];
 					std::string password = data[1];
 
-					if (pseudo == "admin" && password == "admin")
+					if (pseudo == config.admin.login)
 					{
-						if (admin != NULL)
+						if (!isAdminLoginAllowed(client) || !tw::PasswordHasher::verify(password, config.admin.passwordHash))
 						{
-							kick(admin);
+							std::cout << "Connexion admin refusee depuis " << client->getRemoteAddress() << std::endl;
+							wrongIds = true;
 						}
+						else
+						{
+							if (admin != NULL)
+							{
+								kick(admin);
+							}
 
-						client->setIsAdmin(true);
-						admin = client;
-						send(client, "AD\n");
-						notifyPlanifiedAndPlayingMatch(admin);
-						notifyFinishedMatch(admin);
-						notifyTeamList(admin);
+							client->setIsAdmin(true);
+							admin = client;
+							send(client, "AD\n");
+							notifyPlanifiedAndPlayingMatch(admin);
+							notifyFinishedMatch(admin);
+							notifyTeamList(admin);
+						}
 					}
-					else if (playersMap.find(pseudo) != playersMap.end())
+					else if (teamStore.authenticate(pseudo, password, &pseudo) && playersMap.find(pseudo) != playersMap.end())
 					{
 						tw::Player * p = playersMap[pseudo];
 
-						if (password == p->getPassword())
 						{
 							std::cout << "Connexion du joueur " << pseudo.c_str() << std::endl;
 
@@ -143,9 +195,9 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 								// Envoi vers l'écran d'attente de match
 								send(client, "HW\n");
 							}
+
+							notifyTeamList(admin);
 						}
-						else
-							wrongIds = true;
 					}
 					else wrongIds = true;
 				}
@@ -958,29 +1010,34 @@ void TWParser::notifyFinishedMatch(ClientState * c)
 
 void TWParser::notifyTeamList(ClientState * c)
 {
-	std::string data = "TL";
-	int i = 0;
-	for (std::map<int, std::vector<tw::Player*>>::iterator it = teamIdToPlayerList.begin(); it != teamIdToPlayerList.end(); it++)
+	// Liste réservée à l'admin : elle contient les logins et les mots de passe connus.
+	if (c == NULL || !c->isAdmin())
+		return;
+
+	nlohmann::json teams = nlohmann::json::array();
+	for (const tw::Team & team : teamStore.getTeams())
 	{
-		if (i > 0)
+		nlohmann::json teamJson = tw::teamToJson(team, false);
+		for (std::size_t i = 0; i < team.players.size(); i++)
 		{
-			data += ";";
+			const std::string & login = team.players[i].login;
+			std::map<std::string, tw::Player*>::iterator it = playersMap.find(login);
+			bool connected = it != playersMap.end() && getClientStateFromPlayer(it->second) != NULL;
+
+			teamJson["players"][i]["connected"] = connected;
+			teamJson["players"][i]["password"] = credentials.get(login);
 		}
-
-		int teamId = (*it).first;
-		std::vector<tw::Player*> team = (*it).second;
-
-		
-	
-		data += std::to_string(teamId) + ",";
-		data += tw::Match::serializeTeam(team, '¨', '^');
-
-		i++;
+		teamJson["busy"] = teamHasPendingMatch(team.id);
+		teams.push_back(teamJson);
 	}
 
-	data += "\n";
+	nlohmann::json body = {
+		{ "teams", teams },
+		{ "readOnly", teamStoreReadOnly },
+		{ "credentialSheet", credentials.getHtmlPath() }
+	};
 
-	send(c, data);
+	send(c, tw::protocol::Message::encode("TL", body));
 }
 
 void TWParser::notifyPlayingMatchList(ClientState * c)
@@ -1100,6 +1157,7 @@ void TWParser::onDisconnected(tw::net::ConnId id)
 
 			connectedPlayerMap.erase(p);
 			notifyMatchConnectedPlayerChanged(tw::PlayerManager::getCurrentOrNextMatchForPlayer(p));
+			notifyTeamList(admin);
 			std::cout << "Client " << p->getPseudo().c_str() << " disconnected ..." << std::endl;
 		}
 	}

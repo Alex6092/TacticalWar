@@ -4,6 +4,7 @@
 #include "MatchView.h"
 #include "ScreenManager.h"
 #include "LoginScreen.h"
+#include <Message.h>
 
 
 
@@ -116,24 +117,45 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 
 
 
-	gui->add(matchPanelTitle);
-	gui->add(m_matchListpanel);
-	gui->add(m_matchListCreate);
-	gui->add(m_matchListEnd);
-	gui->add(listTeam1);
-	gui->add(listTeam2);
-	gui->add(versus);
-	gui->add(createMatch);
-	gui->add(matchName);
-	gui->add(nameMatch);
-	gui->add(matchCreate);
-	gui->add(team1Choice);
-	gui->add(team2Choice);
-	gui->add(matchEnd);
+	// Les widgets existants (création manuelle de matchs) sont regroupés dans l'onglet "Matchs" :
+	matchesGroup = tgui::Group::create({ "100%", "100%" });
+	matchesGroup->add(matchPanelTitle);
+	matchesGroup->add(m_matchListpanel);
+	matchesGroup->add(m_matchListCreate);
+	matchesGroup->add(m_matchListEnd);
+	matchesGroup->add(listTeam1);
+	matchesGroup->add(listTeam2);
+	matchesGroup->add(versus);
+	matchesGroup->add(createMatch);
+	matchesGroup->add(matchName);
+	matchesGroup->add(nameMatch);
+	matchesGroup->add(matchCreate);
+	matchesGroup->add(team1Choice);
+	matchesGroup->add(team2Choice);
+	matchesGroup->add(matchEnd);
+	gui->add(matchesGroup);
+
+	teamsPanel.reset(new TeamsAdminPanel(gui, font));
+
+	tabs = tgui::Tabs::create();
+	tabs->setInheritedFont(font);
+	tabs->setTextSize(18);
+	tabs->setTabHeight(36);
+	tabs->add("Matchs", false);
+	tabs->add(L"Équipes", false);
+	tabs->connect("TabSelected", [this](const sf::String & tab) { showTab(tab); });
+	gui->add(tabs);
+	tabs->select(1);
 
 	LinkToServer::getInstance()->addListener(this);
 
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
+}
+
+void AdminScreen::showTab(const sf::String & tab)
+{
+	matchesGroup->setVisible(tab == "Matchs");
+	teamsPanel->setVisible(tab != "Matchs");
 }
 
 AdminScreen::~AdminScreen()
@@ -159,6 +181,9 @@ void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	team1Choice->setPosition(window->getSize().x / 2.0 - 350 - team1Choice->getSize().x / 2.0, 425);
 	team2Choice->setPosition(window->getSize().x / 2.0 + 350 - team2Choice->getSize().x / 2.0, 425);
 	matchEnd->setPosition(window->getSize().x / 2.0 - 750 - matchCreate->getSize().x / 2.0, 270);
+
+	tabs->setPosition(window->getSize().x / 2.0 - tabs->getSize().x / 2.0, 200);
+	teamsPanel->layout(window->getSize(), 250);
 
 	sf::Event event;
 	while (window->pollEvent(event))
@@ -272,26 +297,24 @@ void AdminScreen::onMessageReceived(std::string msg)
 
 		m_matchListEnd->getRenderer()->setScrollbarWidth(10);
 	}
-	// Team list
-	else if (m.substring(0, 2) == "TL")
+	// Team list (JSON)
+	else if (m.substring(0, 2) == "TL" || m.substring(0, 2) == "TR")
 	{
-		teamIdToPlayer.clear();
-		std::vector<std::string> data = StringUtils::explode(m.substring(2), ';');
-
-		for (int i = 0; i < data.size(); i++)
+		tw::protocol::Message message;
+		nlohmann::json body;
+		if (tw::protocol::Message::decode(msg, message) && message.parseJson(body))
 		{
-			std::vector<std::string> teamData = StringUtils::explode(data[i], ',');
-			int teamId = std::atoi(teamData[0].c_str());
-			std::string teamInfo = teamData[1];
-
-			std::vector<tw::Player> team = tw::Match::deserializeTeam(teamInfo, '¨', '^');
-
-			teamIdToPlayer[teamId].clear();
-			teamIdToPlayer[teamId] = team;
+			if (message.op == "TL")
+			{
+				teamsPanel->onTeamList(body);
+				updateListTeam(listTeam1);
+				updateListTeam(listTeam2);
+			}
+			else
+			{
+				teamsPanel->onTeamResult(body);
+			}
 		}
-		
-		updateListTeam(listTeam1);
-		updateListTeam(listTeam2);
 	}
 	else if (m.substring(0, 2) == "CO")
 	{
@@ -303,13 +326,28 @@ void AdminScreen::onMessageReceived(std::string msg)
 
 void AdminScreen::updateListTeam(tgui::ListBox::Ptr listTeam)
 {
+	sf::String selected = listTeam->getSelectedItemId();
 	listTeam->removeAllItems();
 
-	for (std::map<int, std::vector<tw::Player>>::iterator it = teamIdToPlayer.begin(); it != teamIdToPlayer.end(); it++)
+	for (const nlohmann::json & team : teamsPanel->getTeams())
 	{
-		sf::String item = "Equipe " + sf::String(std::to_string((*it).first)) + " (" + (*it).second[0].getPseudo() + ", " + (*it).second[1].getPseudo() + ")";
-		listTeam->addItem(item, std::to_string((*it).first));
+		if (!team.value("active", true))
+			continue;
+
+		sf::String item = fromServerText(team.value("name", std::string())) + " (";
+		const nlohmann::json & players = team["players"];
+		for (std::size_t i = 0; i < players.size(); i++)
+		{
+			if (i > 0)
+				item += ", ";
+			item += fromServerText(players[i].value("login", std::string()));
+		}
+		item += ")";
+
+		listTeam->addItem(item, std::to_string(team.value("id", 0)));
 	}
+
+	listTeam->setSelectedItemById(selected);
 }
 
 void AdminScreen::onDisconnected()

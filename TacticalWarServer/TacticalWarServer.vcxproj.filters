@@ -37,4 +37,7 @@
     <ClCompile Include="net\NetServer.cpp" />
     <ClInclude Include="net\NetServer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserTeams.cpp" />
+  </ItemGroup>
 </Project>

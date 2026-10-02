@@ -133,4 +133,8 @@
     <ClCompile Include="ClientConfig.cpp" />
     <ClInclude Include="ClientConfig.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TeamsAdminPanel.cpp" />
+    <ClInclude Include="TeamsAdminPanel.h" />
+  </ItemGroup>
 </Project>

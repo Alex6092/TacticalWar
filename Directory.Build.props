@@ -5,6 +5,8 @@
     The C++/CLI map editor (CLRSupport) is left untouched.
   -->
   <PropertyGroup>
+    <!-- Building a single project (outside the solution) keeps the solution layout (x64\Debug, assets copy). -->
+    <SolutionDir Condition="'$(SolutionDir)' == '' or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
     <TwRootDir>$(MSBuildThisFileDirectory)</TwRootDir>
     <TwThirdPartyInclude>$(MSBuildThisFileDirectory)lib\include</TwThirdPartyInclude>
   </PropertyGroup>

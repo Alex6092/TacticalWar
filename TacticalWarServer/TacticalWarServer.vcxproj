@@ -156,6 +156,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TWParserTeams.cpp" />
     <ClCompile Include="net\NetServer.cpp" />
     <ClCompile Include="ClientState.cpp" />
     <ClCompile Include="main.cpp" />

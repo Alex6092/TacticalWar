@@ -101,6 +101,16 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/intro2.glsl");
 
 	MusicManager::getInstance()->setMenuMusic();
+
+	// Connexion automatique demandée en ligne de commande (une seule fois) :
+	ClientConfig & config = ClientConfig::get();
+	if (config.autoConnect)
+	{
+		config.autoConnect = false;
+		login->setText(fromServerText(config.autoLogin));
+		password->setText(fromServerText(config.autoPassword));
+		readyForConnect = true;
+	}
 }
 
 LoginScreen::~LoginScreen()

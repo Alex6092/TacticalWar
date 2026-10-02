@@ -47,6 +47,7 @@
   <ItemGroup>
     <ClCompile Include="ProtocolTests.cpp" />
     <ClCompile Include="StoreTests.cpp" />
+    <ClCompile Include="TeamTests.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
