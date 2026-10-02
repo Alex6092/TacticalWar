@@ -121,7 +121,7 @@ TEST_CASE("Game data defines the four classes with four spells each")
 		CHECK(classDef->baseStats.get(Stat::AP) == 6);
 		CHECK((classDef->passive.type != PassiveType::NONE));
 	}
-	CHECK(data.findClass(GUERRIER)->baseStats.get(Stat::MAX_HP) == 120);
+	CHECK(data.findClass(GUERRIER)->baseStats.get(Stat::MAX_HP) == 135);
 	CHECK(data.findClass(ARCHER)->baseStats.get(Stat::MP) == 4);
 
 	GameData invalid;
@@ -204,8 +204,9 @@ TEST_CASE("Turn order follows initiative and alternates teams")
 
 TEST_CASE("Damage applies power, resistance, shields and erosion")
 {
-	// Archer (puissance 10) contre Guerrier (résistance 10) à 4 cases.
+	// Archer (puissance 0) contre Guerrier (résistance 10) à 4 cases.
 	Arena arena({ { ARCHER, { 2, 7 } } }, { { GUERRIER, { 6, 7 } } });
+	int guerrierHp = gameData().findClass(GUERRIER)->baseStats.get(Stat::MAX_HP);
 	int archer = 0;
 	int guerrier = 1;
 	arena.playUntilTurnOf(archer);
@@ -214,12 +215,12 @@ TEST_CASE("Damage applies power, resistance, shields and erosion")
 	std::vector<nlohmann::json> damages = arena.eventsOfType("damage");
 	REQUIRE(damages.size() == 1);
 	int amount = damages[0]["amount"];
-	// 12-14 x 1.10 x 0.90
-	CHECK(amount >= 12);
-	CHECK(amount <= 14);
-	CHECK(arena.fighter(guerrier).hp == 120 - amount);
+	// 11-13 x 1.00 x 0.90, arrondi
+	CHECK(amount >= 10);
+	CHECK(amount <= 12);
+	CHECK(arena.fighter(guerrier).hp == guerrierHp - amount);
 	// Érosion de 10 % des PV perdus.
-	CHECK(arena.fighter(guerrier).maxHp == 120 - amount * 10 / 100);
+	CHECK(arena.fighter(guerrier).maxHp == guerrierHp - amount * 10 / 100);
 	CHECK(arena.fighter(archer).ap == 3);
 
 	// Tir précis : second lancer possible (3 PA restants), puis plus de PA ni de lancer disponible.
@@ -323,12 +324,13 @@ TEST_CASE("A movement debuff applies during the target's next turn only")
 	int guerrier = 1;
 	arena.playUntilTurnOf(archer);
 	REQUIRE(arena.engine->cast(archer, spellIndex(ARCHER, "fleche_entravante"), { 6, 7 }, arena.now).ok);
+	int baseMp = gameData().findClass(GUERRIER)->baseStats.get(Stat::MP);
 
 	arena.playUntilTurnOf(guerrier);
-	CHECK(arena.fighter(guerrier).mp == 1);
+	CHECK(arena.fighter(guerrier).mp == baseMp - 2);
 	REQUIRE(arena.engine->endTurn(guerrier, arena.now).ok);
 	arena.playUntilTurnOf(guerrier);
-	CHECK(arena.fighter(guerrier).mp == 3);
+	CHECK(arena.fighter(guerrier).mp == baseMp);
 }
 
 TEST_CASE("Shields absorb damage before HP and expire")
@@ -345,7 +347,7 @@ TEST_CASE("Shields absorb damage before HP and expire")
 	REQUIRE(arena.engine->move(archer, { { 9, 7 } }, arena.now).ok);
 	REQUIRE(arena.engine->cast(archer, spellIndex(ARCHER, "tir_precis"), { 5, 7 }, arena.now).ok);
 	const Fighter & warrior = arena.fighter(guerrier);
-	CHECK(warrior.hp == 120);
+	CHECK(warrior.hp == gameData().findClass(GUERRIER)->baseStats.get(Stat::MAX_HP));
 	CHECK(warrior.shield < 20);
 }
 
@@ -393,8 +395,8 @@ TEST_CASE("Frost glyph triggers on enemies starting their turn inside it")
 	CHECK(arena.state().glyphs[0].cells.size() == 5);
 
 	arena.playUntilTurnOf(guerrier);
-	CHECK(arena.fighter(guerrier).hp < 120);
-	CHECK(arena.fighter(guerrier).mp == 1);
+	CHECK(arena.fighter(guerrier).hp < gameData().findClass(GUERRIER)->baseStats.get(Stat::MAX_HP));
+	CHECK(arena.fighter(guerrier).mp == gameData().findClass(GUERRIER)->baseStats.get(Stat::MP) - 2);
 
 	// Le glyphe disparaît au début du 2e tour suivant du Mage.
 	REQUIRE(arena.engine->endTurn(guerrier, arena.now).ok);

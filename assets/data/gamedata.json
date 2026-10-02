@@ -21,18 +21,18 @@
       "graphicsPath": "./assets/Warrior/",
       "icon": "./assets/classicons/Barbare.png",
       "preview": "./assets/classpreview/Guerrier.png",
-      "stats": { "MAX_HP": 120, "AP": 6, "MP": 3, "INITIATIVE": 30, "POWER": 0, "RESISTANCE": 10, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 8, "DODGE": 2, "EROSION": 10 },
+      "stats": { "MAX_HP": 135, "AP": 6, "MP": 4, "INITIATIVE": 30, "POWER": 0, "RESISTANCE": 10, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 8, "DODGE": 2, "EROSION": 10 },
       "passive": { "type": "LOW_HP_DAMAGE", "name": "Rage", "description": "+15 % de dégâts sous 50 % des PV, +30 % sous 25 %.", "threshold": 50, "bonus": 15, "threshold2": 25, "bonus2": 30 },
       "spells": [
         {
           "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps.",
           "icon": "./assets/spellicons/taillade.png", "ap": 3, "range": [1, 1], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 14, "max": 17 } ],
+          "effects": [ { "type": "DAMAGE", "min": 16, "max": 19 } ],
           "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
         },
         {
           "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour).",
-          "icon": "./assets/spellicons/charge.png", "ap": 3, "range": [2, 4], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
+          "icon": "./assets/spellicons/charge.png", "ap": 3, "range": [2, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 2,
           "effects": [
             { "type": "DASH", "targets": "CASTER" },
             { "type": "DAMAGE", "min": 8, "max": 10 },
@@ -51,7 +51,7 @@
         },
         {
           "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour.",
-          "icon": "./assets/spellicons/provocation.png", "ap": 2, "range": [2, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
+          "icon": "./assets/spellicons/provocation.png", "ap": 2, "range": [2, 6], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
           "effects": [
             { "type": "PULL", "min": 3 },
             { "type": "STAT_MOD", "targets": "CASTER", "stat": "LOCK", "min": 4, "duration": 1, "name": "Provocation" }
@@ -68,13 +68,13 @@
       "graphicsPath": "./assets/Archer/",
       "icon": "./assets/classicons/Chasseur.png",
       "preview": "./assets/classpreview/Archer.png",
-      "stats": { "MAX_HP": 85, "AP": 6, "MP": 4, "INITIATIVE": 50, "POWER": 10, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 2, "DODGE": 8, "EROSION": 10 },
-      "passive": { "type": "DISTANCE_DAMAGE", "name": "Tireur d'élite", "description": "+20 % de dégâts si la cible est à 6 cases ou plus.", "distance": 6, "bonus": 20 },
+      "stats": { "MAX_HP": 80, "AP": 6, "MP": 4, "INITIATIVE": 50, "POWER": 0, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 2, "DODGE": 8, "EROSION": 10 },
+      "passive": { "type": "DISTANCE_DAMAGE", "name": "Tireur d'élite", "description": "+15 % de dégâts si la cible est à 6 cases ou plus.", "distance": 6, "bonus": 15 },
       "spells": [
         {
           "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée.",
           "icon": "./assets/spellicons/tir_precis.png", "ap": 3, "range": [4, 9], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 12, "max": 14 } ],
+          "effects": [ { "type": "DAMAGE", "min": 11, "max": 13 } ],
           "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
         },
         {
@@ -114,13 +114,13 @@
       "graphicsPath": "./assets/Mage/",
       "icon": "./assets/classicons/Mage.png",
       "preview": "./assets/classpreview/Mage.png",
-      "stats": { "MAX_HP": 80, "AP": 6, "MP": 3, "INITIATIVE": 40, "POWER": 15, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 3, "DODGE": 4, "EROSION": 10 },
+      "stats": { "MAX_HP": 85, "AP": 6, "MP": 3, "INITIATIVE": 40, "POWER": 15, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 3, "DODGE": 4, "EROSION": 10 },
       "passive": { "type": "ON_CAST_POWER", "name": "Surcharge", "description": "Chaque sort lancé donne +10 % de puissance jusqu'à la fin du tour (3 fois maximum).", "bonus": 10, "maxStacks": 3 },
       "spells": [
         {
           "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide.",
           "icon": "./assets/spellicons/eclair.png", "ap": 2, "range": [1, 6], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 3,
-          "effects": [ { "type": "DAMAGE", "min": 7, "max": 8 } ],
+          "effects": [ { "type": "DAMAGE", "min": 8, "max": 9 } ],
           "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
         },
         {
@@ -177,7 +177,7 @@
         {
           "id": "soin", "name": "Soin", "description": "Soigne un allié ou soi-même (une fois par tour).",
           "icon": "./assets/spellicons/soin.png", "ap": 3, "range": [0, 4], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "castsPerTurn": 1,
-          "effects": [ { "type": "HEAL", "targets": "ALLIES", "min": 16, "max": 20 } ],
+          "effects": [ { "type": "HEAL", "targets": "ALLIES", "min": 14, "max": 18 } ],
           "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
         },
         {
