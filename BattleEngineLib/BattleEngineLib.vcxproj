@@ -37,6 +37,7 @@
   </ImportGroup>
   <ItemGroup>
     <ClInclude Include="BattleEngine.h" />
+    <ClInclude Include="BattleMirror.h" />
     <ClInclude Include="BattleRules.h" />
     <ClInclude Include="BattleState.h" />
     <ClInclude Include="GameData.h" />
@@ -44,6 +45,7 @@
   <ItemGroup>
     <ClCompile Include="BattleEffects.cpp" />
     <ClCompile Include="BattleEngine.cpp" />
+    <ClCompile Include="BattleMirror.cpp" />
     <ClCompile Include="BattleRules.cpp" />
     <ClCompile Include="BattleState.cpp" />
     <ClCompile Include="GameData.cpp" />

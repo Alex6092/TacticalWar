@@ -4,6 +4,7 @@
 #include <random>
 
 #include <BattleEngine.h>
+#include <BattleMirror.h>
 
 using namespace tw::battle;
 
@@ -451,8 +452,44 @@ TEST_CASE("Random battles always end and every event serializes")
 			{ { classIds[rng() % 4], { 12, 4 } }, { classIds[rng() % 4], { 12, 8 } } },
 			map, (std::uint32_t)battle);
 
+		// Copie tenue par un client : snapshot initial puis événements.
+		BattleState mirror;
+		BattleMap mirrorMap = map;
+		BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(0, arena.now));
+
+		auto syncMirror = [&]() {
+			nlohmann::json batch = nlohmann::json::parse(arena.engine->flushEvents().dump());
+			for (const nlohmann::json & event : batch["ev"])
+				BattleMirror::applyEvent(mirror, event);
+
+			const BattleState & truth = arena.state();
+			INFO(batch.dump());
+			REQUIRE((mirror.phase == truth.phase));
+			REQUIRE(mirror.activeFighterId() == truth.activeFighterId());
+			REQUIRE(mirror.glyphs.size() == truth.glyphs.size());
+			for (const Fighter & real : truth.fighters)
+			{
+				const Fighter & copy = *mirror.findFighter(real.id);
+				REQUIRE(copy.alive == real.alive);
+				REQUIRE(copy.hp == real.hp);
+				if (!real.alive)
+					continue;
+				REQUIRE(copy.position == real.position);
+				REQUIRE(copy.maxHp == real.maxHp);
+				REQUIRE(copy.shield == real.shield);
+				REQUIRE(copy.ap == real.ap);
+				REQUIRE(copy.mp == real.mp);
+				REQUIRE(copy.cooldowns == real.cooldowns);
+				REQUIRE(copy.effects.size() == real.effects.size());
+				for (std::size_t i = 0; i < real.effects.size(); i++)
+					REQUIRE(copy.effects[i].remainingTurns == real.effects[i].remainingTurns);
+			}
+		};
+
 		for (int action = 0; action < 5000 && !arena.engine->isOver(); action++)
 		{
+			syncMirror();
+
 			int id = arena.active();
 			const Fighter & fighter = arena.fighter(id);
 			int choice = rng() % 3;
@@ -485,9 +522,8 @@ TEST_CASE("Random battles always end and every event serializes")
 
 			arena.now += 1000;
 			REQUIRE(arena.engine->endTurn(id, arena.now).ok);
-			std::string dumped = arena.engine->flushEvents().dump();
-			REQUIRE_FALSE(dumped.empty());
 		}
+		syncMirror();
 
 		REQUIRE(arena.engine->isOver());
 		CHECK((arena.state().winnerTeam == 1 || arena.state().winnerTeam == 2));
