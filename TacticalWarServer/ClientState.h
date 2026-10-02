@@ -2,6 +2,7 @@
 
 #include <WS2tcpip.h>
 #include <deque>
+#include <string>
 
 class ClientState
 {
