@@ -504,22 +504,35 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		view->setDisplayMaxLife(fighter->maxHp);
 		// Un mort reste affiché le temps de son animation.
 		view->setCurrentLife(std::max(fighter->hp, fighter->alive ? 0 : 1));
+		if (amount <= 0)
+			return 0;
 		if (fighter->alive)
 			view->startTakeDmg(1);
 
-		sf::String text = L"-" + num(amount - absorbed);
-		if (absorbed > 0)
-			text += L" (bouclier -" + num(absorbed) + L")";
-		addFloatingText(fighterId, text, sf::Color(255, 80, 70));
-
+		int lost = amount - absorbed;
 		sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
-		hud->log(fighterName(fighterId) + L" perd " + num(amount - absorbed) + L" PV" + source, sf::Color(255, 130, 120));
+		if (lost > 0)
+		{
+			sf::String text = L"-" + num(lost);
+			if (absorbed > 0)
+				text += L" (bouclier -" + num(absorbed) + L")";
+			addFloatingText(fighterId, text, sf::Color(255, 80, 70));
+			hud->log(fighterName(fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
+		}
+		else
+		{
+			// Coup entièrement absorbé par le bouclier.
+			addFloatingText(fighterId, L"Bouclier -" + num(absorbed), sf::Color(200, 220, 255));
+			hud->log(fighterName(fighterId) + L" : le bouclier absorbe " + num(absorbed) + L" dégâts" + source, sf::Color(200, 220, 255));
+		}
 		MusicManager::getInstance()->playTakeDamageSound();
 		return fast ? 0 : 0.35f;
 	}
 	if (type == "heal" && view != NULL && fighter != NULL)
 	{
 		view->setCurrentLife(fighter->hp);
+		if (event.value("amount", 0) <= 0)
+			return 0;
 		addFloatingText(fighterId, L"+" + num(event.value("amount", 0)), sf::Color(110, 255, 110));
 		hud->log(fighterName(fighterId) + L" récupère " + num(event.value("amount", 0)) + L" PV", sf::Color(130, 255, 130));
 		return fast ? 0 : 0.3f;
