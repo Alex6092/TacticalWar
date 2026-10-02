@@ -31,6 +31,9 @@ namespace
 	const std::size_t FAST_QUEUE = 25;
 	const std::size_t INSTANT_QUEUE = 60;
 
+	// Durée des animations d'action des personnages (attaque, dégâts, mort), en secondes.
+	const float ACTION_ANIMATION_SECONDS = 1.f;
+
 	sf::String num(int value)
 	{
 		return sf::String(std::to_string(value));
@@ -131,6 +134,23 @@ void BattleScreen::update(float deltatime)
 		entry.second->update(deltatime);
 
 	processVisuals(deltatime);
+
+	// Fin des animations d'action : le personnage reprend l'animation de repos ou de course.
+	for (auto it = actionAnimations.begin(); it != actionAnimations.end();)
+	{
+		it->second -= deltatime;
+		if (it->second <= 0)
+		{
+			BaseCharacterModel * view = viewOf(it->first);
+			if (view != NULL && pendingDeaths.find(it->first) == pendingDeaths.end())
+				view->resetAnimation();
+			it = actionAnimations.erase(it);
+		}
+		else
+		{
+			it++;
+		}
+	}
 
 	for (auto it = pendingDeaths.begin(); it != pendingDeaths.end();)
 	{
@@ -328,6 +348,7 @@ void BattleScreen::applySnapshot(const json & snapshot)
 	waitingMove = false;
 	stepRemaining = 0;
 	pendingDeaths.clear();
+	actionAnimations.clear();
 
 	for (const battle::Fighter & fighter : truth.fighters)
 		syncView(fighter);
@@ -460,6 +481,9 @@ float BattleScreen::playVisual(const json & event, bool fast)
 			}
 			else
 			{
+				// Le déplacement interrompt une animation d'action : le personnage court.
+				actionAnimations.erase(fighterId);
+				view->resetAnimation();
 				view->setPath(toLegacyPath(path), this);
 				waitingMove = true;
 			}
@@ -478,9 +502,9 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		if (spell != NULL)
 		{
 			if (spell->casterAnimation == "physical")
-				view->startAttack2Animation(1);
+				startActionAnimation(fighterId, view, tw::Animation::ATTACK2);
 			else
-				view->startAttack1Animation(1);
+				startActionAnimation(fighterId, view, tw::Animation::ATTACK1);
 
 			if (!spell->fxSprite.empty() && !fast)
 			{
@@ -507,7 +531,7 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		if (amount <= 0)
 			return 0;
 		if (fighter->alive)
-			view->startTakeDmg(1);
+			startActionAnimation(fighterId, view, tw::Animation::TAKE_DAMAGE);
 
 		int lost = amount - absorbed;
 		sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
@@ -590,7 +614,8 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	}
 	if (type == "death" && view != NULL)
 	{
-		view->startDieAction(1);
+		actionAnimations.erase(fighterId);
+		view->startDieAction(ACTION_ANIMATION_SECONDS);
 		pendingDeaths[fighterId] = fast ? 0.f : 0.9f;
 		hud->log(fighterName(fighterId) + L" est hors combat !", sf::Color(255, 90, 90));
 		return fast ? 0 : 0.9f;
@@ -613,6 +638,17 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	}
 
 	return 0;
+}
+
+void BattleScreen::startActionAnimation(int fighterId, BaseCharacterModel * view, tw::Animation animation)
+{
+	if (animation == tw::Animation::ATTACK1)
+		view->startAttack1Animation(ACTION_ANIMATION_SECONDS);
+	else if (animation == tw::Animation::ATTACK2)
+		view->startAttack2Animation(ACTION_ANIMATION_SECONDS);
+	else if (animation == tw::Animation::TAKE_DAMAGE)
+		view->startTakeDmg(ACTION_ANIMATION_SECONDS);
+	actionAnimations[fighterId] = ACTION_ANIMATION_SECONDS;
 }
 
 void BattleScreen::showEnd()

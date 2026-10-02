@@ -111,6 +111,10 @@ namespace tw
 		bool waitingMove;
 		float waitingMoveTime;
 		std::map<int, float> pendingDeaths;
+		// Animations d'action en cours (attaque, dégâts) : temps restant avant le retour à
+		// l'animation de repos ou de course. Celui qui lance une animation d'action la termine.
+		std::map<int, float> actionAnimations;
+		void startActionAnimation(int fighterId, BaseCharacterModel * view, tw::Animation animation);
 
 		std::map<int, BaseCharacterModel*> views;
 		std::vector<FloatingText> floatingTexts;
