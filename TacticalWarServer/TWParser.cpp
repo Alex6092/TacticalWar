@@ -1,5 +1,6 @@
 ﻿#include "TWParser.h"
 #include <iostream>
+#include <cstdlib>
 
 #include "TcpServer.h"
 #include <StringUtils.h>
@@ -99,8 +100,8 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 		buffer.push_back(c);
 	}
 
-	// Implémentation du protocole :
-	if (hasCompleteMessage(client))
+	// Implémentation du protocole (un même paquet peut contenir plusieurs messages) :
+	while (hasCompleteMessage(client))
 	{
 		std::string toParse = extractCompleteMessageFromBuffer(client);
 
@@ -157,7 +158,7 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 							// Un match existe pour ce joueur :
 							if (match != NULL)
 							{
-								if (match->getStatus() == tw::MatchStatus::STARTED)
+								if (match->getStatus() == tw::MatchStatus::STARTED && match->getBattlePayload() != NULL)
 								{
 									// Retour en jeu (reconnexion en combat)
 									Battle * b = (Battle*)match->getBattlePayload();
@@ -427,18 +428,8 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 								// Si le personnage a assez de PM :
 								if (p->getCharacter()->hasEnoughPM(path.size()))
 								{
-									// Check si la cellule de début du chemin est adjacente à la celle où se trouve le personnage :
-									tw::Point2D firstCell = path.back();
-									int characterX = p->getCharacter()->getCurrentX();
-									int characterY = p->getCharacter()->getCurrentY();
-									if ((firstCell.getX() == characterX && firstCell.getY() == characterY + 1)
-										||
-										(firstCell.getX() == characterX && firstCell.getY() == characterY - 1)
-										||
-										(firstCell.getX() == characterX + 1 && firstCell.getY() == characterY)
-										||
-										(firstCell.getX() == characterX - 1 && firstCell.getY() == characterY)
-										)
+									// Check que le chemin part du personnage, est contigu et passe par des cases libres :
+									if (isValidMovePath(m, p, path))
 									{
 										// Le déplacement demandé est valide :
 										p->getCharacter()->serverSetPath(path);
@@ -500,6 +491,9 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 							{
 								std::string data = toParse.substr(2);
 								std::vector<std::string> spellData = StringUtils::explode(data, ';');
+								if (spellData.size() < 3)
+									continue;
+
 								int spellId = std::atoi(spellData[0].c_str());
 								int cellX = std::atoi(spellData[1].c_str());
 								int cellY = std::atoi(spellData[2].c_str());
@@ -537,14 +531,17 @@ void TWParser::parse(ClientState * client, std::vector<unsigned char> & received
 											std::string str = "CL" + std::to_string(b->getIdForPlayer(p)) + ";" + std::to_string(spellId) + ";" + std::to_string(cellX) + ";" + std::to_string(cellY) + "\n";
 											sendToMatch(m, str);
 
-											// Si le personnage est mort pendant son tour ou qu'il n'y a plus d'action possible :
-											if (!p->getCharacter()->isAlive() || (p->getCharacter()->getCurrentPA() == 0 && p->getCharacter()->getCurrentPM() == 0))
+											// La fin de combat est vérifiée avant le passage de tour (le combat
+											// et les personnages sont détruits si le combat est terminé) :
+											if (!checkBattleEnd(m, p))
 											{
-												// Passage automatique du tour ...
-												b->changeTurn();
+												// Si le personnage est mort pendant son tour ou qu'il n'y a plus d'action possible :
+												if (!p->getCharacter()->isAlive() || (p->getCharacter()->getCurrentPA() == 0 && p->getCharacter()->getCurrentPM() == 0))
+												{
+													// Passage automatique du tour ...
+													b->changeTurn();
+												}
 											}
-
-											checkBattleEnd(m);
 										}
 									}
 								}
@@ -630,9 +627,50 @@ std::vector<tw::Point2D> TWParser::calculateSpellZone(tw::BaseCharacterModel * c
 	return targettable;
 }
 
-void TWParser::checkBattleEnd(tw::Match * m)
+// Vérifie qu'un chemin demandé par un client est jouable : non vide, contigu, partant de la
+// position du personnage, sur des cases praticables et libres.
+// path[0] est la destination, path.back() le premier pas.
+bool TWParser::isValidMovePath(tw::Match * m, tw::Player * p, const std::vector<tw::Point2D> & path)
 {
-	std::string str = "";
+	if (path.empty())
+		return false;
+
+	tw::Environment * env = m->getEnvironment();
+	std::vector<tw::Player*> players = m->getPlayers();
+	int previousX = p->getCharacter()->getCurrentX();
+	int previousY = p->getCharacter()->getCurrentY();
+
+	for (int i = (int)path.size() - 1; i >= 0; i--)
+	{
+		int x = path[i].getX();
+		int y = path[i].getY();
+
+		if (std::abs(x - previousX) + std::abs(y - previousY) != 1)
+			return false;
+
+		if (x < 0 || y < 0 || x >= env->getWidth() || y >= env->getHeight())
+			return false;
+
+		tw::CellData * cell = env->getMapData(x, y);
+		if (cell == NULL || !cell->getIsWalkable() || cell->getIsObstacle())
+			return false;
+
+		for (int j = 0; j < players.size(); j++)
+		{
+			tw::BaseCharacterModel * other = players[j]->getCharacter();
+			if (players[j] != p && other != NULL && other->isAlive() && other->getCurrentX() == x && other->getCurrentY() == y)
+				return false;
+		}
+
+		previousX = x;
+		previousY = y;
+	}
+
+	return true;
+}
+
+bool TWParser::checkBattleEnd(tw::Match * m, tw::Player * actingPlayer)
+{
 	std::vector<tw::Player*> team1 = m->getTeam1();
 	std::vector<tw::Player*> team2 = m->getTeam2();
 
@@ -657,34 +695,38 @@ void TWParser::checkBattleEnd(tw::Match * m)
 		}
 	}
 
-	bool endOfBattle = false;
-	if (!aliveInTeam1)
+	if (aliveInTeam1 && aliveInTeam2)
+		return false;
+
+	int winnerTeam;
+	if (!aliveInTeam1 && !aliveInTeam2)
 	{
-		str = "BE" + std::to_string(/*team2[0]->getTeamNumber()*/2) + "\n";
-		sendToMatch(m, str);
-		m->setWinnerTeam(2);
-		endOfBattle = true;
+		// Les deux équipes sont mortes sur la même action : l'équipe de celui qui a agi perd.
+		winnerTeam = (actingPlayer != NULL && m->playerIsInTeam1(actingPlayer)) ? 2 : 1;
+	}
+	else
+	{
+		winnerTeam = aliveInTeam1 ? 1 : 2;
 	}
 
-	if (!aliveInTeam2)
+	std::string str = "BE" + std::to_string(winnerTeam) + "\n";
+	sendToMatch(m, str);
+	m->setWinnerTeam(winnerTeam);
+
+	std::vector<tw::Player*> players = m->getPlayers();
+	for (int i = 0; i < players.size(); i++)
 	{
-		str = "BE" + std::to_string(/*team1[0]->getTeamNumber()*/1) + "\n";
-		sendToMatch(m, str);
-		m->setWinnerTeam(1);
-		endOfBattle = true;
+		tw::BaseCharacterModel * character = players[i]->getCharacter();
+		delete character;
+		players[i]->setCharacter(NULL);
+		players[i]->setHasJoinBattle(false);
 	}
 
-	if (endOfBattle)
-	{
-		std::vector<tw::Player*> players = m->getPlayers();
-		for (int i = 0; i < players.size(); i++)
-		{
-			tw::BaseCharacterModel * character = players[i]->getCharacter();
-			delete character;
-			players[i]->setCharacter(NULL);
-			players[i]->setHasJoinBattle(false);
-		}
-	}
+	Battle * b = (Battle*)m->getBattlePayload();
+	m->setBattlePayload(NULL);
+	delete b;
+
+	return true;
 }
 
 void TWParser::notifyCharacterPositionChanged(ClientState * toNotify, int playerId, tw::Player * characterWhosePositionChanged)
@@ -768,7 +810,7 @@ void TWParser::synchronizeBattleState(tw::Match * m, ClientState * c)
 					TcpServer<TWParser, ClientState>::Send(c, (char*)activeCharacterStr.c_str(), activeCharacterStr.size());
 				}
 
-				notifyReadyState(c, i, p);
+				notifyReadyState(c, i, player);
 			}
 
 			notifyBattleState(c, b);
@@ -820,6 +862,9 @@ void TWParser::notifyPlayerTurnToken(Battle * b, ClientState * c = NULL)
 
 void TWParser::notifyReadyState(ClientState * c, int playerId, tw::Player * p)
 {
+	if (p == NULL || p->getCharacter() == NULL)
+		return;
+
 	std::string readyStateStr = (p->getCharacter()->isPlayerReady()) ? "1" : "0";
 	std::string str = "Cs" + std::to_string(playerId) + ";" + readyStateStr + "\n";
 	TcpServer<TWParser, ClientState>::Send(c, (char*)str.c_str(), str.size());

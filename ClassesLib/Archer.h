@@ -9,6 +9,8 @@ private:
 
 	int tour = 1;
 	int compt1, compt2, compt3;
+	// Durées de relance (valeur initiale du cooldown) :
+	int cd1, cd2, cd3;
 
 public:
 
@@ -122,6 +124,17 @@ public:
 		}
 	}
 
+	virtual void onSpellCast(int spellId)
+	{
+		// Réarme le cooldown du sort lancé :
+		if (spellId == 1)
+			compt1 = cd1;
+		else if (spellId == 2)
+			compt2 = cd2;
+		else if (spellId == 3)
+			compt3 = cd3;
+	}
+
 	virtual void turnStart()
 	{
 		BaseCharacterModel::turnStart();
@@ -129,6 +142,10 @@ public:
 		// Décrémentation des cooldowns :
 		if (compt1 > 0)
 			compt1--;
+		if (compt2 > 0)
+			compt2--;
+		if (compt3 > 0)
+			compt3--;
 	}
 
 	//Passif : +1 de PD - fonction inutilisée
@@ -178,6 +195,9 @@ public:
 		compt1 = 4;
 		compt2 = 3;
 		compt3 = 1;
+		cd1 = compt1;
+		cd2 = compt2;
+		cd3 = compt3;
 	}
 
 

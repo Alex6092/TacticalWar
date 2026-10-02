@@ -20,6 +20,11 @@ class AnimationManager : public IActionAnimationEventListener
 		{
 			animations.push_back(anim);
 			anim->addlistener(this);
+
+			// The first animation of an empty queue must be started explicitly
+			// (the following ones are started by onAnimationFinished) :
+			if (animations.size() == 1)
+				anim->start();
 		}
 };
 

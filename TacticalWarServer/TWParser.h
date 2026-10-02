@@ -50,7 +50,9 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 	void notifyActivePlayerPANumber(Battle * b, ClientState * c);
 	void notifyActivePlayerPMNumber(Battle * b, ClientState * c);
 
-	void checkBattleEnd(tw::Match * m);
+	// Retourne true si le combat est terminé (le combat et les personnages sont alors détruits).
+	bool checkBattleEnd(tw::Match * m, tw::Player * actingPlayer);
+	bool isValidMovePath(tw::Match * m, tw::Player * p, const std::vector<tw::Point2D> & path);
 
 
 	std::vector<tw::Point2D> calculateSpellZone(tw::BaseCharacterModel * character, int selectedSpell, tw::Match * match, tw::Environment * environment);

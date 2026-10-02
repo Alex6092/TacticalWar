@@ -710,6 +710,12 @@ namespace tw
 
 		}
 
+		// A redefinir dans les classes filles pour réarmer le cooldown d'un sort lancé :
+		virtual void onSpellCast(int spellId)
+		{
+
+		}
+
 		int getAttackPACost(int spellId)
 		{
 			if (spellId == 1)
@@ -738,6 +744,7 @@ namespace tw
 			if (paCost != -1)
 			{
 				consumePA(paCost);
+				onSpellCast(spellId);
 				if (spellId == 1)
 				{
 					return doAttack1(targetX, targetY);

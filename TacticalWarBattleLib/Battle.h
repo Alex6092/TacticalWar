@@ -161,18 +161,24 @@ public:
 		return timeline[turnToken];
 	}
 
-	void changeTurn()
+	// Passe au prochain personnage vivant. Retourne false si plus aucun personnage n'est vivant.
+	bool changeTurn()
 	{
-		do
+		for (int i = 0; i < timeline.size(); i++)
 		{
 			turnToken++;
 			if (turnToken >= timeline.size())
 				turnToken = 0;
 
-		} while (!getActivePlayer()->getCharacter()->isAlive());
+			tw::BaseCharacterModel * character = getActivePlayer()->getCharacter();
+			if (character != NULL && character->isAlive())
+			{
+				playerStartTurn(getActivePlayer());
+				return true;
+			}
+		}
 
-		tw::Player * p = getActivePlayer();
-		playerStartTurn(p);
+		return false;
 	}
 
 	void addEventListener(BattleEventListener * l)

@@ -7,7 +7,7 @@ class BattleActionToAnimation
 {
 	private:
 		std::vector<IActionAnimationEventListener*> Listener;
-		float elseTime;
+		float elseTime = 0;
 	protected:
 		void notifyAnimationFinished(float remainingTime);
 
