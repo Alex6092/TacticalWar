@@ -13,14 +13,14 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
-    <ProjectGuid>{703DCFD6-42E6-46F7-970F-0D00E4BE0DB4}</ProjectGuid>
+    <ProjectGuid>{727719B2-E119-4FE0-A54D-1A4C69327C22}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>TacticalWarTests</RootNamespace>
+    <RootNamespace>TournamentLib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -35,32 +35,20 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(TwRootDir)build\TwProject.props" />
   </ImportGroup>
-  <ItemDefinitionGroup>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Tournament.h" />
+    <ClInclude Include="TournamentEngine.h" />
+    <ClInclude Include="TournamentJson.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Tournament.cpp" />
+    <ClCompile Include="TournamentBrackets.cpp" />
+    <ClCompile Include="TournamentEngine.cpp" />
+    <ClCompile Include="TournamentJson.cpp" />
+    <ClCompile Include="TournamentStandings.cpp" />
+  </ItemGroup>
   <ItemGroup>
 
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="ProtocolTests.cpp" />
-    <ClCompile Include="StoreTests.cpp" />
-    <ClCompile Include="TeamTests.cpp" />
-    <ClCompile Include="TournamentTests.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
-      <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\ServerCoreLib\ServerCoreLib.vcxproj">
-      <Project>{10456535-d2a2-4a1e-80ab-14952b9cf73b}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TournamentLib\TournamentLib.vcxproj">
-      <Project>{727719b2-e119-4fe0-a54d-1a4c69327c22}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
