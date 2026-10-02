@@ -18,7 +18,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/utf-8 /bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(TwRootDir)ProtocolLib;$(TwRootDir)ServerCoreLib;$(TwRootDir)TournamentLib;$(TwRootDir)UtilsLib;$(TwRootDir)TacticalWarCommonLib;$(TwRootDir)PathfindingLib;$(TwRootDir)ZoneAndSightLib;$(TwRootDir)TacticalWarBattleLib;$(TwRootDir)EnvironmentPersistanceLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(TwRootDir)ProtocolLib;$(TwRootDir)ServerCoreLib;$(TwRootDir)TournamentLib;$(TwRootDir)BattleEngineLib;$(TwRootDir)UtilsLib;$(TwRootDir)TacticalWarCommonLib;$(TwRootDir)PathfindingLib;$(TwRootDir)ZoneAndSightLib;$(TwRootDir)TacticalWarBattleLib;$(TwRootDir)EnvironmentPersistanceLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
