@@ -70,3 +70,9 @@ ClassesLib/x64/
 ClassesTestModule/x64/
 ZSightTestModule/x64/
 AnimationTestModule/x64/
+# Build intermediates and runtime data
+*.idb
+*.ilk
+data/
+x64/Debug/data/
+x64/Release/data/
