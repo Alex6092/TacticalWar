@@ -9,6 +9,7 @@
 
 #include <BattleMirror.h>
 #include <BattleRules.h>
+#include <BotBrain.h>
 #include <EnvironmentManager.h>
 #include <EnvironmentMap.h>
 #include <Message.h>
@@ -24,38 +25,6 @@ namespace
 	std::int64_t nowMs()
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-	}
-
-	enum class SpellRole
-	{
-		OFFENSIVE,
-		SUPPORT,
-		UTILITY
-	};
-
-	SpellRole roleOf(const SpellDef & spell)
-	{
-		for (const EffectDef & effect : spell.effects)
-		{
-			if (effect.type == EffectType::DAMAGE || effect.type == EffectType::LIFESTEAL || effect.type == EffectType::DOT)
-				return SpellRole::OFFENSIVE;
-		}
-		for (const EffectDef & effect : spell.effects)
-		{
-			if (effect.type == EffectType::HEAL || effect.type == EffectType::SHIELD || effect.type == EffectType::HOT)
-				return SpellRole::SUPPORT;
-		}
-		return SpellRole::UTILITY;
-	}
-
-	bool hitsAll(const SpellDef & spell)
-	{
-		for (const EffectDef & effect : spell.effects)
-		{
-			if (effect.targets == TargetFilter::ALL)
-				return true;
-		}
-		return false;
 	}
 }
 
@@ -296,107 +265,20 @@ void Bot::act(std::int64_t now)
 	nextActionAt = now + options.actionDelayMs;
 	awaiting = true;
 
-	if (tryCast(*me) || tryMove(*me))
-		return;
-
-	send("Ct");
-}
-
-bool Bot::tryCast(const Fighter & me)
-{
-	const ClassDef * classDef = data.findClass(me.classId);
-	if (classDef == nullptr)
-		return false;
-
-	int bestSlot = -1;
-	Cell bestCell;
-	int bestScore = 0;
-
-	for (int slot = 0; slot < (int)classDef->spells.size(); slot++)
+	BotAction action = chooseBotAction(state, map, data, you, rng);
+	if (action.kind == BotAction::Kind::CAST)
 	{
-		const SpellDef & spell = classDef->spells[slot];
-		if (!checkSpellResources(me, spell).empty())
-			continue;
-
-		SpellRole role = roleOf(spell);
-		for (const Cell & cell : castableCells(state, map, data, me, spell))
-		{
-			int score = 0;
-			for (const Cell & hit : impactCells(map, me.position, cell, spell.impact))
-			{
-				const Fighter * fighter = state.fighterAt(hit);
-				if (fighter == nullptr)
-					continue;
-
-				bool ally = fighter->team == me.team;
-				if (role == SpellRole::OFFENSIVE)
-				{
-					if (!ally)
-						score += 10 + (fighter->maxHp - fighter->hp) / 10;
-					else if (hitsAll(spell))
-						score -= 15;
-				}
-				else if (role == SpellRole::SUPPORT && ally)
-				{
-					score += (fighter->maxHp - fighter->hp) / 3 + 2;
-				}
-			}
-
-			if (role == SpellRole::UTILITY)
-				score = (int)(rng() % 4);
-
-			// Un peu de hasard pour varier les combats.
-			score = score * 4 + (int)(rng() % 4);
-			if (score > bestScore)
-			{
-				bestScore = score;
-				bestSlot = slot;
-				bestCell = cell;
-			}
-		}
+		send("CL" + json({ { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } }).dump());
 	}
-
-	if (bestSlot < 0 || bestScore < 8)
-		return false;
-
-	send("CL" + json({ { "slot", bestSlot }, { "x", bestCell.x }, { "y", bestCell.y } }).dump());
-	return true;
-}
-
-bool Bot::tryMove(const Fighter & me)
-{
-	if (me.mp <= 0)
-		return false;
-
-	// Se rapproche de l'ennemi vivant le plus proche.
-	const Fighter * target = nullptr;
-	for (const Fighter & fighter : state.fighters)
+	else if (action.kind == BotAction::Kind::MOVE)
 	{
-		if (fighter.alive && fighter.team != me.team && (target == nullptr || manhattan(fighter.position, me.position) < manhattan(target->position, me.position)))
-			target = &fighter;
+		json path = json::array();
+		for (const Cell & step : action.path)
+			path.push_back(json::array({ step.x, step.y }));
+		send("Cm" + json({ { "path", path } }).dump());
 	}
-	if (target == nullptr)
-		return false;
-
-	int currentDistance = manhattan(me.position, target->position);
-	Cell best = me.position;
-	int bestDistance = currentDistance;
-	for (const Cell & cell : reachableCells(state, map, me))
+	else
 	{
-		int distance = manhattan(cell, target->position);
-		if (distance < bestDistance)
-		{
-			bestDistance = distance;
-			best = cell;
-		}
+		send("Ct");
 	}
-
-	if (best == me.position)
-		return false;
-
-	json path = json::array();
-	for (const Cell & step : findPath(state, map, me, best))
-		path.push_back(json::array({ step.x, step.y }));
-	send("Cm" + json({ { "path", path } }).dump());
-	return true;
 }

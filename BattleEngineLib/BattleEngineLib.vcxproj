@@ -40,6 +40,7 @@
     <ClInclude Include="BattleMirror.h" />
     <ClInclude Include="BattleRules.h" />
     <ClInclude Include="BattleState.h" />
+    <ClInclude Include="BotBrain.h" />
     <ClInclude Include="EnvironmentMap.h" />
     <ClInclude Include="GameData.h" />
   </ItemGroup>
@@ -49,6 +50,7 @@
     <ClCompile Include="BattleMirror.cpp" />
     <ClCompile Include="BattleRules.cpp" />
     <ClCompile Include="BattleState.cpp" />
+    <ClCompile Include="BotBrain.cpp" />
     <ClCompile Include="EnvironmentMap.cpp" />
     <ClCompile Include="GameData.cpp" />
   </ItemGroup>

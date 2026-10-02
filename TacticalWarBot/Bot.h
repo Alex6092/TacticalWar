@@ -38,8 +38,6 @@ private:
 	void onLine(const std::string & line);
 	void onBattleEvent(const nlohmann::json & event);
 	void act(std::int64_t now);
-	bool tryCast(const tw::battle::Fighter & me);
-	bool tryMove(const tw::battle::Fighter & me);
 	void log(const std::string & text);
 
 	Options options;

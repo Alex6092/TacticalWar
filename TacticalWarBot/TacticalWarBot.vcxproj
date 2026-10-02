@@ -43,9 +43,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bot.h" />
+    <ClInclude Include="Simulation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bot.cpp" />
+    <ClCompile Include="Simulation.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
