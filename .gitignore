@@ -73,7 +73,7 @@ AnimationTestModule/x64/
 # Build intermediates and runtime data
 *.idb
 *.ilk
-data/
+/data/
 x64/Debug/data/
 x64/Release/data/
 x64/*/server.json

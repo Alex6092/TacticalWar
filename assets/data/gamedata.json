@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "rules": {
+    "turnSeconds": 40,
+    "placementSeconds": 30,
+    "disconnectedTurnSeconds": 5,
+    "suddenDeathRound": 15,
+    "suddenDeathPercentPerRound": 5,
+    "maxRounds": 30,
+    "maxResistance": 50,
+    "collisionDamagePerCell": 6,
+    "collisionDamageToHit": 3,
+    "tackleApFactor": 0.5
+  },
+  "classes": [
+    {
+      "id": 4,
+      "key": "guerrier",
+      "name": "Guerrier",
+      "description": "Combattant de mêlée robuste. Il colle ses adversaires grâce à son tacle, les attire à lui et protège ses alliés.",
+      "graphicsPath": "./assets/Warrior/",
+      "icon": "./assets/classicons/Barbare.png",
+      "preview": "./assets/classpreview/Guerrier.png",
+      "stats": { "MAX_HP": 120, "AP": 6, "MP": 3, "INITIATIVE": 30, "POWER": 0, "RESISTANCE": 10, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 8, "DODGE": 2, "EROSION": 10 },
+      "passive": { "type": "LOW_HP_DAMAGE", "name": "Rage", "description": "+15 % de dégâts sous 50 % des PV, +30 % sous 25 %.", "threshold": 50, "bonus": 15, "threshold2": 25, "bonus2": 30 },
+      "spells": [
+        {
+          "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps.",
+          "icon": "./assets/spellicons/101.png", "ap": 3, "range": [1, 1], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
+          "effects": [ { "type": "DAMAGE", "min": 14, "max": 17 } ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        },
+        {
+          "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour).",
+          "icon": "./assets/spellicons/515.png", "ap": 3, "range": [2, 4], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
+          "effects": [
+            { "type": "DASH", "targets": "CASTER" },
+            { "type": "DAMAGE", "min": 8, "max": 10 },
+            { "type": "STAT_MOD", "stat": "MP", "min": -1, "duration": 1, "name": "Ralenti" }
+          ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        },
+        {
+          "id": "rempart", "name": "Rempart", "description": "+30 % de résistance pour le Guerrier et +15 % pour les alliés à 2 cases ou moins, pendant 2 tours.",
+          "icon": "./assets/spellicons/516.png", "ap": 3, "launch": "SELF", "cooldown": 4, "zone": { "shape": "CIRCLE", "size": 2 },
+          "effects": [
+            { "type": "STAT_MOD", "targets": "CASTER", "stat": "RESISTANCE", "min": 15, "duration": 2, "refresh": false, "name": "Rempart" },
+            { "type": "STAT_MOD", "targets": "ALLIES", "stat": "RESISTANCE", "min": 15, "duration": 2, "refresh": false, "name": "Rempart" }
+          ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour.",
+          "icon": "./assets/spellicons/700.png", "ap": 2, "range": [2, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
+          "effects": [
+            { "type": "PULL", "min": 3 },
+            { "type": "STAT_MOD", "targets": "CASTER", "stat": "LOCK", "min": 4, "duration": 1, "name": "Provocation" }
+          ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "key": "archer",
+      "name": "Archer",
+      "description": "Tireur mobile et précis. Il harcèle à distance, empoisonne et repousse ceux qui l'approchent.",
+      "graphicsPath": "./assets/Archer/",
+      "icon": "./assets/classicons/Chasseur.png",
+      "preview": "./assets/classpreview/Archer.png",
+      "stats": { "MAX_HP": 85, "AP": 6, "MP": 4, "INITIATIVE": 50, "POWER": 10, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 2, "DODGE": 8, "EROSION": 10 },
+      "passive": { "type": "DISTANCE_DAMAGE", "name": "Tireur d'élite", "description": "+20 % de dégâts si la cible est à 6 cases ou plus.", "distance": 6, "bonus": 20 },
+      "spells": [
+        {
+          "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée.",
+          "icon": "./assets/spellicons/101.png", "ap": 3, "range": [4, 9], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
+          "effects": [ { "type": "DAMAGE", "min": 12, "max": 14 } ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        },
+        {
+          "id": "fleche_empoisonnee", "name": "Flèche empoisonnée", "description": "Blesse puis empoisonne la cible : 6 dégâts au début de chacun de ses 3 prochains tours (non cumulable).",
+          "icon": "./assets/spellicons/515.png", "ap": 3, "range": [3, 7], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "cooldown": 2,
+          "effects": [
+            { "type": "DAMAGE", "min": 5, "max": 6 },
+            { "type": "DOT", "min": 6, "max": 6, "duration": 3, "name": "Poison" }
+          ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        },
+        {
+          "id": "fleche_recul", "name": "Flèche de recul", "description": "Repousse la cible de 3 cases. Une poussée bloquée inflige des dégâts de collision.",
+          "icon": "./assets/spellicons/516.png", "ap": 2, "range": [1, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 2,
+          "effects": [
+            { "type": "DAMAGE", "min": 5, "max": 7 },
+            { "type": "PUSH", "min": 3 }
+          ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        },
+        {
+          "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour.",
+          "icon": "./assets/spellicons/700.png", "ap": 2, "range": [3, 7], "launch": "CIRCLE", "target": "ENEMY", "cooldown": 3,
+          "effects": [
+            { "type": "DAMAGE", "min": 4, "max": 5 },
+            { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" }
+          ],
+          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "key": "mage",
+      "name": "Mage",
+      "description": "Maître du contrôle de zone. Ses sorts gagnent en puissance à chaque incantation du tour.",
+      "graphicsPath": "./assets/Mage/",
+      "icon": "./assets/classicons/Mage.png",
+      "preview": "./assets/classpreview/Mage.png",
+      "stats": { "MAX_HP": 80, "AP": 6, "MP": 3, "INITIATIVE": 40, "POWER": 15, "RESISTANCE": 0, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 3, "DODGE": 4, "EROSION": 10 },
+      "passive": { "type": "ON_CAST_POWER", "name": "Surcharge", "description": "Chaque sort lancé donne +10 % de puissance jusqu'à la fin du tour (3 fois maximum).", "bonus": 10, "maxStacks": 3 },
+      "spells": [
+        {
+          "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide.",
+          "icon": "./assets/spellicons/758.png", "ap": 2, "range": [1, 6], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 3,
+          "effects": [ { "type": "DAMAGE", "min": 7, "max": 8 } ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours.",
+          "icon": "./assets/spellicons/515.png", "ap": 4, "range": [2, 6], "rangeModifiable": true, "launch": "CIRCLE", "cooldown": 2, "zone": { "shape": "CROSS", "size": 1 },
+          "effects": [
+            { "type": "DAMAGE", "targets": "ALL", "min": 12, "max": 15 },
+            { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" }
+          ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts et perd 2 PM.",
+          "icon": "./assets/spellicons/516.png", "ap": 3, "range": [1, 5], "lineOfSight": false, "launch": "CIRCLE", "cooldown": 3,
+          "effects": [
+            {
+              "type": "GLYPH", "duration": 2, "name": "Glyphe de givre",
+              "glyph": {
+                "shape": "CIRCLE", "size": 1,
+                "effects": [
+                  { "type": "DAMAGE", "targets": "ENEMIES", "min": 8, "max": 8 },
+                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -2, "duration": 0, "name": "Gel" }
+                ]
+              }
+            }
+          ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "transposition", "name": "Transposition", "description": "Se téléporte sur une case libre, ou échange sa place avec un allié.",
+          "icon": "./assets/spellicons/700.png", "ap": 2, "range": [1, 5], "lineOfSight": false, "launch": "CIRCLE", "target": "FREE_CELL_OR_ALLY", "cooldown": 3,
+          "effects": [ { "type": "TELEPORT", "targets": "CASTER", "allowSwap": true } ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "key": "protecteur",
+      "name": "Protecteur",
+      "description": "Soutien de l'équipe : il soigne, protège, purifie et renforce la résistance des alliés proches.",
+      "graphicsPath": "./assets/Protecteur/",
+      "icon": "./assets/classicons/Priest.png",
+      "preview": "./assets/classpreview/Protecteur.png",
+      "stats": { "MAX_HP": 100, "AP": 6, "MP": 3, "INITIATIVE": 20, "POWER": 0, "RESISTANCE": 10, "RANGE": 0, "HEAL_BONUS": 0, "LOCK": 5, "DODGE": 3, "EROSION": 10 },
+      "passive": { "type": "ALLY_AURA", "name": "Aura protectrice", "description": "Les alliés à 2 cases ou moins gagnent +10 % de résistance.", "stat": "RESISTANCE", "distance": 2, "bonus": 10 },
+      "spells": [
+        {
+          "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés.",
+          "icon": "./assets/spellicons/101.png", "ap": 3, "range": [1, 4], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
+          "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50 } ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "soin", "name": "Soin", "description": "Soigne un allié ou soi-même (une fois par tour).",
+          "icon": "./assets/spellicons/758.png", "ap": 3, "range": [0, 4], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "castsPerTurn": 1,
+          "effects": [ { "type": "HEAL", "targets": "ALLIES", "min": 16, "max": 20 } ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "bouclier_sacre", "name": "Bouclier sacré", "description": "Bouclier de 20 PV sur un allié ou soi-même pendant 2 tours.",
+          "icon": "./assets/spellicons/516.png", "ap": 2, "range": [0, 5], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "cooldown": 3,
+          "effects": [ { "type": "SHIELD", "targets": "ALLIES", "min": 20, "max": 20, "duration": 2, "name": "Bouclier sacré" } ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        },
+        {
+          "id": "purification", "name": "Purification", "description": "Dans un rayon de 2 cases : retire les effets négatifs des alliés et les effets positifs des ennemis.",
+          "icon": "./assets/spellicons/700.png", "ap": 2, "launch": "SELF", "cooldown": 3, "zone": { "shape": "CIRCLE", "size": 2 },
+          "effects": [
+            { "type": "DISPEL", "targets": "ALLIES", "dispel": "NEGATIVE" },
+            { "type": "DISPEL", "targets": "ENEMIES", "dispel": "POSITIVE" }
+          ],
+          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+        }
+      ]
+    }
+  ]
+}
