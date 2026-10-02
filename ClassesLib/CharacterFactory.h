@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
