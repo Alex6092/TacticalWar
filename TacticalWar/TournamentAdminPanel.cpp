@@ -191,29 +191,46 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 
 	pauseButton = createButton(L"Suspendre");
 	pauseButton->connect("pressed", [this]() {
-		if (selectedId != 0)
+		if (selectedId != 0 && state.is_object())
 			send("UP", { { "id", selectedId }, { "paused", !state.value("paused", false) } });
 	});
-	winAButton = createButton(L"Victoire équipe A");
+	winAButton = createButton(L"Victoire A");
 	winAButton->connect("pressed", [this]() { forceWinner(true); });
-	winBButton = createButton(L"Victoire équipe B");
+	winBButton = createButton(L"Victoire B");
 	winBButton->connect("pressed", [this]() { forceWinner(false); });
-	stopButton = createButton(L"Arrêter (décision PV)");
+	stopButton = createButton(L"Arrêter (PV)");
 	stopButton->connect("pressed", [this]() {
 		if (selectedMatchId() != 0)
 			send("US", { { "id", selectedId }, { "match", selectedMatchId() } });
 	});
-	replayButton = createButton(L"Rejouer le match");
+	replayButton = createButton(L"Rejouer");
 	replayButton->connect("pressed", [this]() {
 		if (selectedMatchId() != 0)
 			send("UX", { { "id", selectedId }, { "match", selectedMatchId() } });
 	});
-	webButton = createButton(L"Ouvrir la vue projetée");
+	webButton = createButton(L"Vue projetée");
 	webButton->connect("pressed", []() {
 		std::string url = "http://" + ClientConfig::get().serverHost + ":8080/";
 		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
 	});
-	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, webButton })
+	watchButton = createButton(L"Regarder");
+	watchButton->connect("pressed", [this]() {
+		int matchId = selectedMatchId();
+		for (const nlohmann::json & session : liveSessions)
+		{
+			if (matchId != 0 && session.value("tournament", 0) == selectedId && session.value("match", 0) == matchId)
+			{
+				std::string phase = session.value("phase", std::string());
+				if (phase == "PLACEMENT" || phase == "FIGHT")
+					send("SW", { { "session", session.value("session", 0) } });
+				else
+					status->setText(L"Les joueurs choisissent encore leurs classes.");
+				return;
+			}
+		}
+		status->setText(L"Sélectionnez un match en cours.");
+	});
+	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton })
 		group->add(button);
 
 	standings = createLabel("", 13);
@@ -324,9 +341,9 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float right = margin + 380 + margin;
 	float rightWidth = width - right - margin;
 	header->setPosition(right, top);
-	float buttonWidth = (rightWidth - 50) / 6;
-	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, webButton };
-	for (int i = 0; i < 6; i++)
+	float buttonWidth = (rightWidth - 60) / 7;
+	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton };
+	for (int i = 0; i < 7; i++)
 	{
 		buttons[i]->setPosition(right + i * (buttonWidth + 10), top + 32);
 		buttons[i]->setSize(buttonWidth, 32);
@@ -398,6 +415,11 @@ void TournamentAdminPanel::onTournamentState(const nlohmann::json & body)
 	refreshMatches();
 }
 
+void TournamentAdminPanel::onSessionList(const nlohmann::json & body)
+{
+	liveSessions = body.value("sessions", nlohmann::json::array());
+}
+
 void TournamentAdminPanel::onAck(const nlohmann::json & body)
 {
 	bool ok = body.value("ok", false);
@@ -451,7 +473,8 @@ void TournamentAdminPanel::refreshFormatOptions()
 
 void TournamentAdminPanel::refreshForm()
 {
-	bool draft = selectedId == 0 || state.value("status", std::string()) == "DRAFT";
+	// L'état est vide (null) entre la sélection d'un tournoi et la réponse du serveur.
+	bool draft = selectedId == 0 || (state.is_object() && state.value("status", std::string()) == "DRAFT");
 
 	if (selectedId != 0 && state.is_object())
 	{

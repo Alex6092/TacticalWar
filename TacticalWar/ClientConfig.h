@@ -12,8 +12,10 @@ public:
 	bool soundEnabled = true;
 
 	// Connexion automatique au lancement (ligne de commande, non enregistrée) :
-	//   --server hote[:port]  --login X --password Y  ou  --spectator
+	//   --server hote[:port]  --login X --password Y  ou  --spectator [--director]
 	bool autoConnect = false;
+	// Mode réalisateur du spectateur activé au lancement (poste projeté).
+	bool directorMode = false;
 	std::string autoLogin;
 	std::string autoPassword;
 

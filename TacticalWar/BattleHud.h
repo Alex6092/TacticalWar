@@ -30,6 +30,11 @@ public:
 	void log(const sf::String & line, const sf::Color & color = sf::Color(230, 230, 230));
 	void showEnd(const sf::String & title, const sf::String & details, bool victory);
 
+	// Mode spectateur : bandeau (équipes en présence) et bouton "Quitter" permanent.
+	void setSpectator(const sf::String & banner);
+	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
+	void setEndButtonText(const sf::String & text);
+
 	static sf::String fighterSummary(const tw::battle::BattleState & state, const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
 
 private:
@@ -74,4 +79,10 @@ private:
 	tgui::Button::Ptr readyButton;
 	bool readyState;
 	tgui::Panel::Ptr endPanel;
+	tgui::Button::Ptr endButton;
+
+	bool spectator;
+	tgui::Label::Ptr bannerLabel;
+	tgui::Button::Ptr leaveButton;
+	tgui::Label::Ptr cameraHelp;
 };

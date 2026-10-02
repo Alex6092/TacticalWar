@@ -53,4 +53,7 @@
     <ClCompile Include="http\HttpFrontend.cpp" />
     <ClInclude Include="http\HttpFrontend.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserSpectator.cpp" />
+  </ItemGroup>
 </Project>

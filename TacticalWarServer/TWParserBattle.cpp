@@ -98,7 +98,13 @@ void TWParser::sendBattleState(BattleSession * session, ClientState * client, tw
 		send(client, "HG" + std::to_string(session->getMapId()) + "\n");
 
 	int fighterId = player != NULL ? session->fighterIdOf(player) : -1;
-	send(client, encode("BI", session->getEngine()->snapshot(fighterId, nowMs())));
+	nlohmann::json snapshot = session->getEngine()->snapshot(fighterId, nowMs());
+
+	// Noms des équipes et du match, pour l'affichage (bandeau spectateur, écran de fin).
+	tw::Match * match = session->getMatch();
+	snapshot["teams"] = nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) });
+	snapshot["title"] = match->getMatchName();
+	send(client, encode("BI", snapshot));
 }
 
 void TWParser::handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body)
@@ -170,6 +176,13 @@ void TWParser::broadcastBattleEvents(BattleSession * session)
 		ClientState * client = getClientStateFromPlayer(player);
 		if (client != NULL && player->getHasJoinBattle())
 			send(client, message);
+	}
+
+	for (tw::net::ConnId spectator : session->spectators)
+	{
+		auto it = clients.find(spectator);
+		if (it != clients.end())
+			send(it->second, message);
 	}
 
 	if (engine->isOver() && session->getPhase() == BattleSession::Phase::BATTLE)
@@ -305,6 +318,7 @@ void TWParser::tickBattles()
 	}
 
 	publishPublicState();
+	refreshSessionList();
 
 	for (auto it = sessions.begin(); it != sessions.end();)
 	{

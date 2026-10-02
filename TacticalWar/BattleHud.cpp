@@ -103,7 +103,7 @@ namespace
 }
 
 BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
-	: gui(gui), font(font), messageRemaining(0), spellBarClassId(0), readyState(false)
+	: gui(gui), font(font), messageRemaining(0), spellBarClassId(0), readyState(false), spectator(false)
 {
 	timelinePanel = tgui::Panel::create();
 	timelinePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 170));
@@ -198,6 +198,44 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	endPanel->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
 	endPanel->setVisible(false);
 	gui->add(endPanel);
+
+	bannerLabel = createLabel(20, sf::Color(255, 215, 0));
+	bannerLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	bannerLabel->getRenderer()->setTextOutlineThickness(2);
+	bannerLabel->setVisible(false);
+	gui->add(bannerLabel);
+
+	leaveButton = tgui::Button::create(L"Quitter");
+	leaveButton->setInheritedFont(font);
+	leaveButton->setTextSize(18);
+	leaveButton->setVisible(false);
+	leaveButton->connect("pressed", [this]() {
+		if (onClose)
+			onClose();
+	});
+	gui->add(leaveButton);
+
+	cameraHelp = createLabel(13, sf::Color(220, 220, 220));
+	cameraHelp->setText(L"Molette : zoom   Clic droit : déplacer   F : suivre   C : recentrer");
+	cameraHelp->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	cameraHelp->getRenderer()->setTextOutlineThickness(1);
+	cameraHelp->setEnabled(false);
+	gui->add(cameraHelp);
+}
+
+void BattleHud::setSpectator(const sf::String & banner)
+{
+	spectator = true;
+	bannerLabel->setText(banner);
+	bannerLabel->setVisible(true);
+	leaveButton->setVisible(true);
+	layout(windowSize);
+}
+
+void BattleHud::setEndButtonText(const sf::String & text)
+{
+	if (endButton != nullptr && endButton->getText() != text)
+		endButton->setText(text);
 }
 
 tgui::Label::Ptr BattleHud::createLabel(unsigned int size, const sf::Color & color)
@@ -246,6 +284,11 @@ void BattleHud::layout(const sf::Vector2u & size)
 
 	endPanel->setSize(520, 220);
 	endPanel->setPosition((width - 520) / 2, (height - 220) / 2);
+
+	bannerLabel->setPosition((width - bannerLabel->getSize().x) / 2, 46);
+	leaveButton->setSize(180, 50);
+	leaveButton->setPosition((width - 180) / 2, height - 68);
+	cameraHelp->setPosition(width - cameraHelp->getSize().x - 15, height - cameraHelp->getSize().y - 10);
 }
 
 void BattleHud::update(float deltatime)
@@ -419,8 +462,8 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		layout(windowSize);
 	}
 
-	// Détails du combattant survolé (ou du sien par défaut).
-	int detailsId = hoveredFighter >= 0 ? hoveredFighter : you;
+	// Détails du combattant survolé (par défaut : le sien, ou le combattant actif pour un spectateur).
+	int detailsId = hoveredFighter >= 0 ? hoveredFighter : (you >= 0 ? you : active);
 	const Fighter * shown = state.findFighter(detailsId);
 	detailsPanel->setVisible(shown != nullptr);
 	if (shown != nullptr)
@@ -500,16 +543,17 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	detailsText->setPosition(20, 80);
 	endPanel->add(detailsText);
 
-	tgui::Button::Ptr close = tgui::Button::create(L"Fermer");
-	close->setInheritedFont(font);
-	close->setTextSize(18);
-	close->setSize(160, 44);
-	close->setPosition(340, 160);
-	close->connect("pressed", [this]() {
+	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : L"Fermer");
+	endButton->setInheritedFont(font);
+	endButton->setTextSize(18);
+	endButton->setSize(spectator ? 240 : 160, 44);
+	endButton->setPosition(spectator ? 260 : 340, 160);
+	endButton->connect("pressed", [this]() {
 		if (onClose)
 			onClose();
 	});
-	endPanel->add(close);
+	endPanel->add(endButton);
+	leaveButton->setVisible(false);
 
 	endPanel->setVisible(true);
 	endTurnButton->setVisible(false);

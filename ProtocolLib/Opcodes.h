@@ -85,6 +85,11 @@ namespace tw
 			{ "UX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Rejouer un match en cours {id, match}" },
 			{ "UA", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur un tournoi {ok, message, id}" },
 
+			// Mode spectateur (contenu JSON)
+			{ "SL", Direction::BOTH, Role::SPECTATOR, "Combats en cours (S->C : {sessions})" },
+			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
+			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder" },
+
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },
 			{ "CO", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Match créé" },
@@ -101,7 +106,7 @@ namespace tw
 			{ "BI", Direction::SERVER_TO_CLIENT, Role::ANY, "État complet du combat {seq, you, phase, fighters...}" },
 			{ "BV", Direction::SERVER_TO_CLIENT, Role::ANY, "Lot d'événements de combat {seq, ev:[...]}" },
 			{ "ER", Direction::SERVER_TO_CLIENT, Role::ANY, "Action refusée {op, message}" },
-			{ "BR", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Demande de l'état complet (resynchronisation)" },
+			{ "BR", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Demande de l'état complet (resynchronisation)" },
 			{ "CP", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Placement {x, y}" },
 			{ "Cs", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Prêt {ready}" },
 			{ "Cm", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Déplacement {path:[[x,y]...]} (sans la cellule de départ)" },

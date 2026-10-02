@@ -5,6 +5,9 @@
 #include "ScreenManager.h"
 #include "LoginScreen.h"
 #include <Message.h>
+#include "BattleScreen.h"
+
+sf::String AdminScreen::currentTab = L"Tournoi";
 
 
 
@@ -137,6 +140,10 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 
 	teamsPanel.reset(new TeamsAdminPanel(gui, font));
 	tournamentPanel.reset(new TournamentAdminPanel(gui, font));
+	livePanel.reset(new LiveSessionsPanel(gui, font));
+	livePanel->onWatch = [](int session) {
+		LinkToServer::getInstance()->SendRaw("SW" + nlohmann::json({ { "session", session } }).dump());
+	};
 
 	tabs = tgui::Tabs::create();
 	tabs->setInheritedFont(font);
@@ -145,11 +152,18 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	tabs->add("Matchs", false);
 	tabs->add(L"Équipes", false);
 	tabs->add(L"Tournoi", false);
+	tabs->add(L"Combats", false);
 	tabs->connect("TabSelected", [this](const sf::String & tab) { showTab(tab); });
 	gui->add(tabs);
-	tabs->select(2);
+	if (!tabs->select(currentTab))
+		tabs->select(2);
 
 	LinkToServer::getInstance()->addListener(this);
+
+	// Listes à jour (utile au retour d'un combat regardé : le serveur ne les renvoie pas seul).
+	LinkToServer::getInstance()->SendRaw("TL");
+	LinkToServer::getInstance()->SendRaw("MC");
+	LinkToServer::getInstance()->SendRaw("SL{}");
 
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
 }
@@ -159,6 +173,8 @@ void AdminScreen::showTab(const sf::String & tab)
 	matchesGroup->setVisible(tab == "Matchs");
 	teamsPanel->setVisible(tab == L"Équipes");
 	tournamentPanel->setVisible(tab == "Tournoi");
+	livePanel->setVisible(tab == "Combats");
+	currentTab = tab;
 }
 
 AdminScreen::~AdminScreen()
@@ -188,6 +204,7 @@ void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	tabs->setPosition(window->getSize().x / 2.0 - tabs->getSize().x / 2.0, 200);
 	teamsPanel->layout(window->getSize(), 250);
 	tournamentPanel->layout(window->getSize(), 250);
+	livePanel->layout(window->getSize(), 250);
 
 	sf::Event event;
 	while (window->pollEvent(event))
@@ -210,7 +227,6 @@ void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 void AdminScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
-	LinkToServer::getInstance()->UpdateReceivedData();
 
 	if (readyForCreate)
 	{
@@ -226,6 +242,8 @@ void AdminScreen::update(float deltatime)
 
 		readyForCreate = false;
 	}
+
+	LinkToServer::getInstance()->UpdateReceivedData();
 }
 
 void AdminScreen::render(sf::RenderWindow * window)
@@ -334,6 +352,31 @@ void AdminScreen::onMessageReceived(std::string msg)
 				teamsPanel->onTeamResult(body);
 			}
 		}
+	}
+	else if (m.substring(0, 2) == "SL" || m.substring(0, 2) == "ER")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body;
+		if (tw::protocol::Message::decode(msg, message) && message.parseJson(body))
+		{
+			if (message.op == "SL")
+			{
+				livePanel->onSessionList(body);
+				tournamentPanel->onSessionList(body);
+			}
+			else
+			{
+				livePanel->setStatus(fromServerText(body.value("message", std::string())), sf::Color(255, 120, 100));
+			}
+		}
+	}
+	else if (m.substring(0, 2) == "HG")
+	{
+		// Combat regardé : la carte, puis l'état complet (BI).
+		int environmentId = std::atoi(msg.substr(2).c_str());
+		gui->removeAllWidgets();
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::BattleScreen(gui, environmentId, tw::BattleScreen::Mode::ADMIN));
+		delete this;
 	}
 	else if (m.substring(0, 2) == "CO")
 	{

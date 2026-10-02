@@ -3,12 +3,14 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include <BattleEngine.h>
 #include <Environment.h>
 #include <Match.h>
 #include <Player.h>
+#include "net/NetServer.h"
 
 // Un combat entre deux équipes : choix des classes, puis combat géré par le BattleEngine.
 // Les identifiants de combattants sont stables : 0 et 1 pour l'équipe 1, 2 et 3 pour l'équipe 2.
@@ -54,6 +56,9 @@ public:
 
 	// Depuis quand toute une équipe (1 ou 2) est absente (0 : présente).
 	std::int64_t absentSince[3] = { 0, 0, 0 };
+
+	// Connexions des spectateurs de ce combat.
+	std::set<tw::net::ConnId> spectators;
 
 	static tw::battle::BattleMap toBattleMap(tw::Environment * environment);
 

@@ -106,6 +106,13 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 			autoPassword.clear();
 			autoConnect = true;
 		}
+		else if (arg == "--director")
+		{
+			autoLogin.clear();
+			autoPassword.clear();
+			autoConnect = true;
+			directorMode = true;
+		}
 	}
 }
 

@@ -111,7 +111,15 @@ void LinkToServer::UpdateReceivedData()
 			continue;
 		}
 
-		notifyMessage(line);
+		// Un message inattendu (ex : JSON incomplet) ne doit pas faire planter le client.
+		try
+		{
+			notifyMessage(line);
+		}
+		catch (const std::exception & e)
+		{
+			std::cout << "Message ignore (" << line.substr(0, 2) << ") : " << e.what() << std::endl;
+		}
 	}
 
 	if (disconnected)

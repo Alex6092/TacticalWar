@@ -154,12 +154,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="CellColorator.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="IsometricRenderer.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CellColorator.cpp" />
     <ClCompile Include="IsometricRenderer.cpp" />
     <ClCompile Include="IsometricRendererLib.cpp" />

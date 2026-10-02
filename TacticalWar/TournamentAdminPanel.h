@@ -16,6 +16,8 @@ public:
 	void onTournamentList(const nlohmann::json & body);
 	void onTournamentState(const nlohmann::json & body);
 	void onAck(const nlohmann::json & body);
+	// Combats en cours (message SL) : pour "Regarder" le match sélectionné.
+	void onSessionList(const nlohmann::json & body);
 	// Équipes disponibles (liste TL de l'onglet Équipes).
 	void setTeams(const nlohmann::json & teams);
 
@@ -69,6 +71,8 @@ private:
 	tgui::Button::Ptr stopButton;
 	tgui::Button::Ptr replayButton;
 	tgui::Button::Ptr webButton;
+	tgui::Button::Ptr watchButton;
+	nlohmann::json liveSessions = nlohmann::json::array();
 	tgui::Label::Ptr standings;
 	tgui::Label::Ptr status;
 

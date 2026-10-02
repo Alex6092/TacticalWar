@@ -32,6 +32,8 @@ IsometricRenderer::IsometricRenderer(sf::RenderWindow * window)
 	this->window = window;
 	this->colorator = NULL;
 	this->ellapsedTime = 0;
+	this->hasCamera = false;
+	this->cameraZoom = 1.f;
 }
 
 void IsometricRenderer::manageEvents(Environment * environment, std::vector<BaseCharacterModel*> & characters)
@@ -157,11 +159,18 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 	manageEvents(environment, characters);
 
 	sf::View view = window->getView();
-	float centerX = environment->getWidth() / 2;
-	float centerY = environment->getHeight() / 2;
-	int viewCenterX = (centerX * 120.0 - centerY * 120.0) / 2;
-	int viewCenterY = (centerY * 60.0 + centerY * 60.0) / 2;
-	view.setCenter(viewCenterX + 60.0, viewCenterY + 30.0);
+	if (hasCamera)
+	{
+		view.setSize(window->getSize().x * cameraZoom, window->getSize().y * cameraZoom);
+		view.setCenter(cameraCenter);
+	}
+	else
+	{
+		// Centre de la carte (case centrale, y compris pour les cartes non carrées).
+		float centerX = (environment->getWidth() - 1) / 2.f;
+		float centerY = (environment->getHeight() - 1) / 2.f;
+		view.setCenter((centerX - centerY) * 60.f + 60.f, (centerX + centerY) * 30.f + 30.f);
+	}
 	window->setView(view);
 
 	sf::Sprite * spriteToDraw;

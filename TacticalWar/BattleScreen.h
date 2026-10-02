@@ -12,6 +12,7 @@
 #include "BattleColorator.h"
 #include "BattleHud.h"
 #include <IsometricRenderer.h>
+#include <Camera.h>
 #include <Environment.h>
 #include <BaseCharacterModel.h>
 #include <IMapKnowledge.h>
@@ -28,7 +29,11 @@ namespace tw
 	class BattleScreen : public Screen, RendererEventListener, ServerMessageListener, IMapKnowledge, MoveActionAnimationEventListener
 	{
 	public:
-		BattleScreen(tgui::Gui * gui, int environmentId);
+		// PLAYER : joueur du combat ; SPECTATOR / ADMIN : spectateur (retour à la liste des combats
+		// ou à l'écran d'administration).
+		enum class Mode { PLAYER, SPECTATOR, ADMIN };
+
+		BattleScreen(tgui::Gui * gui, int environmentId, Mode mode = Mode::PLAYER);
 		~BattleScreen();
 
 		virtual void handleEvents(sf::RenderWindow * window, tgui::Gui * gui);
@@ -81,12 +86,18 @@ namespace tw
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
 		void showEnd();
+		void leave();
+		sf::String teamLabel(int team) const;
 
 		tgui::Gui * gui;
 		sf::RenderWindow * window;
 		IsometricRenderer * renderer;
 		Environment * environment;
 		BattleColorator * colorator;
+		Camera camera;
+		Mode mode;
+		sf::String teamNames[2];
+		float autoCloseRemaining;
 		std::unique_ptr<BattleHud> hud;
 		sf::Font font;
 

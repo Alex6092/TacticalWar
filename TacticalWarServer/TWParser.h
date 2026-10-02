@@ -147,6 +147,15 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	nlohmann::json publicStateJson();
 	void publishPublicState(bool force = false);
 
+	// Mode spectateur (TWParserSpectator.cpp) :
+	std::string lastSessionSignature;
+	nlohmann::json sessionListJson();
+	void notifySessionList(ClientState * only = NULL);
+	void refreshSessionList();
+	BattleSession * spectatedSession(ClientState * client);
+	void removeSpectator(ClientState * client);
+	void handleSpectatorMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+
 	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());
 

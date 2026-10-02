@@ -95,6 +95,27 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		return;
 	}
 
+	// Mode spectateur (contenu JSON) :
+	if (op == "SL" || op == "SW" || op == "SU" || (op == "BR" && getPlayerFromClientState(client) == NULL))
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+
+		if (op == "BR")
+		{
+			BattleSession * watched = spectatedSession(client);
+			if (watched != NULL)
+				sendBattleState(watched, client, NULL, false);
+		}
+		else
+		{
+			handleSpectatorMessage(client, op, body);
+		}
+		return;
+	}
+
 	// Actions de combat (contenu JSON) :
 	if (op == "CP" || op == "Cs" || op == "Cm" || op == "CL" || op == "Ct" || op == "BR")
 	{
@@ -243,6 +264,8 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			{
 				spectatorModeClientDiffusionList.push_back(client);
 				send(client, "HS\n");
+				sendGameData(client);
+				notifySessionList(client);
 				
 				notifyPlayingMatchList();
 			}
@@ -261,6 +284,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		else if (StringUtils::startsWith(toParse, "MC"))
 		{
 			notifyPlanifiedAndPlayingMatch(client);
+			notifyFinishedMatch(client);
 		}
 		// Demande la création d'un match :
 		else if (StringUtils::startsWith(toParse, "CM"))
@@ -561,6 +585,7 @@ void TWParser::onDisconnected(tw::net::ConnId id)
 	{
 		spectatorModeClientDiffusionList.erase(it);
 	}
+	removeSpectator(client);
 
 	// Clear connected player map (only if this connection is still the one bound to the account) :
 	if (client->getPseudo().length() > 0 && playersMap.find(client->getPseudo()) != playersMap.end())

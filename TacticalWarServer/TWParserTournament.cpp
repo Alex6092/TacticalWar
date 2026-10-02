@@ -381,6 +381,15 @@ void TWParser::cancelSession(BattleSession * session)
 			send(client, "HW\n");
 	}
 
+	// Les spectateurs reviennent à la liste des combats.
+	for (tw::net::ConnId spectator : session->spectators)
+	{
+		auto it = clients.find(spectator);
+		if (it != clients.end())
+			send(it->second, "HW\n");
+	}
+	session->spectators.clear();
+
 	// Le match annulé n'a pas de vainqueur : il disparaît des listes.
 	match->setWinnerTeam(0);
 }

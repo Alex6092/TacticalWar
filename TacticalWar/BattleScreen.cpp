@@ -1,6 +1,7 @@
 ﻿#include "BattleScreen.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 #include <BattleMirror.h>
@@ -10,12 +11,14 @@
 #include <EnvironmentMap.h>
 #include <Message.h>
 
+#include "AdminScreen.h"
 #include "ClassSelectionScreen.h"
 #include "ClientGameData.h"
 #include "LinkToServer.h"
 #include "LoginScreen.h"
 #include "MusicManager.h"
 #include "ScreenManager.h"
+#include "SpectatorModeScreen.h"
 #include "WaitMatchScreen.h"
 
 using namespace tw;
@@ -55,8 +58,8 @@ namespace
 	}
 }
 
-BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
-	: gui(gui), window(NULL), you(-1), lastSeq(0), hasSnapshot(false), awaitingServer(false),
+BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
+	: gui(gui), window(NULL), mode(mode), autoCloseRemaining(-1), you(-1), lastSeq(0), hasSnapshot(false), awaitingServer(false),
 	stepRemaining(0), waitingMove(false), waitingMoveTime(0), deadline(0), selectedSpell(-1), hoveredFighter(-1),
 	closeRequested(false), endShown(false)
 {
@@ -66,6 +69,10 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
 	environment = EnvironmentManager::getInstance()->loadEnvironment(environmentId);
 	map = battle::battleMapFromEnvironment(environment);
 	hoveredCell = { -1, -1 };
+
+	camera.reset(environment->getWidth(), environment->getHeight());
+	// En mode réalisateur, la caméra suit le personnage actif.
+	camera.setFollowing(mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode());
 
 	colorator = new BattleColorator();
 	renderer->setColorator(colorator);
@@ -152,6 +159,21 @@ void BattleScreen::update(float deltatime)
 
 	renderer->ellapseTime(deltatime);
 
+	// Caméra : suivi du personnage actif (sa position interpolée pendant les déplacements).
+	BaseCharacterModel * activeView = viewOf(shown.activeFighterId());
+	if (activeView != NULL && shown.phase == battle::BattlePhase::FIGHT)
+		camera.followCell(activeView->getInterpolatedX(), activeView->getInterpolatedY());
+	camera.update(deltatime);
+
+	// Mode réalisateur : retour automatique à la liste quelques secondes après la fin du combat.
+	if (autoCloseRemaining > 0)
+	{
+		autoCloseRemaining -= deltatime;
+		hud->setEndButtonText(L"Retour à la liste (" + num((int)std::ceil(std::max(0.f, autoCloseRemaining))) + L")");
+		if (autoCloseRemaining <= 0)
+			closeRequested = true;
+	}
+
 	if (hasSnapshot)
 	{
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
@@ -161,12 +183,7 @@ void BattleScreen::update(float deltatime)
 
 	if (closeRequested)
 	{
-		gui->removeAllWidgets();
-		if (window != NULL)
-			window->setView(window->getDefaultView());
-		ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
-		MusicManager::getInstance()->setMenuMusic();
-		delete this;
+		leave();
 		return;
 	}
 
@@ -176,6 +193,7 @@ void BattleScreen::update(float deltatime)
 void BattleScreen::render(sf::RenderWindow * window)
 {
 	renderer->modifyWindow(window);
+	camera.apply(*renderer);
 
 	std::vector<BaseCharacterModel*> characters;
 	for (auto & entry : views)
@@ -257,7 +275,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 	}
 	else if (message.op == "HW")
 	{
-		// Combat annulé par l'organisateur : retour à l'attente.
+		// Combat annulé par l'organisateur : retour à l'attente (ou à la liste des combats).
 		closeRequested = true;
 	}
 	else if (message.op == "HC")
@@ -285,6 +303,15 @@ void BattleScreen::applySnapshot(const json & snapshot)
 	battle::BattleMirror::applySnapshot(truth, map, snapshot);
 	shown = truth;
 	you = snapshot.value("you", -1);
+
+	const json & teams = snapshot.value("teams", json::array());
+	for (std::size_t i = 0; i < 2 && i < teams.size(); i++)
+		teamNames[i] = fromServerText(teams[i].get<std::string>());
+	if (mode != Mode::PLAYER)
+	{
+		sf::String title = fromServerText(snapshot.value("title", std::string()));
+		hud->setSpectator((title.isEmpty() ? sf::String() : title + L" : ") + teamLabel(1) + L" contre " + teamLabel(2));
+	}
 	lastSeq = snapshot.value("seq", (std::uint64_t)0);
 	deadline = clock.getElapsedTime().asSeconds() + snapshot.value("ms", 0) / 1000.f;
 	hasSnapshot = true;
@@ -585,7 +612,7 @@ void BattleScreen::showEnd()
 	}
 	else
 	{
-		title = L"Victoire de l'équipe " + num(shown.winnerTeam);
+		title = L"Victoire : " + teamLabel(shown.winnerTeam);
 	}
 
 	sf::String winners;
@@ -597,8 +624,40 @@ void BattleScreen::showEnd()
 
 	sf::String details = winners + L" remportent le combat.\n" + reasonLabel(shown.endReason)
 		+ L"\nTours joués : " + num(shown.round);
-	hud->showEnd(title, details, victory);
+	hud->showEnd(title, details, victory || me == NULL);
 	hud->log(title, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
+
+	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())
+		autoCloseRemaining = 10.f;
+}
+
+sf::String BattleScreen::teamLabel(int team) const
+{
+	if (team >= 1 && team <= 2 && !teamNames[team - 1].isEmpty())
+		return teamNames[team - 1];
+	return L"équipe " + num(team);
+}
+
+void BattleScreen::leave()
+{
+	gui->removeAllWidgets();
+	if (window != NULL)
+		window->setView(sf::View(sf::FloatRect(0.f, 0.f, (float)window->getSize().x, (float)window->getSize().y)));
+	MusicManager::getInstance()->setMenuMusic();
+
+	if (mode == Mode::PLAYER)
+	{
+		ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
+	}
+	else
+	{
+		LinkToServer::getInstance()->SendRaw("SU{}");
+		if (mode == Mode::ADMIN)
+			ScreenManager::getInstance()->setCurrentScreen(new AdminScreen(gui));
+		else
+			ScreenManager::getInstance()->setCurrentScreen(new SpectatorModeScreen(gui));
+	}
+	delete this;
 }
 
 //----------------------------------------------------------
@@ -774,8 +833,25 @@ void BattleScreen::onEvent(void * e)
 		case sf::Keyboard::Num3: selectSpell(2); break;
 		case sf::Keyboard::Num4: selectSpell(3); break;
 		case sf::Keyboard::Escape: selectSpell(-1); break;
+		case sf::Keyboard::F:
+			camera.setFollowing(!camera.isFollowing());
+			hud->showMessage(camera.isFollowing() ? L"Caméra : suivi du personnage actif" : L"Caméra libre", sf::Color(200, 220, 255), 1.2f);
+			break;
+		case sf::Keyboard::C:
+			camera.reset(environment->getWidth(), environment->getHeight());
+			break;
 		default: break;
 		}
+	}
+
+	// Caméra : la molette au-dessus de l'interface (journal) reste à l'interface.
+	if (window != NULL)
+	{
+		bool overHud = isMouseOverHud();
+		bool wheel = event->type == sf::Event::MouseWheelScrolled;
+		bool press = event->type == sf::Event::MouseButtonPressed;
+		if (!((wheel || press) && overHud))
+			camera.handleEvent(*event, *window);
 	}
 
 	if (gui != NULL)

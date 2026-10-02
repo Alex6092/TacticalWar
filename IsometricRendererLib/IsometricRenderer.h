@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <AbstractRenderer.h>
 #include <AbstractSpellView.h>
@@ -44,10 +44,23 @@ namespace tw
 
 		float ellapsedTime;
 
+		// Caméra (voir Camera) : sans caméra, la carte est centrée dans la vue courante.
+		bool hasCamera;
+		sf::Vector2f cameraCenter;
+		float cameraZoom;
+
 	public:
 		IsometricRenderer(sf::RenderWindow * window);
 		inline void modifyWindow(sf::RenderWindow * newWindow) { this->window = newWindow; }
 		virtual void render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime);
+
+		// Centre (repère du monde) et facteur de zoom de la vue (> 1 : vue plus large).
+		void setCamera(const sf::Vector2f & center, float zoom)
+		{
+			hasCamera = true;
+			cameraCenter = center;
+			cameraZoom = zoom;
+		}
 
 		void setColorator(CellColorator * colorator)
 		{
