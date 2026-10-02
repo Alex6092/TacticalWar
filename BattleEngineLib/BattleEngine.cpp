@@ -458,6 +458,13 @@ void BattleEngine::stopByDecision(std::int64_t nowMs)
 	endBattle(hp1 >= hp2 ? 1 : 2, EndReason::ADMIN);
 }
 
+void BattleEngine::declareWinner(int winnerTeam, std::int64_t nowMs)
+{
+	if (state.phase == BattlePhase::ENDED || (winnerTeam != 1 && winnerTeam != 2))
+		return;
+	endBattle(winnerTeam, EndReason::ADMIN);
+}
+
 double BattleEngine::teamHpPercent(int team) const
 {
 	int hp = 0;

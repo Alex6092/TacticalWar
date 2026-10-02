@@ -181,6 +181,9 @@ namespace tw
 			std::uint32_t rngSeed = 0;
 		};
 
+		// Libellé lisible d'un match ("Poule A - journée 2", "Demi-finale", "Grande finale"...).
+		std::string matchLabel(const Tournament & tournament, const TMatch & match);
+
 		const char * toString(Format format);
 		const char * toString(StageType type);
 		const char * toString(TournamentStatus status);

@@ -255,6 +255,11 @@ void BattleScreen::onMessageReceived(std::string msg)
 		if (message.parseJson(error))
 			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
 	}
+	else if (message.op == "HW")
+	{
+		// Combat annulé par l'organisateur : retour à l'attente.
+		closeRequested = true;
+	}
 	else if (message.op == "HC")
 	{
 		gui->removeAllWidgets();

@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -139,7 +139,7 @@ exit /b 0</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -156,6 +156,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TWParserTournament.cpp" />
     <ClCompile Include="BattleSession.cpp" />
     <ClCompile Include="TWParserBattle.cpp" />
     <ClCompile Include="TWParserTeams.cpp" />
@@ -171,6 +172,9 @@ exit /b 0</Command>
     <ClInclude Include="TWParser.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\TournamentLib\TournamentLib.vcxproj">
+      <Project>{727719b2-e119-4fe0-a54d-1a4c69327c22}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\BattleEngineLib\BattleEngineLib.vcxproj">
       <Project>{501a17cd-3a0d-4143-9c9c-4d2cf98c4b87}</Project>
     </ProjectReference>

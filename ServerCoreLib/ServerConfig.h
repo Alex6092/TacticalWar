@@ -30,6 +30,12 @@ namespace tw
 		// Durée du choix des classes avant le combat (les classes manquantes sont tirées au hasard).
 		int classSelectionSeconds = 90;
 
+		// Tournois : combats simultanés au maximum, repos entre deux matchs d'une équipe,
+		// délai avant forfait d'une équipe absente ou déconnectée.
+		int maxConcurrentMatches = 8;
+		int restSeconds = 20;
+		int forfeitSeconds = 90;
+
 		AdminConfig admin;
 
 		nlohmann::json toJson() const;

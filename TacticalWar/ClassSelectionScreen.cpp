@@ -9,7 +9,7 @@
 #include "PictureCharacterView.h"
 #include "BattleScreen.h"
 #include "ClientGameData.h"
-#include "LinkToServer.h"
+#include "WaitMatchScreen.h"
 
 
 
@@ -479,6 +479,13 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		int environmentId = std::atoi(m.substring(2).toAnsiString().c_str());
 		gui->removeAllWidgets();
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::BattleScreen(gui, environmentId));
+		delete this;
+	}
+	else if (m.substring(0, 2) == "HW")
+	{
+		// Match annulé ou gagné par forfait : retour à l'attente.
+		gui->removeAllWidgets();
+		tw::ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
 		delete this;
 	}
 }

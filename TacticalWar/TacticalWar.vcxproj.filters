@@ -121,4 +121,8 @@
     <ClInclude Include="BattleColorator.h" />
     <ClInclude Include="BattleHud.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TournamentAdminPanel.cpp" />
+    <ClInclude Include="TournamentAdminPanel.h" />
+  </ItemGroup>
 </Project>

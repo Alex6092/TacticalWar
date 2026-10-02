@@ -53,6 +53,8 @@ namespace tw
 			void forfeit(int team, std::int64_t nowMs);
 			// Arrêt par l'admin : décision aux points de vie restants.
 			void stopByDecision(std::int64_t nowMs);
+			// Arrêt par l'admin avec un vainqueur désigné.
+			void declareWinner(int winnerTeam, std::int64_t nowMs);
 
 			bool hasPendingEvents() const { return !pendingEvents.empty(); }
 			// Événements produits depuis le dernier appel : {"seq": n, "ev": [...]}.

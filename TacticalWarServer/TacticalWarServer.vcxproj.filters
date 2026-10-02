@@ -45,4 +45,7 @@
     <ClCompile Include="TWParserBattle.cpp" />
     <ClInclude Include="BattleSession.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserTournament.cpp" />
+  </ItemGroup>
 </Project>

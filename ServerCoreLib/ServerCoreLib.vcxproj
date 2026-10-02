@@ -43,6 +43,7 @@
     <ClInclude Include="ServerConfig.h" />
     <ClInclude Include="Team.h" />
     <ClInclude Include="TeamStore.h" />
+    <ClInclude Include="TournamentService.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CredentialSheet.cpp" />
@@ -51,10 +52,14 @@
     <ClCompile Include="PasswordHasher.cpp" />
     <ClCompile Include="ServerConfig.cpp" />
     <ClCompile Include="TeamStore.cpp" />
+    <ClCompile Include="TournamentService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
       <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\TournamentLib\TournamentLib.vcxproj">
+      <Project>{727719b2-e119-4fe0-a54d-1a4c69327c22}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

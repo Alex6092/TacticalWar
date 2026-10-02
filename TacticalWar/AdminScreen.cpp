@@ -136,6 +136,7 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	gui->add(matchesGroup);
 
 	teamsPanel.reset(new TeamsAdminPanel(gui, font));
+	tournamentPanel.reset(new TournamentAdminPanel(gui, font));
 
 	tabs = tgui::Tabs::create();
 	tabs->setInheritedFont(font);
@@ -143,9 +144,10 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	tabs->setTabHeight(36);
 	tabs->add("Matchs", false);
 	tabs->add(L"Équipes", false);
+	tabs->add(L"Tournoi", false);
 	tabs->connect("TabSelected", [this](const sf::String & tab) { showTab(tab); });
 	gui->add(tabs);
-	tabs->select(1);
+	tabs->select(2);
 
 	LinkToServer::getInstance()->addListener(this);
 
@@ -155,7 +157,8 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 void AdminScreen::showTab(const sf::String & tab)
 {
 	matchesGroup->setVisible(tab == "Matchs");
-	teamsPanel->setVisible(tab != "Matchs");
+	teamsPanel->setVisible(tab == L"Équipes");
+	tournamentPanel->setVisible(tab == "Tournoi");
 }
 
 AdminScreen::~AdminScreen()
@@ -184,6 +187,7 @@ void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 	tabs->setPosition(window->getSize().x / 2.0 - tabs->getSize().x / 2.0, 200);
 	teamsPanel->layout(window->getSize(), 250);
+	tournamentPanel->layout(window->getSize(), 250);
 
 	sf::Event event;
 	while (window->pollEvent(event))
@@ -298,6 +302,20 @@ void AdminScreen::onMessageReceived(std::string msg)
 		m_matchListEnd->getRenderer()->setScrollbarWidth(10);
 	}
 	// Team list (JSON)
+	else if (m.substring(0, 2) == "UL" || m.substring(0, 2) == "UT" || m.substring(0, 2) == "UA")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body;
+		if (tw::protocol::Message::decode(msg, message) && message.parseJson(body))
+		{
+			if (message.op == "UL")
+				tournamentPanel->onTournamentList(body);
+			else if (message.op == "UT")
+				tournamentPanel->onTournamentState(body);
+			else
+				tournamentPanel->onAck(body);
+		}
+	}
 	else if (m.substring(0, 2) == "TL" || m.substring(0, 2) == "TR")
 	{
 		tw::protocol::Message message;
@@ -307,6 +325,7 @@ void AdminScreen::onMessageReceived(std::string msg)
 			if (message.op == "TL")
 			{
 				teamsPanel->onTeamList(body);
+				tournamentPanel->setTeams(body.value("teams", nlohmann::json::array()));
 				updateListTeam(listTeam1);
 				updateListTeam(listTeam2);
 			}

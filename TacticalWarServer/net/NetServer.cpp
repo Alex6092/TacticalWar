@@ -34,6 +34,7 @@ struct NetServer::Connection
 	std::size_t outgoingOffset = 0;
 	Clock::time_point lastReceive;
 	Clock::time_point lastSend;
+	Clock::time_point lastPing;
 
 	// Fermeture demandée : on essaie encore d'envoyer les données en attente.
 	bool closing = false;
@@ -220,6 +221,7 @@ void NetServer::acceptConnections(Clock::time_point now)
 		connection->remoteAddress = ip;
 		connection->lastReceive = now;
 		connection->lastSend = now;
+		connection->lastPing = now;
 
 		ConnId id = connection->id;
 		std::string remote = connection->remoteAddress;
@@ -322,9 +324,14 @@ void NetServer::handleKeepalive(Connection & connection, Clock::time_point now)
 		return;
 	}
 
-	auto idle = std::chrono::duration_cast<std::chrono::milliseconds>(now - connection.lastSend).count();
-	if (idle > options.keepaliveIntervalMs)
+	// Un client silencieux (ex : admin ou spectateur qui ne fait que recevoir) est sollicité
+	// régulièrement pour prouver qu'il est toujours là.
+	auto sincePing = std::chrono::duration_cast<std::chrono::milliseconds>(now - connection.lastPing).count();
+	if (silence > options.keepaliveIntervalMs && sincePing > options.keepaliveIntervalMs)
+	{
+		connection.lastPing = now;
 		send(connection.id, KEEPALIVE_PING_LINE);
+	}
 }
 
 void NetServer::send(ConnId id, const std::string & data)

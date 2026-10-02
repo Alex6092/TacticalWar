@@ -46,6 +46,15 @@ public:
 
 	void markEnded() { phase = Phase::ENDED; }
 
+	// Match de tournoi joué par cette session (0 : match amical).
+	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
+	int getTournamentId() const { return tournamentId; }
+	int getTournamentMatchId() const { return tournamentMatchId; }
+	std::uint32_t getSeed() const { return seed; }
+
+	// Depuis quand toute une équipe (1 ou 2) est absente (0 : présente).
+	std::int64_t absentSince[3] = { 0, 0, 0 };
+
 	static tw::battle::BattleMap toBattleMap(tw::Environment * environment);
 
 private:
@@ -60,4 +69,6 @@ private:
 	std::int64_t classSelectionDeadline;
 	std::unique_ptr<tw::battle::BattleEngine> engine;
 	std::uint32_t seed;
+	int tournamentId = 0;
+	int tournamentMatchId = 0;
 };

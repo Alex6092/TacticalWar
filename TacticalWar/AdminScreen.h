@@ -4,6 +4,7 @@
 #include "ServerMessageListener.h"
 #include <Player.h>
 #include "TeamsAdminPanel.h"
+#include "TournamentAdminPanel.h"
 #include <memory>
 
 class AdminScreen : public tw::Screen, ServerMessageListener
@@ -42,6 +43,7 @@ private:
 	tgui::Tabs::Ptr tabs;
 	tgui::Group::Ptr matchesGroup;
 	std::unique_ptr<TeamsAdminPanel> teamsPanel;
+	std::unique_ptr<TournamentAdminPanel> tournamentPanel;
 	void showTab(const sf::String & tab);
 
 	void updateListTeam(tgui::ListBox::Ptr listTeam);

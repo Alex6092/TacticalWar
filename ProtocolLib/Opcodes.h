@@ -71,6 +71,20 @@ namespace tw
 			{ "TI", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Importer assets/equipe.txt" },
 			{ "TR", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur les équipes {ok, message, passwords}" },
 
+			// Administration des tournois (contenu JSON)
+			{ "UL", Direction::BOTH, Role::ADMIN, "Liste des tournois (S->C : {tournaments})" },
+			{ "UG", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Suivre un tournoi {id} (le serveur envoie UT à chaque changement)" },
+			{ "UT", Direction::SERVER_TO_CLIENT, Role::ADMIN, "État complet d'un tournoi (matchs, libellés, classements)" },
+			{ "UC", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un tournoi {name, settings, teams}" },
+			{ "UE", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Modifier un tournoi non démarré {id, name, settings, teams}" },
+			{ "UB", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Démarrer un tournoi {id}" },
+			{ "UP", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Suspendre / reprendre le lancement des matchs {id, paused}" },
+			{ "UD", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Supprimer un tournoi {id}" },
+			{ "UF", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Imposer un vainqueur {id, match, winner, cascade}" },
+			{ "US", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Arrêter un combat en cours (décision aux PV) {id, match}" },
+			{ "UX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Rejouer un match en cours {id, match}" },
+			{ "UA", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur un tournoi {ok, message, id}" },
+
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },
 			{ "CO", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Match créé" },

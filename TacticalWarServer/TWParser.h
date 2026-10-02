@@ -10,6 +10,7 @@
 #include <CredentialSheet.h>
 #include <ServerConfig.h>
 #include <TeamStore.h>
+#include <TournamentService.h>
 #include <nlohmann/json.hpp>
 
 class TWParser : public tw::net::NetHandler, tw::MatchEventListener
@@ -118,6 +119,23 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void finishBattle(BattleSession * session);
 	void onPlayerConnectionChanged(tw::Player * player, bool connected);
 	void tickBattles();
+	void trackAbsences(BattleSession * session, std::int64_t now);
+
+	// Tournois (TWParserTournament.cpp) :
+	tw::TournamentService tournaments;
+	int adminWatchedTournament;
+	void loadTournaments();
+	std::string teamName(int teamId);
+	nlohmann::json tournamentListJson();
+	nlohmann::json tournamentStateJson(int id);
+	void sendTournamentAck(ClientState * client, const std::string & error, const std::string & success, int id);
+	void notifyTournamentsChanged();
+	BattleSession * sessionOfTournamentMatch(int tournamentId, int matchId);
+	void handleTournamentAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void dispatchTournamentMatches();
+	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds);
+	void finishWithoutBattle(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason);
+	void cancelSession(BattleSession * session);
 
 	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());

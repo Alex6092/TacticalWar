@@ -178,6 +178,15 @@ void TWParser::finishBattle(BattleSession * session)
 	std::cout << "Combat " << session->getId() << " terminé : équipe " << state.winnerTeam << " gagnante ("
 		<< tw::battle::toString(state.endReason) << ", tour " << state.round << ")." << std::endl;
 
+	tw::tournament::ResultReason reason = tw::tournament::ResultReason::KO;
+	if (state.endReason == tw::battle::EndReason::ROUND_LIMIT)
+		reason = tw::tournament::ResultReason::ROUND_LIMIT;
+	else if (state.endReason == tw::battle::EndReason::FORFEIT)
+		reason = tw::tournament::ResultReason::FORFEIT;
+	else if (state.endReason == tw::battle::EndReason::ADMIN)
+		reason = tw::tournament::ResultReason::ADMIN;
+	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round);
+
 	session->markEnded();
 	match->setBattlePayload(NULL);
 
@@ -196,6 +205,36 @@ void TWParser::onPlayerConnectionChanged(tw::Player * player, bool connected)
 
 	session->getEngine()->setConnected(session->fighterIdOf(player), connected, nowMs());
 	broadcastBattleEvents(session);
+}
+
+void TWParser::trackAbsences(BattleSession * session, std::int64_t now)
+{
+	// Une équipe entièrement déconnectée pendant le délai de forfait perd le combat.
+	const tw::battle::BattleState & state = session->getEngine()->getState();
+	for (int team = 1; team <= 2; team++)
+	{
+		bool someoneConnected = false;
+		for (const tw::battle::Fighter & fighter : state.fighters)
+		{
+			if (fighter.team == team && fighter.connected)
+				someoneConnected = true;
+		}
+
+		if (someoneConnected)
+		{
+			session->absentSince[team] = 0;
+		}
+		else if (session->absentSince[team] == 0)
+		{
+			session->absentSince[team] = now;
+		}
+		else if (now - session->absentSince[team] >= (std::int64_t)config.forfeitSeconds * 1000)
+		{
+			std::cout << "Combat " << session->getId() << " : forfait de l'équipe " << team << " (déconnectée)." << std::endl;
+			session->getEngine()->forfeit(team, now);
+			return;
+		}
+	}
 }
 
 void TWParser::tickBattles()
@@ -223,16 +262,37 @@ void TWParser::tickBattles()
 			}
 
 			if (present[0] && present[1])
+			{
 				startBattle(session);
+			}
+			else if (present[0] || present[1])
+			{
+				// Une seule équipe présente : l'autre perd par forfait après le délai.
+				int absentTeam = present[0] ? 2 : 1;
+				if (session->absentSince[absentTeam] == 0)
+					session->absentSince[absentTeam] = now;
+
+				if (now - session->absentSince[absentTeam] >= (std::int64_t)config.forfeitSeconds * 1000)
+					finishWithoutBattle(session, absentTeam == 1 ? 2 : 1, tw::tournament::ResultReason::FORFEIT);
+				else
+					session->postponeClassSelection(now + 1000);
+			}
 			else
+			{
 				session->postponeClassSelection(now + CLASS_SELECTION_RETRY_MS);
+			}
 		}
 		else if (session->getPhase() == BattleSession::Phase::BATTLE)
 		{
+			trackAbsences(session, now);
 			session->getEngine()->tick(now);
 			broadcastBattleEvents(session);
 		}
 	}
+
+	dispatchTournamentMatches();
+	if (tournaments.takeChanged())
+		notifyTournamentsChanged();
 
 	for (auto it = sessions.begin(); it != sessions.end();)
 	{

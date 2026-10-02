@@ -17,12 +17,14 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	: config(config),
 	teamStore(tw::store::joinPath(config.dataDir, "teams.json")),
 	credentials(tw::store::joinPath(config.dataDir, "exports/credentials.json"), tw::store::joinPath(config.dataDir, "exports/fiches-equipes.html")),
-	teamStoreReadOnly(false)
+	teamStoreReadOnly(false),
+	tournaments(config.dataDir)
 {
 	srand((unsigned int)time(NULL));
 	net = NULL;
 	admin = NULL;
 	nextSessionId = 1;
+	adminWatchedTournament = 0;
 
 	loadEnvironments();
 	loadTeams();
@@ -31,6 +33,8 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	if (!gameData.loadFromFile("./assets/data/gamedata.json", error))
 		throw std::runtime_error(error);
 	std::cout << gameData.classes.size() << " classes chargées." << std::endl;
+
+	loadTournaments();
 }
 
 void TWParser::loadEnvironments()
@@ -96,6 +100,17 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
 			message.parseJson(body);
 		handleBattleAction(client, op, body);
+		return;
+	}
+
+	// Administration des tournois (contenu JSON) :
+	if (op == "UL" || op == "UG" || op == "UC" || op == "UE" || op == "UB" || op == "UP" || op == "UD" || op == "UF" || op == "US" || op == "UX")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleTournamentAdminMessage(client, op, body);
 		return;
 	}
 

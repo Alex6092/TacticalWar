@@ -12,6 +12,9 @@ nlohmann::json ServerConfig::toJson() const
 		{ "keepaliveIntervalSeconds", keepaliveIntervalSeconds },
 		{ "keepaliveTimeoutSeconds", keepaliveTimeoutSeconds },
 		{ "classSelectionSeconds", classSelectionSeconds },
+		{ "maxConcurrentMatches", maxConcurrentMatches },
+		{ "restSeconds", restSeconds },
+		{ "forfeitSeconds", forfeitSeconds },
 		{ "admin", {
 			{ "login", admin.login },
 			{ "passwordHash", admin.passwordHash },
@@ -29,6 +32,9 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.keepaliveIntervalSeconds = json.value("keepaliveIntervalSeconds", config.keepaliveIntervalSeconds);
 	config.keepaliveTimeoutSeconds = json.value("keepaliveTimeoutSeconds", config.keepaliveTimeoutSeconds);
 	config.classSelectionSeconds = json.value("classSelectionSeconds", config.classSelectionSeconds);
+	config.maxConcurrentMatches = json.value("maxConcurrentMatches", config.maxConcurrentMatches);
+	config.restSeconds = json.value("restSeconds", config.restSeconds);
+	config.forfeitSeconds = json.value("forfeitSeconds", config.forfeitSeconds);
 
 	if (json.contains("admin") && json["admin"].is_object())
 	{
