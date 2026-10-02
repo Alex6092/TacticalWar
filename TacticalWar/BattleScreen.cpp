@@ -84,6 +84,18 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	font.loadFromFile("./assets/font/neuropol_x_rg.ttf");
 
 	hud.reset(new BattleHud(gui, font));
+
+	std::string fxError;
+	if (!fx.loadCatalog(BattleFx::CATALOG_PATH, &fxError))
+		std::cout << fxError << std::endl;
+	fx.positionOf = [this](int fighterId, sf::Vector2f & cell) {
+		BaseCharacterModel * view = viewOf(fighterId);
+		if (view == NULL)
+			return false;
+		cell = sf::Vector2f(view->getInterpolatedX(), view->getInterpolatedY());
+		return true;
+	};
+	fx.playSound = [this](const std::string & path) { playSound(path); };
 	hud->onSpellClicked = [this](int slot) { selectSpell(selectedSpell == slot ? -1 : slot); };
 	hud->onEndTurn = [this]() { sendAction("Ct", json::object()); };
 	hud->onReady = [this](bool ready) { LinkToServer::getInstance()->SendRaw("Cs" + json({ { "ready", ready } }).dump()); };
@@ -176,13 +188,7 @@ void BattleScreen::update(float deltatime)
 	floatingTexts.erase(std::remove_if(floatingTexts.begin(), floatingTexts.end(),
 		[](const FloatingText & text) { return text.age > 1.4f; }), floatingTexts.end());
 
-	for (SpellEffect & effect : spellEffects)
-	{
-		effect.view->update(deltatime);
-		effect.remaining -= deltatime;
-	}
-	spellEffects.erase(std::remove_if(spellEffects.begin(), spellEffects.end(),
-		[](const SpellEffect & effect) { return effect.remaining <= 0; }), spellEffects.end());
+	fx.update(deltatime);
 
 	renderer->ellapseTime(deltatime);
 
@@ -227,8 +233,7 @@ void BattleScreen::render(sf::RenderWindow * window)
 		characters.push_back(entry.second);
 
 	std::vector<AbstractSpellView<sf::Sprite*>*> effects;
-	for (SpellEffect & effect : spellEffects)
-		effects.push_back(effect.view.get());
+	fx.collectViews(effects);
 
 	renderer->render(environment, characters, effects, getDeltatime());
 
@@ -352,6 +357,8 @@ void BattleScreen::applySnapshot(const json & snapshot)
 
 	for (const battle::Fighter & fighter : truth.fighters)
 		syncView(fighter);
+	// Effets durables et glyphes déjà en place (spectateur arrivé en cours de combat, resynchronisation).
+	fx.rebuild(truth);
 
 	if (truth.phase == battle::BattlePhase::PLACEMENT)
 		colorator->setStartCells(map.startCells[1], map.startCells[2]);
@@ -506,16 +513,14 @@ float BattleScreen::playVisual(const json & event, bool fast)
 			else
 				startActionAnimation(fighterId, view, tw::Animation::ATTACK1);
 
-			if (!spell->fxSprite.empty() && !fast)
-			{
-				SpellEffect effect;
-				effect.view.reset(new SpellView(x, y));
-				effect.view->loadAnimation(spell->fxSprite);
-				effect.remaining = 0.6f;
-				spellEffects.push_back(std::move(effect));
-			}
+			// Les dégâts et soins (événements suivants) s'affichent à l'impact.
+			float impact = fx.castSpell(map, *spell, fighterId, fighter->position, { x, y }, fast);
 			playSound(spell->sound);
 			hud->log(fighterName(fighterId) + L" lance " + fromServerText(spell->name), sf::Color(150, 200, 255));
+			// Bond : l'événement suivant est le déplacement du lanceur, qui part après son geste.
+			if (BattleFx::dashes(*spell))
+				return fast ? 0.05f : BattleFx::WINDUP_SECONDS;
+			return fast ? 0.05f : std::max(0.4f, impact + 0.1f);
 		}
 		return fast ? 0.05f : 0.7f;
 	}
@@ -532,6 +537,10 @@ float BattleScreen::playVisual(const json & event, bool fast)
 			return 0;
 		if (fighter->alive)
 			startActionAnimation(fighterId, view, tw::Animation::TAKE_DAMAGE);
+		if (!fast && kind == "dot")
+			fx.periodic(fighterId, periodicSpell(*fighter, event.value("src", -1), battle::EffectType::DOT));
+		else if (!fast && kind == "collision")
+			fx.playEvent("collision", fighterId);
 
 		int lost = amount - absorbed;
 		sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
@@ -557,6 +566,10 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		view->setCurrentLife(fighter->hp);
 		if (event.value("amount", 0) <= 0)
 			return 0;
+		if (!fast && event.value("kind", std::string()) == "hot")
+			fx.periodic(fighterId, periodicSpell(*fighter, event.value("src", -1), battle::EffectType::HOT));
+		else if (!fast && event.value("kind", std::string()) == "lifesteal")
+			fx.playEvent("lifesteal", fighterId);
 		addFloatingText(fighterId, L"+" + num(event.value("amount", 0)), sf::Color(110, 255, 110));
 		hud->log(fighterName(fighterId) + L" récupère " + num(event.value("amount", 0)) + L" PV", sf::Color(130, 255, 130));
 		return fast ? 0 : 0.3f;
@@ -564,6 +577,7 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	if (type == "effect+" && fighter != NULL)
 	{
 		battle::ActiveEffect effect = battle::BattleMirror::effectFromJson(event["effect"]);
+		fx.effectAdded(fighterId, effect.uid, effect.spellId);
 		if (effect.spellId != "__passive")
 		{
 			sf::Color color = effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
@@ -571,6 +585,11 @@ float BattleScreen::playVisual(const json & event, bool fast)
 			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name), color);
 		}
 		return fast ? 0 : 0.2f;
+	}
+	if (type == "effect-")
+	{
+		fx.effectRemoved(event.value("uid", -1));
+		return 0;
 	}
 	if (type == "stats" && view != NULL && fighter != NULL)
 	{
@@ -583,11 +602,36 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	}
 	if (type == "slide" && view != NULL)
 	{
-		view->setCurrentX(event["x"].get<int>());
-		view->setCurrentY(event["y"].get<int>());
+		int x = event["x"].get<int>();
+		int y = event["y"].get<int>();
 		std::string kind = event.value("kind", std::string());
+		if (fast || kind == "teleport")
+		{
+			view->setCurrentX(x);
+			view->setCurrentY(y);
+		}
+		else
+		{
+			// Poussée, attraction ou bond : le personnage glisse case par case jusqu'à l'arrivée.
+			std::vector<Point2D> path;
+			int cx = view->getCurrentX();
+			int cy = view->getCurrentY();
+			while (cx != x || cy != y)
+			{
+				cx += cx < x ? 1 : cx > x ? -1 : 0;
+				cy += cy < y ? 1 : cy > y ? -1 : 0;
+				path.insert(path.begin(), Point2D(cx, cy));
+			}
+			if (!path.empty())
+			{
+				view->slide(path, BattleFx::SLIDE_CELLS_PER_SECOND, this);
+				waitingMove = true;
+			}
+		}
 		if (kind == "push" || kind == "pull")
 			addFloatingText(fighterId, kind == "push" ? L"Repoussé" : L"Attiré", sf::Color(230, 230, 230));
+		if (!fast)
+			fx.playEvent(kind, fighterId);
 		return fast ? 0 : 0.25f;
 	}
 	if (type == "swap" && view != NULL)
@@ -604,11 +648,23 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	}
 	if (type == "glyph+")
 	{
+		const json & glyph = event["glyph"];
+		std::vector<battle::Cell> cells;
+		for (const json & cell : glyph.value("cells", json::array()))
+			cells.push_back({ cell.at(0).get<int>(), cell.at(1).get<int>() });
+		fx.glyphAdded(glyph.value("uid", -1), glyph.value("spell", std::string()), cells);
 		hud->log(L"Un glyphe est posé : " + fromServerText(event["glyph"].value("name", std::string())), sf::Color(200, 150, 255));
 		return fast ? 0 : 0.2f;
 	}
+	if (type == "glyph-")
+	{
+		fx.glyphRemoved(event.value("uid", -1));
+		return 0;
+	}
 	if (type == "glyph")
 	{
+		if (!fast)
+			fx.glyphTriggered(event.value("uid", -1), fighterId);
 		hud->log(fighterName(fighterId) + L" déclenche un glyphe", sf::Color(200, 150, 255));
 		return fast ? 0 : 0.2f;
 	}
@@ -616,6 +672,9 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	{
 		actionAnimations.erase(fighterId);
 		view->startDieAction(ACTION_ANIMATION_SECONDS);
+		fx.fighterRemoved(fighterId);
+		if (!fast)
+			fx.playEvent("death", fighterId);
 		pendingDeaths[fighterId] = fast ? 0.f : 0.9f;
 		hud->log(fighterName(fighterId) + L" est hors combat !", sf::Color(255, 90, 90));
 		return fast ? 0 : 0.9f;
@@ -685,6 +744,22 @@ void BattleScreen::showEnd()
 
 	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())
 		autoCloseRemaining = 10.f;
+}
+
+std::string BattleScreen::periodicSpell(const battle::Fighter & target, int sourceId, battle::EffectType type) const
+{
+	// Sort de l'effet périodique (poison, brûlure…) posé par ce lanceur sur la cible.
+	for (const battle::ActiveEffect & effect : target.effects)
+	{
+		if (effect.type == type && effect.casterId == sourceId)
+			return effect.spellId;
+	}
+	for (const battle::ActiveEffect & effect : target.effects)
+	{
+		if (effect.type == type)
+			return effect.spellId;
+	}
+	return std::string();
 }
 
 sf::String BattleScreen::teamLabel(int team) const

@@ -100,6 +100,20 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			soundEnabled = false;
 		}
+		else if (arg == "--fx-gallery")
+		{
+			fxGallery = true;
+		}
+		else if (arg == "--fx-spell" && hasValue)
+		{
+			fxGallery = true;
+			fxSpell = argv[++i];
+		}
+		else if (arg == "--fx-map" && hasValue)
+		{
+			fxGallery = true;
+			fxMap = std::atoi(argv[++i]);
+		}
 		else if (arg == "--spectator")
 		{
 			autoLogin.clear();

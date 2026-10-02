@@ -158,6 +158,8 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FxGalleryScreen.cpp" />
+    <ClCompile Include="BattleFx.cpp" />
     <ClCompile Include="ReplaysPanel.cpp" />
     <ClCompile Include="LiveSessionsPanel.cpp" />
     <ClCompile Include="TournamentAdminPanel.cpp" />
@@ -221,6 +223,8 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FxGalleryScreen.h" />
+    <ClInclude Include="BattleFx.h" />
     <ClInclude Include="ReplaysPanel.h" />
     <ClInclude Include="LiveSessionsPanel.h" />
     <ClInclude Include="TournamentAdminPanel.h" />

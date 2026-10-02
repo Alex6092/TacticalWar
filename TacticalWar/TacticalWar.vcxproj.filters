@@ -133,4 +133,12 @@
     <ClCompile Include="ReplaysPanel.cpp" />
     <ClInclude Include="ReplaysPanel.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BattleFx.cpp" />
+    <ClInclude Include="BattleFx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FxGalleryScreen.cpp" />
+    <ClInclude Include="FxGalleryScreen.h" />
+  </ItemGroup>
 </Project>
