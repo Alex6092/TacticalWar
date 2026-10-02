@@ -56,7 +56,7 @@ bool BattleSession::allClassesChosen() const
 	return classes.size() == participants.size();
 }
 
-void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, bool> & connected)
+void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, bool> & connected, const std::map<tw::Player*, std::string> & names)
 {
 	if (phase != Phase::CLASS_SELECTION)
 		return;
@@ -72,7 +72,8 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 			classId = data.classes[rng() % data.classes.size()].id;
 
 		int team = match->playerIsInTeam1(player) ? 1 : 2;
-		engine->addFighter(team, classId, player->getPseudo());
+		auto name = names.find(player);
+		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo());
 	}
 
 	engine->startPlacement(nowMs);

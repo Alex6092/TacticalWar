@@ -13,6 +13,8 @@
 #include <TournamentService.h>
 #include <nlohmann/json.hpp>
 
+class HttpFrontend;
+
 class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 {
 	tw::net::NetServer * net;
@@ -137,6 +139,14 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void finishWithoutBattle(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason);
 	void cancelSession(BattleSession * session);
 
+	// Vue projetée (TWParserPublic.cpp) :
+	HttpFrontend * http;
+	bool publicDirty;
+	std::int64_t lastPublicPublish;
+	std::string displayNameOf(tw::Player * player);
+	nlohmann::json publicStateJson();
+	void publishPublicState(bool force = false);
+
 	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());
 
@@ -145,6 +155,7 @@ public:
 	~TWParser();
 
 	void setNetServer(tw::net::NetServer * net);
+	void setHttpFrontend(HttpFrontend * http);
 
 	// NetHandler implementation :
 	virtual void onConnected(tw::net::ConnId id, const std::string & remoteAddress);

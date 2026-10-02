@@ -1,4 +1,7 @@
-﻿#include <atomic>
+﻿// WinSock2.h doit précéder Windows.h (sinon l'ancien winsock.h entre en conflit).
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <atomic>
 #include <cstdint>
 #include <iostream>
 #include <Windows.h>
@@ -7,6 +10,7 @@
 #include <ServerConfig.h>
 #include "TWParser.h"
 #include "net/NetServer.h"
+#include "http/HttpFrontend.h"
 
 namespace
 {
@@ -18,6 +22,29 @@ namespace
 		stopRequested = true;
 		return TRUE;
 	}
+}
+
+// Adresses à communiquer aux joueurs (champ "Serveur" du client) et pour la vue projetée.
+void printLanAddresses(const tw::ServerConfig & config)
+{
+	char hostName[256] = {};
+	if (gethostname(hostName, sizeof(hostName)) != 0)
+		return;
+
+	addrinfo hints = {};
+	hints.ai_family = AF_INET;
+	addrinfo * result = nullptr;
+	if (getaddrinfo(hostName, nullptr, &hints, &result) != 0)
+		return;
+
+	std::cout << "Adresses de ce poste :" << std::endl;
+	for (addrinfo * address = result; address != nullptr; address = address->ai_next)
+	{
+		char ip[INET_ADDRSTRLEN] = {};
+		inet_ntop(AF_INET, &((sockaddr_in*)address->ai_addr)->sin_addr, ip, sizeof(ip));
+		std::cout << "  jeu : " << ip << ":" << config.gamePort << "   vue projetée : http://" << ip << ":" << config.httpPort << "/" << std::endl;
+	}
+	freeaddrinfo(result);
 }
 
 int main(int argc, char** argv)
@@ -80,10 +107,20 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	HttpFrontend http(config.httpPort, "./assets/web");
+	if (!http.start(error))
+		std::cerr << "Vue projetée indisponible : " << error << std::endl;
+	else
+		parser.setHttpFrontend(&http);
+
 	SetConsoleCtrlHandler(onConsoleEvent, TRUE);
 	std::cout << "Serveur en écoute sur le port " << config.gamePort << " (Ctrl+C pour arrêter)." << std::endl;
+	printLanAddresses(config);
 
 	server.run(stopRequested);
+
+	parser.setHttpFrontend(NULL);
+	http.stop();
 
 	std::cout << "Arrêt du serveur." << std::endl;
 	return 0;

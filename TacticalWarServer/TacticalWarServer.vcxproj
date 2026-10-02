@@ -156,6 +156,8 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TWParserPublic.cpp" />
+    <ClCompile Include="http\HttpFrontend.cpp" />
     <ClCompile Include="TWParserTournament.cpp" />
     <ClCompile Include="BattleSession.cpp" />
     <ClCompile Include="TWParserBattle.cpp" />
@@ -166,6 +168,7 @@ exit /b 0</Command>
     <ClCompile Include="TWParser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="http\HttpFrontend.h" />
     <ClInclude Include="BattleSession.h" />
     <ClInclude Include="net\NetServer.h" />
     <ClInclude Include="ClientState.h" />

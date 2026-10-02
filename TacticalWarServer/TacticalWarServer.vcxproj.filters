@@ -48,4 +48,9 @@
   <ItemGroup>
     <ClCompile Include="TWParserTournament.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserPublic.cpp" />
+    <ClCompile Include="http\HttpFrontend.cpp" />
+    <ClInclude Include="http\HttpFrontend.h" />
+  </ItemGroup>
 </Project>

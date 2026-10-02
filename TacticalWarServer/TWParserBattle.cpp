@@ -70,7 +70,13 @@ void TWParser::startBattle(BattleSession * session)
 	for (tw::Player * player : session->getParticipants())
 		connected[player] = getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle();
 
-	session->startBattle(nowMs(), connected);
+	// Les combattants portent le nom affiché des joueurs (jamais leur login).
+	std::map<tw::Player*, std::string> names;
+	for (tw::Player * player : session->getParticipants())
+		names[player] = displayNameOf(player);
+
+	session->startBattle(nowMs(), connected, names);
+	publicDirty = true;
 	session->getMatch()->setMatchStatus(tw::MatchStatus::STARTED);
 
 	// Les clients reçoivent l'état complet : les événements produits jusqu'ici y sont déjà.
@@ -189,6 +195,7 @@ void TWParser::finishBattle(BattleSession * session)
 
 	session->markEnded();
 	match->setBattlePayload(NULL);
+	publicDirty = true;
 
 	for (tw::Player * player : session->getParticipants())
 		player->setHasJoinBattle(false);
@@ -292,7 +299,12 @@ void TWParser::tickBattles()
 
 	dispatchTournamentMatches();
 	if (tournaments.takeChanged())
+	{
 		notifyTournamentsChanged();
+		publicDirty = true;
+	}
+
+	publishPublicState();
 
 	for (auto it = sessions.begin(); it != sessions.end();)
 	{

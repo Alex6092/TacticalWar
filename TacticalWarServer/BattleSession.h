@@ -41,7 +41,7 @@ public:
 	void postponeClassSelection(std::int64_t deadline) { classSelectionDeadline = deadline; }
 
 	// Crée le moteur (classe au hasard pour les joueurs qui n'ont pas choisi) et démarre le placement.
-	void startBattle(std::int64_t nowMs, const std::map<tw::Player*, bool> & connected);
+	void startBattle(std::int64_t nowMs, const std::map<tw::Player*, bool> & connected, const std::map<tw::Player*, std::string> & names);
 	tw::battle::BattleEngine * getEngine() { return engine.get(); }
 
 	void markEnded() { phase = Phase::ENDED; }

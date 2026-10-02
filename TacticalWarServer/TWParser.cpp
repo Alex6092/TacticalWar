@@ -25,6 +25,9 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	admin = NULL;
 	nextSessionId = 1;
 	adminWatchedTournament = 0;
+	http = NULL;
+	publicDirty = true;
+	lastPublicPublish = 0;
 
 	loadEnvironments();
 	loadTeams();
