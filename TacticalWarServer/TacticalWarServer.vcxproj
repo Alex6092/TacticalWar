@@ -23,32 +23,32 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{cbd4e741-a5dc-4e78-a6f0-0af51839f95b}</ProjectGuid>
     <RootNamespace>TacticalWarServer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -87,6 +87,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -101,6 +102,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,15 +117,18 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
+      <Command>robocopy "$(SolutionDir)assets" "$(OutDir)assets" /E /XO /R:5 /W:1 /NFL /NDL /NJH /NJS /NP
+if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
+exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,8 +139,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\TacticalWarBattleLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TournamentLib;..\BattleEngineLib;..\ProtocolLib;..\ServerCoreLib;..\ZoneAndSightLib;..\PathfindingLib;..\ClassesLib;..\UtilsLib;..\EnvironmentPersistanceLib;..\TacticalWarCommonLib;..\MatchmakingLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,27 +150,45 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
+      <Command>robocopy "$(SolutionDir)assets" "$(OutDir)assets" /E /XO /R:5 /W:1 /NFL /NDL /NJH /NJS /NP
+if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
+exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TWParserReplay.cpp" />
+    <ClCompile Include="TWParserSpectator.cpp" />
+    <ClCompile Include="TWParserPublic.cpp" />
+    <ClCompile Include="http\HttpFrontend.cpp" />
+    <ClCompile Include="TWParserTournament.cpp" />
+    <ClCompile Include="BattleSession.cpp" />
+    <ClCompile Include="TWParserBattle.cpp" />
+    <ClCompile Include="TWParserTeams.cpp" />
+    <ClCompile Include="net\NetServer.cpp" />
     <ClCompile Include="ClientState.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Parser.cpp" />
-    <ClCompile Include="ParserEventListener.cpp" />
     <ClCompile Include="TWParser.cpp" />
-    <ClCompile Include="TcpServer.cpp" />
-    <ClCompile Include="ThreadSafeQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="http\HttpFrontend.h" />
+    <ClInclude Include="BattleSession.h" />
+    <ClInclude Include="net\NetServer.h" />
     <ClInclude Include="ClientState.h" />
-    <ClInclude Include="Parser.h" />
-    <ClInclude Include="ParserEventListener.h" />
     <ClInclude Include="TWParser.h" />
-    <ClInclude Include="TcpServer.h" />
-    <ClInclude Include="ThreadSafeQueue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\TournamentLib\TournamentLib.vcxproj">
+      <Project>{727719b2-e119-4fe0-a54d-1a4c69327c22}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\BattleEngineLib\BattleEngineLib.vcxproj">
+      <Project>{501a17cd-3a0d-4143-9c9c-4d2cf98c4b87}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ServerCoreLib\ServerCoreLib.vcxproj">
+      <Project>{10456535-d2a2-4a1e-80ab-14952b9cf73b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
+      <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\ClassesLib\ClassesLib.vcxproj">
       <Project>{2ec46bdc-a3bb-4af9-bdfb-519e2974822e}</Project>
     </ProjectReference>
@@ -176,9 +200,6 @@
     </ProjectReference>
     <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">
       <Project>{f579ad13-4a80-40f5-aba4-88e8e8739a71}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\TacticalWarBattleLib\TacticalWarBattleLib.vcxproj">
-      <Project>{c5a2fcbb-be73-4c99-9ed0-96ca39f959c0}</Project>
     </ProjectReference>
     <ProjectReference Include="..\TacticalWarCommonLib\TacticalWarCommonLib.vcxproj">
       <Project>{22afcd2a-5058-44cf-8264-ad1a26272a58}</Project>

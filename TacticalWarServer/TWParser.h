@@ -1,30 +1,52 @@
-#pragma once
+﻿#pragma once
 
-#include "Parser.h"
-#include "ParserEventListener.h"
-#include "ThreadSafeQueue.h"
+#include "ClientState.h"
+#include "net/NetServer.h"
 #include <Player.h>
 #include <map>
-#include <Battle.h>
 #include <Match.h>
+#include "BattleSession.h"
 #include <Environment.h>
-#include <Battle.h>
+#include <CredentialSheet.h>
+#include <ServerConfig.h>
+#include <TeamStore.h>
+#include <TournamentService.h>
+#include <ReplayStore.h>
+#include <memory>
+#include <nlohmann/json.hpp>
 
-class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEventListener
+class HttpFrontend;
+
+class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 {
+	tw::net::NetServer * net;
+	std::map<tw::net::ConnId, ClientState*> clients;
+
 	std::vector<tw::Environment*> environments;
+	// Cartes tirées pour les matchs de tournoi (option "tournament" des cartes ; toutes si aucune).
+	std::vector<tw::Environment*> tournamentEnvironments;
+	// Message MP (carte au format v2 avec ses règles) par identifiant de carte.
+	std::map<int, std::string> mapMessages;
 
 	void loadEnvironments();
 
-	bool hasCompleteMessage(ClientState * client);
-	std::string extractCompleteMessageFromBuffer(ClientState * client);
-	std::vector<tw::Player*> players;
+	tw::ServerConfig config;
+
+	// Équipes et comptes (source de vérité, persistée dans data/teams.json) :
+	tw::TeamStore teamStore;
+	tw::CredentialSheet credentials;
+	// true si teams.json n'a pas pu être lu : aucune modification n'est alors enregistrée.
+	bool teamStoreReadOnly;
+
+	// Tous les joueurs déjà créés (login -> joueur), y compris ceux d'équipes désactivées
+	// ou supprimées, encore référencés par des matchs.
+	std::map<std::string, tw::Player*> allPlayers;
+	// Joueurs des équipes actives (login -> joueur) :
 	std::map<std::string, tw::Player*> playersMap;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
-	std::map<tw::Player*, Battle*> playerToBattleMap;
 	std::map<int, std::vector<tw::Player*>> teamIdToPlayerList;
 
-	// Liste des clients en mode spectateur (pour mettre � jour la liste des match en cours) :
+	// Liste des clients en mode spectateur (pour mettre à jour la liste des match en cours) :
 	std::vector<ClientState*> spectatorModeClientDiffusionList;
 
 	void notifyPlayingMatchList(ClientState * c = NULL);
@@ -35,28 +57,15 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 	void notifyPlanifiedAndPlayingMatch(ClientState * c);
 	void notifyFinishedMatch(ClientState * c);
 
-	void notifyClassChoiceLocked(ClientState * c);
 
 	int isTeamAvailableForMatchCreation(int teamId);
 
-	bool everybodyReadyForBattle(tw::Match * m);
-	void synchronizeBattleState(tw::Match * m, ClientState * c);
-	void enterBattleState(tw::Match * m, ClientState * c);
-
-	void notifyBattleState(ClientState * c, Battle * battle);
-	void notifyReadyState(ClientState * c, int playerId, tw::Player * p);
-	void notifyCharacterPositionChanged(ClientState * toNotify, int playerId, tw::Player * characterWhosePositionChanged);
-	void notifyPlayerTurnToken(Battle * b, ClientState * c);
-	void notifyActivePlayerPANumber(Battle * b, ClientState * c);
-	void notifyActivePlayerPMNumber(Battle * b, ClientState * c);
-
-	void checkBattleEnd(tw::Match * m);
 
 
-	std::vector<tw::Point2D> calculateSpellZone(tw::BaseCharacterModel * character, int selectedSpell, tw::Match * match, tw::Environment * environment);
 
 
-	bool initRandom;
+
+
 
 
 	ClientState * getClientStateFromPlayer(tw::Player * p)
@@ -84,29 +93,120 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 		return p;
 	}
 
-	void switchParticipantToBattleState(Battle * b);
 
 	ClientState * admin;
 
 	void sendToMatch(tw::Match * match, std::string str);
+	void send(ClientState * client, const std::string & data);
+
+	void handleMessage(ClientState * client, const std::string & toParse);
+	bool isAuthorized(ClientState * client, const std::string & op);
+	bool isAdminLoginAllowed(ClientState * client);
+
+	// Gestion des équipes (TWParserTeams.cpp) :
+	void loadTeams();
+	bool saveTeams(std::string * error = nullptr);
+	void rebuildPlayers();
+	bool teamHasPendingMatch(int teamId);
+	bool teamHasAnyMatch(int teamId);
+	// Combats (TWParserBattle.cpp) :
+	tw::battle::GameData gameData;
+	std::string gameDataMessage;
+	std::map<int, BattleSession*> sessions;
+	int nextSessionId;
+	std::int64_t nowMs() const;
+	void createSession(tw::Match * match);
+	BattleSession * sessionOfMatch(tw::Match * match);
+	BattleSession * sessionOfPlayer(tw::Player * player);
+	void sendGameData(ClientState * client);
+	void handlePickClass(ClientState * client, tw::Player * player, int classId);
+	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void startBattle(BattleSession * session);
+	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
+	void broadcastBattleEvents(BattleSession * session);
+	void finishBattle(BattleSession * session);
+	void onPlayerConnectionChanged(tw::Player * player, bool connected);
+	void tickBattles();
+	void trackAbsences(BattleSession * session, std::int64_t now);
+
+	// Tournois (TWParserTournament.cpp) :
+	tw::TournamentService tournaments;
+
+	// Rediffusions (TWParserReplay.cpp) : enregistrement de chaque combat et relecture
+	// pour les spectateurs (même flux de messages qu'un combat en direct).
+	struct ReplayRecording
+	{
+		std::unique_ptr<tw::store::ReplayWriter> writer;
+		std::int64_t startMs = 0;
+	};
+	struct ReplayPlayback
+	{
+		tw::store::Replay replay;
+		std::vector<std::int64_t> due;	// Moment d'envoi de chaque lot (ms après le début)
+		std::size_t next = 0;
+		std::int64_t startMs = 0;
+	};
+	tw::store::ReplayLibrary replays;
+	std::map<int, ReplayRecording> recordings;
+	std::map<tw::net::ConnId, ReplayPlayback> playbacks;
+	nlohmann::json battleSnapshot(BattleSession * session, int fighterId);
+	void startRecording(BattleSession * session);
+	void recordBatch(BattleSession * session, const nlohmann::json & batch);
+	void stopRecording(BattleSession * session, const nlohmann::json & end, bool keep);
+	void handleReplayMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void stopPlayback(ClientState * client);
+	void tickReplays(std::int64_t now);
+	int adminWatchedTournament;
+	void loadTournaments();
+	std::string teamName(int teamId);
+	nlohmann::json tournamentListJson();
+	nlohmann::json tournamentStateJson(int id);
+	void sendTournamentAck(ClientState * client, const std::string & error, const std::string & success, int id);
+	void notifyTournamentsChanged();
+	BattleSession * sessionOfTournamentMatch(int tournamentId, int matchId);
+	void handleTournamentAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void dispatchTournamentMatches();
+	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds);
+	void finishWithoutBattle(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason);
+	void cancelSession(BattleSession * session);
+
+	// Vue projetée (TWParserPublic.cpp) :
+	HttpFrontend * http;
+	bool publicDirty;
+	std::int64_t lastPublicPublish;
+	std::string displayNameOf(tw::Player * player);
+	nlohmann::json publicStateJson();
+	void publishPublicState(bool force = false);
+
+	// Mode spectateur (TWParserSpectator.cpp) :
+	std::string lastSessionSignature;
+	nlohmann::json sessionListJson();
+	void notifySessionList(ClientState * only = NULL);
+	void refreshSessionList();
+	BattleSession * spectatedSession(ClientState * client);
+	void removeSpectator(ClientState * client);
+	void handleSpectatorMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+
+	void handleTeamAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void sendTeamResult(ClientState * client, bool ok, const std::string & message, const std::map<std::string, std::string> & passwords = std::map<std::string, std::string>());
 
 public:
-	TWParser();
+	TWParser(const tw::ServerConfig & config);
 	~TWParser();
 
-	virtual void onClientConnected(ClientState * client);
-	virtual void parse(ClientState * client, std::vector<unsigned char> & receivedPacket);
-	virtual void parse(SOCKET sock, unsigned char * buf, int length);
-	virtual void onClientDisconnected(SOCKET sock);
-	virtual void onClientDisconnected(ClientState * client);
+	void setNetServer(tw::net::NetServer * net);
+	void setHttpFrontend(HttpFrontend * http);
+
+	// NetHandler implementation :
+	virtual void onConnected(tw::net::ConnId id, const std::string & remoteAddress);
+	virtual void onMessage(tw::net::ConnId id, const std::string & line);
+	virtual void onDisconnected(tw::net::ConnId id);
+	virtual void onTick(tw::net::Clock::time_point now);
 
 	void kick(ClientState * client);
 
 	// MatchEventListener implementation :
 	virtual void onMatchStatusChanged(tw::Match * match, tw::MatchStatus oldStatus, tw::MatchStatus newStatus);
 
-	// BattleEventListener implementation :
-	virtual void onBattleStateChanged(tw::Match * m, BattleState state);
-	virtual void onPlayerTurnStart(tw::Match * match, tw::Player * player);
 };
 

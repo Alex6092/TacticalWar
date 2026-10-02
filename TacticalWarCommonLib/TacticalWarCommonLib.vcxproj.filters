@@ -99,4 +99,8 @@
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TileRegistry.cpp" />
+    <ClInclude Include="TileRegistry.h" />
+  </ItemGroup>
 </Project>

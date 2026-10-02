@@ -1,87 +1,93 @@
-#include "BattleScreen.h"
-#include "TestCharacterModel.h"
-#include <Pathfinder.h>
-#include <ZoneAndSightCalculator.h>
-#include <EnvironmentManager.h>
-#include <TypeZoneLaunch.h>
-#include "ScreenManager.h"
-#include "LoginScreen.h"
-#include <StringUtils.h>
-#include <CharacterFactory.h>
-#include "MusicManager.h"
-#include "PlayerStatusView.h"
-#include "SpellSlot.h"
-#include <AnimationManager.h>
-#include <ChangeTurnAction.h>
-#include <CharacterMoveAction.h>
-#include <LaunchSpellAction.h>
-#include <TakeDamage.h>
-#include <TeleportAction.h>
-#include <SynchroPAAction.h>
-#include <SynchroPMAction.h>
-#include <LaunchSpellAction.h>
-#include <BattleEndAction.h>
-#include "ClassSelectionScreen.h"
-#include "WaitMatchScreen.h"
-#include "TimelineView.h"
+﻿#include "BattleScreen.h"
 
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+
+#include <BattleMirror.h>
+#include <BattleRules.h>
+#include <CharacterFactory.h>
+#include <EnvironmentManager.h>
+#include <EnvironmentMap.h>
+#include <Message.h>
+
+#include "AdminScreen.h"
+#include "ClassSelectionScreen.h"
+#include "ClientGameData.h"
+#include "LinkToServer.h"
+#include "LoginScreen.h"
+#include "MusicManager.h"
+#include "ScreenManager.h"
+#include "SpectatorModeScreen.h"
+#include "WaitMatchScreen.h"
 
 using namespace tw;
+using nlohmann::json;
 
-
-BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
+namespace
 {
-	redirectToBattlePreparation = false;
-	hasInitSpellBar = false;
-	turnToken = -1;
-	readyToValidatePosition = false;
-	this->gui = NULL;
-	this->window = NULL;
-	
+	// Au-delà de ces tailles de file, les animations sont accélérées puis appliquées directement
+	// (ex : reconnexion ou client qui a pris du retard).
+	const std::size_t FAST_QUEUE = 25;
+	const std::size_t INSTANT_QUEUE = 60;
+
+	sf::String num(int value)
+	{
+		return sf::String(std::to_string(value));
+	}
+
+	std::vector<Point2D> toLegacyPath(const json & path)
+	{
+		// Les vues attendent la destination en premier et le premier pas en dernier.
+		std::vector<Point2D> legacy;
+		for (const json & cell : path)
+			legacy.insert(legacy.begin(), Point2D(cell.at(0).get<int>(), cell.at(1).get<int>()));
+		return legacy;
+	}
+
+	sf::String reasonLabel(battle::EndReason reason)
+	{
+		switch (reason)
+		{
+		case battle::EndReason::KO: return L"Toute l'équipe adverse est hors combat.";
+		case battle::EndReason::ROUND_LIMIT: return L"Limite de tours atteinte : décision aux points de vie.";
+		case battle::EndReason::FORFEIT: return L"Victoire par forfait.";
+		case battle::EndReason::ADMIN: return L"Combat arrêté par l'organisateur : décision aux points de vie.";
+		default: return L"";
+		}
+	}
+}
+
+BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
+	: gui(gui), window(NULL), mode(mode), autoCloseRemaining(-1), cameraFitted(false), you(-1), lastSeq(0), hasSnapshot(false), awaitingServer(false),
+	stepRemaining(0), waitingMove(false), waitingMoveTime(0), deadline(0), selectedSpell(-1), hoveredFighter(-1),
+	closeRequested(false), endShown(false)
+{
 	gui->removeAllWidgets();
-	
+
 	renderer = new IsometricRenderer(NULL);
 	environment = EnvironmentManager::getInstance()->loadEnvironment(environmentId);
+	map = battle::battleMapFromEnvironment(environment);
+	hoveredCell = { -1, -1 };
 
-	
-	colorator = new TWColorator(sf::Color(40, 200, 255), sf::Color(20, 100, 200));
+	camera.reset(environment->getWidth(), environment->getHeight());
+	// En mode réalisateur, la caméra suit le personnage actif.
+	camera.setFollowing(mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode());
 
+	colorator = new BattleColorator();
 	renderer->setColorator(colorator);
 	renderer->addEventListener(this);
 
-	activeCharacter = NULL;
-
 	font.loadFromFile("./assets/font/neuropol_x_rg.ttf");
-	FPS.setFont(font);
 
+	hud.reset(new BattleHud(gui, font));
+	hud->onSpellClicked = [this](int slot) { selectSpell(selectedSpell == slot ? -1 : slot); };
+	hud->onEndTurn = [this]() { sendAction("Ct", json::object()); };
+	hud->onReady = [this](bool ready) { LinkToServer::getInstance()->SendRaw("Cs" + json({ { "ready", ready } }).dump()); };
+	hud->onClose = [this]() { closeRequested = true; };
 
-	tgui::Button::Ptr readyButton = tgui::Button::create();
-	readyButton->setInheritedFont(font);
-	readyButton->setText("Valider position");
-	readyButton->setSize(200, 100);
-	readyButton->setVisible(false);
-	readyButton->connect("pressed", [&]() {
-		if (activeCharacter != NULL && !activeCharacter->isPlayerReady() && !readyToValidatePosition)
-		{
-			readyToValidatePosition = true;
-		}
-	});
-
-	gui->add(readyButton, "readyButton");
-
-
-	// Battle message label :
-	msgLabel = tgui::Label::create("");
-	msgLabel->setInheritedFont(font);
-	msgLabel->setTextSize(30);
-	msgLabel->getRenderer()->setTextColor(tgui::Color::Red);
-	msgLabel->getRenderer()->setTextOutlineColor(tgui::Color::Black);
-	msgLabel->getRenderer()->setTextOutlineThickness(1.0);
-	gui->add(msgLabel, "msgLabel");
-	msgRemainingTime = 0;
-
-	gui->add(PlayerStatusView::getInstance());
-	gui->add(TimelineView::getInstance());
+	if (MusicManager::getInstance()->isEnabled())
+		sounds.resize(8);
 
 	LinkToServer::getInstance()->addListener(this);
 	MusicManager::getInstance()->setBattleMusic();
@@ -90,926 +96,840 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId)
 BattleScreen::~BattleScreen()
 {
 	LinkToServer::getInstance()->removeListener(this);
-	for (auto it = characters.begin(); it != characters.end(); it++)
-		delete (*it).second;
+	for (auto & entry : views)
+		delete entry.second;
 
 	delete colorator;
 	delete renderer;
 	delete environment;
 }
 
+//----------------------------------------------------------
+// Boucle principale
+//----------------------------------------------------------
+
 void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
-{	
+{
 	this->window = window;
 	this->gui = gui;
+	hud->layout(window->getSize());
 
-	tgui::Button::Ptr readyButton = gui->get<tgui::Button>("readyButton");
-	readyButton->setPosition(window->getSize().x / 2. - readyButton->getSize().x / 2., window->getSize().y - readyButton->getSize().y - 20);
-
-	msgLabel->setPosition(window->getSize().x / 2.0 - msgLabel->getSize().x / 2.0, window->getSize().y / 2.0 - msgLabel->getSize().y / 2.0);
-
-	
-
-	if (activeCharacter != NULL)
+	// Première image : toute la carte tient dans la fenêtre.
+	if (!cameraFitted)
 	{
-		readyButton->setVisible(!activeCharacter->isPlayerReady());
-
-		if(!hasInitSpellBar)
-		{
-			std::shared_ptr<SpellSlot> spellSlot1 = std::make_shared<SpellSlot>(activeCharacter, 1, activeCharacter->getSpell1IconPath());
-			gui->add(spellSlot1, "spellSlot1");
-			spellSlot1->setSize(tgui::Layout2d(100, 100));
-			spellSlot1->setPosition(tgui::Layout2d(150, window->getSize().y - 110));
-			spellSlot1->connect("Clicked", [&]() {
-				setSelectedSpell(1);
-			});
-
-			std::shared_ptr<SpellSlot> spellSlot2 = std::make_shared<SpellSlot>(activeCharacter, 2, activeCharacter->getSpell2IconPath());
-			gui->add(spellSlot2, "spellSlot2");
-			spellSlot2->setSize(tgui::Layout2d(100, 100));
-			spellSlot2->setPosition(tgui::Layout2d(150 + 110, window->getSize().y - 110));
-			spellSlot2->connect("Clicked", [&]() {
-				setSelectedSpell(2);
-			});
-
-			std::shared_ptr<SpellSlot> spellSlot3 = std::make_shared<SpellSlot>(activeCharacter, 3, activeCharacter->getSpell3IconPath());
-			gui->add(spellSlot3, "spellSlot3");
-			spellSlot3->setSize(tgui::Layout2d(100, 100));
-			spellSlot3->setPosition(tgui::Layout2d(150 + 220, window->getSize().y - 110));
-			spellSlot3->connect("Clicked", [&]() {
-				setSelectedSpell(3);
-			});
-
-			std::shared_ptr<SpellSlot> spellSlot4 = std::make_shared<SpellSlot>(activeCharacter, 4, activeCharacter->getSpell4IconPath());
-			gui->add(spellSlot4, "spellSlot4");
-			spellSlot4->setSize(tgui::Layout2d(100, 100));
-			spellSlot4->setPosition(tgui::Layout2d(150 + 330, window->getSize().y - 110));
-			spellSlot4->connect("Clicked", [&]() {
-				setSelectedSpell(4);
-			});
-			
-
-			tgui::Button::Ptr skipTurnBtn = tgui::Button::create("Passer le tour");
-			gui->add(skipTurnBtn, "skipTurnBtn");
-			skipTurnBtn->setSize(200, 100);
-			skipTurnBtn->setPosition(tgui::Layout2d(150 + 440, window->getSize().y - 110));
-			skipTurnBtn->setVisible(false);
-			skipTurnBtn->connect("pressed", [&]() {
-				LinkToServer::getInstance()->Send("Ct");
-			});
-
-			hasInitSpellBar = true;
-		}
-		else
-		{
-			tgui::Button::Ptr skipTurnButton = gui->get<tgui::Button>("skipTurnBtn");
-			// Le bouton n'est visible que pendant notre tour.
-			skipTurnButton->setVisible(colorator->getBattleState() == BattleState::BATTLE_PHASE_ACTIVE_PLAYER_TURN);
-		}
-	}
-}
-
-void tw::BattleScreen::setMessage(std::string message)
-{
-	msgLabel->setText(message);
-	msgLabel->setPosition(window->getSize().x / 2.0 - msgLabel->getSize().x / 2.0, window->getSize().y / 2.0 - msgLabel->getSize().y / 2.0);
-	msgRemainingTime = 2.0;
-}
-
-void tw::BattleScreen::calculateAndSetSpellZone()
-{
-	int spellMinPO = -1;
-	int spellMaxPO = -1;
-	TypeZoneLaunch zoneType = TypeZoneLaunch::NORMAL;
-	
-	if (activeCharacter != NULL)
-	{
-		switch (selectedSpell)
-		{
-		case 1:
-			spellMinPO = activeCharacter->getSpell1MinPO();
-			spellMaxPO = activeCharacter->getSpell1MaxPO();
-			zoneType = activeCharacter->getSpell1LaunchZoneType();
-			break;
-
-		case 2:
-			spellMinPO = activeCharacter->getSpell2MinPO();
-			spellMaxPO = activeCharacter->getSpell2MaxPO();
-			zoneType = activeCharacter->getSpell2LaunchZoneType();
-			break;
-
-		case 3:
-			spellMinPO = activeCharacter->getSpell3MinPO();
-			spellMaxPO = activeCharacter->getSpell3MaxPO();
-			zoneType = activeCharacter->getSpell3LaunchZoneType();
-			break;
-
-		case 4:
-			spellMinPO = activeCharacter->getSpell4MinPO();
-			spellMaxPO = activeCharacter->getSpell4MaxPO();
-			zoneType = activeCharacter->getSpell4LaunchZoneType();
-			break;
-		}
-	}
-
-	if (activeCharacter != NULL && selectedSpell != -1)
-	{
-		std::vector<Point2D> targetZone = ZoneAndSightCalculator::getInstance()->generateZone(
-			activeCharacter->getCurrentX(),
-			activeCharacter->getCurrentY(),
-			spellMinPO,
-			spellMaxPO,
-			zoneType);
-
-		std::vector<Obstacle> obstacles;
-		std::vector<Obstacle> environmentObstacles = environment->getObstacles();
-		std::vector<Obstacle> dynamicsObstacles = getDynamicObstacles();
-		obstacles.insert(obstacles.end(), environmentObstacles.begin(), environmentObstacles.end());
-		obstacles.insert(obstacles.end(), dynamicsObstacles.begin(), dynamicsObstacles.end());
-
-		std::vector<Point2D> targettable = ZoneAndSightCalculator::getInstance()->processLineOfSight(
-			activeCharacter->getCurrentX(),
-			activeCharacter->getCurrentY(),
-			targetZone,
-			obstacles
-		);
-
-		colorator->setSpellLaunchZone(targettable);
+		camera.fit(environment->getWidth(), environment->getHeight(), window->getSize(), 1.0f);
+		cameraFitted = true;
 	}
 }
 
 void BattleScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
+	hud->update(deltatime);
 
-	if (msgRemainingTime > 0)
+	for (auto & entry : views)
+		entry.second->update(deltatime);
+
+	processVisuals(deltatime);
+
+	for (auto it = pendingDeaths.begin(); it != pendingDeaths.end();)
 	{
-		msgRemainingTime -= deltatime;
-		if (msgRemainingTime < 0)
+		it->second -= deltatime;
+		if (it->second <= 0)
 		{
-			msgRemainingTime = 0;
-			msgLabel->setText("");
+			BaseCharacterModel * view = viewOf(it->first);
+			if (view != NULL)
+			{
+				view->resetAnimation();
+				view->setCurrentLife(0);
+			}
+			it = pendingDeaths.erase(it);
+		}
+		else
+		{
+			it++;
 		}
 	}
 
-	for (int i = 0; i < characters.size(); i++)
+	for (FloatingText & text : floatingTexts)
+		text.age += deltatime;
+	floatingTexts.erase(std::remove_if(floatingTexts.begin(), floatingTexts.end(),
+		[](const FloatingText & text) { return text.age > 1.4f; }), floatingTexts.end());
+
+	for (SpellEffect & effect : spellEffects)
 	{
-		characters[i]->update(deltatime);
+		effect.view->update(deltatime);
+		effect.remaining -= deltatime;
+	}
+	spellEffects.erase(std::remove_if(spellEffects.begin(), spellEffects.end(),
+		[](const SpellEffect & effect) { return effect.remaining <= 0; }), spellEffects.end());
+
+	renderer->ellapseTime(deltatime);
+
+	// Caméra : suivi du personnage actif (sa position interpolée pendant les déplacements).
+	BaseCharacterModel * activeView = viewOf(shown.activeFighterId());
+	if (activeView != NULL && shown.phase == battle::BattlePhase::FIGHT)
+		camera.followCell(activeView->getInterpolatedX(), activeView->getInterpolatedY());
+	camera.update(deltatime);
+
+	// Mode réalisateur : retour automatique à la liste quelques secondes après la fin du combat.
+	if (autoCloseRemaining > 0)
+	{
+		autoCloseRemaining -= deltatime;
+		hud->setEndButtonText(L"Retour à la liste (" + num((int)std::ceil(std::max(0.f, autoCloseRemaining))) + L")");
+		if (autoCloseRemaining <= 0)
+			closeRequested = true;
 	}
 
-	renderer->ellapseTime(deltatime);	// Update renderer (water animation)
-
-	double fps = 1.0 / deltatime;
-	FPS.setString(std::to_string((int)fps));
-	FPS.setFillColor(sf::Color::Red);
-	FPS.setPosition(10, 10);
-
-	if (readyToValidatePosition)
+	if (hasSnapshot)
 	{
-		if (activeCharacter != NULL && !activeCharacter->isPlayerReady())
-		{
-			LinkToServer::getInstance()->Send("Cs");
-		}
+		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
+		hud->refresh(shown, ClientGameData::get().data(), you, hoveredFighter, selectedSpell, isInteractive(), remaining);
+		refreshPreview();
 	}
 
-	AnimationManager::getInstance()->update(deltatime);
+	if (closeRequested)
+	{
+		leave();
+		return;
+	}
 
-	if (redirectToBattlePreparation)
-	{
-		AnimationManager::getInstance()->clear();
-		gui->removeAllWidgets();
-		window->setView(window->getDefaultView());
-		tw::ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
-		MusicManager::getInstance()->setMenuMusic();
-		redirectToBattlePreparation = false;
-		delete this;
-	}
-	else
-	{
-		LinkToServer::getInstance()->UpdateReceivedData();
-	}
+	LinkToServer::getInstance()->UpdateReceivedData();
 }
 
 void BattleScreen::render(sf::RenderWindow * window)
 {
-	msgLabel->setVisible(msgRemainingTime > 0);
-	
 	renderer->modifyWindow(window);
-	std::vector<BaseCharacterModel*> aliveCharacters;
-	
-	for (std::map<int, BaseCharacterModel*>::iterator it = characters.begin(); it != characters.end(); it++)
+	camera.apply(*renderer);
+
+	std::vector<BaseCharacterModel*> characters;
+	for (auto & entry : views)
+		characters.push_back(entry.second);
+
+	std::vector<AbstractSpellView<sf::Sprite*>*> effects;
+	for (SpellEffect & effect : spellEffects)
+		effects.push_back(effect.view.get());
+
+	renderer->render(environment, characters, effects, getDeltatime());
+
+	// Textes flottants (dégâts, soins, effets), dans le repère de la carte.
+	for (const FloatingText & floating : floatingTexts)
 	{
-		aliveCharacters.push_back((*it).second);
+		sf::Text text(floating.text, font, 22);
+		float alpha = std::max(0.f, 1.f - floating.age / 1.4f);
+		sf::Color color = floating.color;
+		color.a = (sf::Uint8)(255 * alpha);
+		text.setFillColor(color);
+		text.setOutlineColor(sf::Color(0, 0, 0, color.a));
+		text.setOutlineThickness(2);
+
+		float isoX = (floating.x * 120 - floating.y * 120) / 2 + 60;
+		float isoY = (floating.x * 60 + floating.y * 60) / 2 + 30 - 110 - floating.age * 45;
+		text.setPosition(isoX - text.getLocalBounds().width / 2, isoY);
+		window->draw(text);
 	}
-
-	renderer->render(environment, aliveCharacters, animationsToDisplay, getDeltatime());
-	window->draw(FPS);
-
-	animationsToDisplay.clear();
 }
 
-void BattleScreen::invalidatePathZone()
-{
-	colorator->setPathToHighlight(std::vector<Point2D>());
-	lastStartPosition.setX(-1);
-	lastStartPosition.setY(-1);
-}
+//----------------------------------------------------------
+// Messages du serveur
+//----------------------------------------------------------
 
-std::vector<Obstacle> tw::BattleScreen::getDynamicObstacles()
+void BattleScreen::onMessageReceived(std::string msg)
 {
-	std::vector<Obstacle> obstacles;
+	tw::protocol::Message message;
+	if (!tw::protocol::Message::decode(msg, message))
+		return;
 
-	for (auto it = characters.begin(); it != characters.end(); it++)
+	if (message.op == "BI")
 	{
-		if(activeCharacter != (*it).second && (*it).second->isAlive())
-			obstacles.push_back(Obstacle((*it).second));
+		json snapshot;
+		if (message.parseJson(snapshot))
+			applySnapshot(snapshot);
 	}
-
-	return obstacles;
-}
-
-// Renderer Event Listener
-void BattleScreen::onCellClicked(int cellX, int cellY)
-{
-	std::cout << "Cell x=" << cellX << ", y=" << cellY << " clicked !" << std::endl;
-	BaseCharacterModel * m = activeCharacter;
-	if (colorator->getBattleState() == BattleState::BATTLE_PHASE_ACTIVE_PLAYER_TURN)
+	else if (message.op == "BV")
 	{
-		std::vector<tw::Point2D> spellZone = colorator->getSpellLaunchZone();
+		json batch;
+		if (!hasSnapshot || !message.parseJson(batch))
+			return;
 
-		// Ciblage :
-		if(spellZone.size() > 0)
+		std::uint64_t seq = batch.value("seq", (std::uint64_t)0);
+		if (seq != lastSeq + 1)
 		{
-			bool isInSpellZone = false;
+			// Événements manquants : demande de l'état complet.
+			LinkToServer::getInstance()->SendRaw("BR{}");
+			return;
+		}
+		lastSeq = seq;
+		awaitingServer = false;
 
-			for (int i = 0; i < spellZone.size(); i++)
-			{
-				if (spellZone[i].getX() == cellX && spellZone[i].getY() == cellY)
-				{
-					isInSpellZone = true;
-					break;
-				}
-			}
+		for (const json & event : batch["ev"])
+		{
+			battle::BattleMirror::applyEvent(truth, event);
 
-			if (!isInSpellZone)
+			std::string type = event.value("t", std::string());
+			if (type == "timer" || type == "placement")
+				deadline = clock.getElapsedTime().asSeconds() + event.value("ms", 0) / 1000.f;
+
+			visualQueue.push_back(event);
+		}
+	}
+	else if (message.op == "ER")
+	{
+		json error;
+		awaitingServer = false;
+		if (message.parseJson(error))
+			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
+	}
+	else if (message.op == "HW")
+	{
+		// Combat annulé par l'organisateur : retour à l'attente (ou à la liste des combats).
+		closeRequested = true;
+	}
+	else if (message.op == "HC")
+	{
+		gui->removeAllWidgets();
+		if (window != NULL)
+			window->setView(window->getDefaultView());
+		ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui));
+		MusicManager::getInstance()->setMenuMusic();
+		delete this;
+	}
+}
+
+void BattleScreen::onDisconnected()
+{
+	gui->removeAllWidgets();
+	if (window != NULL)
+		window->setView(window->getDefaultView());
+	ScreenManager::getInstance()->setCurrentScreen(new LoginScreen(gui));
+	delete this;
+}
+
+void BattleScreen::applySnapshot(const json & snapshot)
+{
+	battle::BattleMirror::applySnapshot(truth, map, snapshot);
+	shown = truth;
+	you = snapshot.value("you", -1);
+
+	const json & teams = snapshot.value("teams", json::array());
+	for (std::size_t i = 0; i < 2 && i < teams.size(); i++)
+		teamNames[i] = fromServerText(teams[i].get<std::string>());
+	if (mode != Mode::PLAYER)
+	{
+		sf::String title = fromServerText(snapshot.value("title", std::string()));
+		hud->setSpectator((title.isEmpty() ? sf::String() : title + L" : ") + teamLabel(1) + L" contre " + teamLabel(2));
+	}
+	lastSeq = snapshot.value("seq", (std::uint64_t)0);
+	deadline = clock.getElapsedTime().asSeconds() + snapshot.value("ms", 0) / 1000.f;
+	hasSnapshot = true;
+	awaitingServer = false;
+
+	visualQueue.clear();
+	waitingMove = false;
+	stepRemaining = 0;
+	pendingDeaths.clear();
+
+	for (const battle::Fighter & fighter : truth.fighters)
+		syncView(fighter);
+
+	if (truth.phase == battle::BattlePhase::PLACEMENT)
+		colorator->setStartCells(map.startCells[1], map.startCells[2]);
+	else
+		colorator->setStartCells({}, {});
+
+	if (truth.phase == battle::BattlePhase::ENDED)
+		showEnd();
+}
+
+BaseCharacterModel * BattleScreen::viewOf(int fighterId)
+{
+	auto it = views.find(fighterId);
+	return it == views.end() ? NULL : it->second;
+}
+
+void BattleScreen::syncView(const battle::Fighter & fighter)
+{
+	BaseCharacterModel * view = viewOf(fighter.id);
+	if (view == NULL)
+	{
+		view = CharacterFactory::getInstance()->constructCharacter(environment, fighter.classId, fighter.team, fighter.position.x, fighter.position.y);
+		if (view == NULL)
+			return;
+		view->setColorNumber(fighter.team);
+		view->setPseudo(fighter.name);
+		views[fighter.id] = view;
+	}
+
+	view->setCurrentX(fighter.position.x);
+	view->setCurrentY(fighter.position.y);
+	view->setDisplayMaxLife(fighter.maxHp);
+	view->setCurrentLife(fighter.alive ? fighter.hp : 0);
+	view->setCurrentPA(fighter.ap);
+	view->setCurrentPM(fighter.mp);
+	view->setReadyStatus(fighter.ready);
+	view->resetAnimation();
+}
+
+//----------------------------------------------------------
+// Animation des événements
+//----------------------------------------------------------
+
+void BattleScreen::processVisuals(float deltatime)
+{
+	if (waitingMove)
+	{
+		// Sécurité : un déplacement qui ne se termine pas ne doit pas bloquer l'affichage.
+		waitingMoveTime += deltatime;
+		if (waitingMoveTime < 6.f)
+			return;
+		waitingMove = false;
+	}
+	waitingMoveTime = 0;
+
+	bool instant = visualQueue.size() > INSTANT_QUEUE;
+	float speed = visualQueue.size() > FAST_QUEUE ? 3.f : 1.f;
+	stepRemaining -= deltatime * speed;
+
+	while ((stepRemaining <= 0 || instant) && !visualQueue.empty() && !waitingMove)
+	{
+		json event = visualQueue.front();
+		visualQueue.pop_front();
+		stepRemaining = playVisual(event, speed > 1.f || instant);
+		instant = visualQueue.size() > INSTANT_QUEUE;
+	}
+}
+
+void BattleScreen::onMoveFinished()
+{
+	waitingMove = false;
+	stepRemaining = 0;
+}
+
+float BattleScreen::playVisual(const json & event, bool fast)
+{
+	battle::BattleMirror::applyEvent(shown, event);
+
+	const tw::battle::GameData & data = ClientGameData::get().data();
+	std::string type = event.value("t", std::string());
+	int fighterId = event.value("f", -1);
+	BaseCharacterModel * view = viewOf(fighterId);
+	const battle::Fighter * fighter = shown.findFighter(fighterId);
+
+	if (type == "placement")
+	{
+		colorator->setStartCells(map.startCells[1], map.startCells[2]);
+		return 0;
+	}
+	if (type == "place" && view != NULL)
+	{
+		view->setCurrentX(event["x"].get<int>());
+		view->setCurrentY(event["y"].get<int>());
+		return 0;
+	}
+	if (type == "fight")
+	{
+		colorator->setStartCells({}, {});
+		hud->showMessage(L"Le combat commence !", sf::Color(255, 220, 80), 1.5f);
+		hud->log(L"Le combat commence.", sf::Color(255, 220, 80));
+		return fast ? 0 : 0.8f;
+	}
+	if (type == "turn" && fighter != NULL)
+	{
+		bool mine = fighterId == you;
+		sf::String text = mine ? sf::String(L"À vous de jouer !") : L"Tour de " + fromServerText(fighter->name);
+		hud->showMessage(text, mine ? sf::Color(120, 255, 120) : sf::Color(255, 220, 80), 1.2f);
+		hud->log(L"--- Tour " + num(shown.round) + L" : " + fromServerText(fighter->name), sf::Color(255, 220, 80));
+		selectSpell(-1);
+		return fast ? 0 : 0.4f;
+	}
+	if (type == "move" && view != NULL)
+	{
+		for (const json & tackle : event.value("tackles", json::array()))
+		{
+			hud->log(fighterName(fighterId) + L" est taclé : -" + num(tackle.value("mp", 0)) + L" PM, -" + num(tackle.value("ap", 0)) + L" PA", sf::Color(255, 170, 90));
+			addFloatingText(fighterId, L"Taclé !", sf::Color(255, 170, 90));
+		}
+
+		const json & path = event["path"];
+		if (!path.empty())
+		{
+			if (fast)
 			{
-				setSelectedSpell(-1);
+				view->setCurrentX(path.back().at(0).get<int>());
+				view->setCurrentY(path.back().at(1).get<int>());
 			}
 			else
 			{
-				// Send launch spell request to server ...
-				std::string str = "CL" + std::to_string(selectedSpell) + ";" + std::to_string(cellX) + ";" + std::to_string(cellY);
-				LinkToServer::getInstance()->Send(str);
-				setSelectedSpell(-1);
+				view->setPath(toLegacyPath(path), this);
+				waitingMove = true;
 			}
 		}
-		// D�placement :
-		else if (m != NULL && !m->hasTargetPosition())
+		view->setCurrentPA(event.value("ap", 0));
+		view->setCurrentPM(event.value("mp", 0));
+		return 0;
+	}
+	if (type == "cast" && view != NULL && fighter != NULL)
+	{
+		int x = event["x"].get<int>();
+		int y = event["y"].get<int>();
+		const battle::SpellDef * spell = battle::spellOf(data, *fighter, event.value("slot", -1));
+		view->setOrientationToLookAt(x, y);
+
+		if (spell != NULL)
 		{
-			bool isInPathZone = false;
-			for (int i = 0; i < pathZone.size(); i++)
-			{
-				if (pathZone[i].getX() == cellX && pathZone[i].getY() == cellY)
-				{
-					isInPathZone = true;
-					break;
-				}
-			}
+			if (spell->casterAnimation == "physical")
+				view->startAttack2Animation(1);
+			else
+				view->startAttack1Animation(1);
 
-			if (isInPathZone)
+			if (!spell->fxSprite.empty() && !fast)
 			{
-				Point2D startPosition(m->getCurrentX(), m->getCurrentY());
-				Point2D targetPosition(cellX, cellY);
-
-				std::vector<Point2D> path = Pathfinder::getInstance()->getPath(startPosition, targetPosition, environment, getDynamicObstacles());
-				//m->setPath(path);
-				std::string str = "Cm" + Pathfinder::serializePath(path);
-				LinkToServer::getInstance()->Send(str);
+				SpellEffect effect;
+				effect.view.reset(new SpellView(x, y));
+				effect.view->loadAnimation(spell->fxSprite);
+				effect.remaining = 0.6f;
+				spellEffects.push_back(std::move(effect));
 			}
+			playSound(spell->sound);
+			hud->log(fighterName(fighterId) + L" lance " + fromServerText(spell->name), sf::Color(150, 200, 255));
+		}
+		return fast ? 0.05f : 0.7f;
+	}
+	if (type == "damage" && view != NULL && fighter != NULL)
+	{
+		int amount = event.value("amount", 0);
+		int absorbed = event.value("absorbed", 0);
+		std::string kind = event.value("kind", std::string());
+
+		view->setDisplayMaxLife(fighter->maxHp);
+		// Un mort reste affiché le temps de son animation.
+		view->setCurrentLife(std::max(fighter->hp, fighter->alive ? 0 : 1));
+		if (amount <= 0)
+			return 0;
+		if (fighter->alive)
+			view->startTakeDmg(1);
+
+		int lost = amount - absorbed;
+		sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
+		if (lost > 0)
+		{
+			sf::String text = L"-" + num(lost);
+			if (absorbed > 0)
+				text += L" (bouclier -" + num(absorbed) + L")";
+			addFloatingText(fighterId, text, sf::Color(255, 80, 70));
+			hud->log(fighterName(fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
+		}
+		else
+		{
+			// Coup entièrement absorbé par le bouclier.
+			addFloatingText(fighterId, L"Bouclier -" + num(absorbed), sf::Color(200, 220, 255));
+			hud->log(fighterName(fighterId) + L" : le bouclier absorbe " + num(absorbed) + L" dégâts" + source, sf::Color(200, 220, 255));
+		}
+		MusicManager::getInstance()->playTakeDamageSound();
+		return fast ? 0 : 0.35f;
+	}
+	if (type == "heal" && view != NULL && fighter != NULL)
+	{
+		view->setCurrentLife(fighter->hp);
+		if (event.value("amount", 0) <= 0)
+			return 0;
+		addFloatingText(fighterId, L"+" + num(event.value("amount", 0)), sf::Color(110, 255, 110));
+		hud->log(fighterName(fighterId) + L" récupère " + num(event.value("amount", 0)) + L" PV", sf::Color(130, 255, 130));
+		return fast ? 0 : 0.3f;
+	}
+	if (type == "effect+" && fighter != NULL)
+	{
+		battle::ActiveEffect effect = battle::BattleMirror::effectFromJson(event["effect"]);
+		if (effect.spellId != "__passive")
+		{
+			sf::Color color = effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
+			addFloatingText(fighterId, fromServerText(effect.name), color);
+			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name), color);
+		}
+		return fast ? 0 : 0.2f;
+	}
+	if (type == "stats" && view != NULL && fighter != NULL)
+	{
+		view->setCurrentPA(fighter->ap);
+		view->setCurrentPM(fighter->mp);
+		view->setDisplayMaxLife(fighter->maxHp);
+		if (fighter->alive)
+			view->setCurrentLife(fighter->hp);
+		return 0;
+	}
+	if (type == "slide" && view != NULL)
+	{
+		view->setCurrentX(event["x"].get<int>());
+		view->setCurrentY(event["y"].get<int>());
+		std::string kind = event.value("kind", std::string());
+		if (kind == "push" || kind == "pull")
+			addFloatingText(fighterId, kind == "push" ? L"Repoussé" : L"Attiré", sf::Color(230, 230, 230));
+		return fast ? 0 : 0.25f;
+	}
+	if (type == "swap" && view != NULL)
+	{
+		view->setCurrentX(event["x"].get<int>());
+		view->setCurrentY(event["y"].get<int>());
+		BaseCharacterModel * other = viewOf(event.value("other", -1));
+		if (other != NULL)
+		{
+			other->setCurrentX(event["ox"].get<int>());
+			other->setCurrentY(event["oy"].get<int>());
+		}
+		return fast ? 0 : 0.3f;
+	}
+	if (type == "glyph+")
+	{
+		hud->log(L"Un glyphe est posé : " + fromServerText(event["glyph"].value("name", std::string())), sf::Color(200, 150, 255));
+		return fast ? 0 : 0.2f;
+	}
+	if (type == "glyph")
+	{
+		hud->log(fighterName(fighterId) + L" déclenche un glyphe", sf::Color(200, 150, 255));
+		return fast ? 0 : 0.2f;
+	}
+	if (type == "death" && view != NULL)
+	{
+		view->startDieAction(1);
+		pendingDeaths[fighterId] = fast ? 0.f : 0.9f;
+		hud->log(fighterName(fighterId) + L" est hors combat !", sf::Color(255, 90, 90));
+		return fast ? 0 : 0.9f;
+	}
+	if (type == "timeout")
+	{
+		hud->log(L"Temps écoulé pour " + fighterName(fighterId), sf::Color(200, 200, 200));
+		return 0;
+	}
+	if (type == "connection")
+	{
+		bool connected = event.value("connected", true);
+		hud->log(fighterName(fighterId) + (connected ? L" est revenu." : L" s'est déconnecté."), sf::Color(200, 200, 200));
+		return 0;
+	}
+	if (type == "end")
+	{
+		showEnd();
+		return 0;
+	}
+
+	return 0;
+}
+
+void BattleScreen::showEnd()
+{
+	if (endShown)
+		return;
+	endShown = true;
+	selectSpell(-1);
+
+	const battle::Fighter * me = shown.findFighter(you);
+	sf::String title;
+	bool victory = false;
+	if (me != NULL)
+	{
+		victory = me->team == shown.winnerTeam;
+		title = victory ? L"Victoire !" : L"Défaite...";
+	}
+	else
+	{
+		title = L"Victoire : " + teamLabel(shown.winnerTeam);
+	}
+
+	sf::String winners;
+	for (const battle::Fighter & fighter : shown.fighters)
+	{
+		if (fighter.team == shown.winnerTeam)
+			winners += (winners.isEmpty() ? sf::String() : sf::String(L" et ")) + fromServerText(fighter.name);
+	}
+
+	sf::String details = winners + L" remportent le combat.\n" + reasonLabel(shown.endReason)
+		+ L"\nTours joués : " + num(shown.round);
+	hud->showEnd(title, details, victory || me == NULL);
+	hud->log(title, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
+
+	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())
+		autoCloseRemaining = 10.f;
+}
+
+sf::String BattleScreen::teamLabel(int team) const
+{
+	if (team >= 1 && team <= 2 && !teamNames[team - 1].isEmpty())
+		return teamNames[team - 1];
+	return L"équipe " + num(team);
+}
+
+void BattleScreen::leave()
+{
+	gui->removeAllWidgets();
+	if (window != NULL)
+		window->setView(sf::View(sf::FloatRect(0.f, 0.f, (float)window->getSize().x, (float)window->getSize().y)));
+	MusicManager::getInstance()->setMenuMusic();
+
+	if (mode == Mode::PLAYER)
+	{
+		ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
+	}
+	else
+	{
+		LinkToServer::getInstance()->SendRaw("SU{}");
+		if (mode == Mode::ADMIN)
+			ScreenManager::getInstance()->setCurrentScreen(new AdminScreen(gui));
+		else
+			ScreenManager::getInstance()->setCurrentScreen(new SpectatorModeScreen(gui));
+	}
+	delete this;
+}
+
+//----------------------------------------------------------
+// Interactions
+//----------------------------------------------------------
+
+bool BattleScreen::isInteractive() const
+{
+	return hasSnapshot && !awaitingServer && truth.phase == battle::BattlePhase::FIGHT
+		&& truth.activeFighterId() == you && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
+}
+
+bool BattleScreen::isMouseOverHud() const
+{
+	if (window == NULL)
+		return false;
+
+	sf::Vector2i mouse = sf::Mouse::getPosition(*window);
+	for (const tgui::Widget::Ptr & widget : gui->getWidgets())
+	{
+		if (!widget->isVisible())
+			continue;
+		sf::Vector2f position = widget->getPosition();
+		sf::Vector2f size = widget->getSize();
+		if (mouse.x >= position.x && mouse.y >= position.y && mouse.x < position.x + size.x && mouse.y < position.y + size.y)
+			return true;
+	}
+	return false;
+}
+
+void BattleScreen::selectSpell(int slot)
+{
+	selectedSpell = -1;
+	if (slot < 0 || !isInteractive())
+		return;
+
+	const battle::Fighter * me = truth.findFighter(you);
+	const battle::SpellDef * spell = me != NULL ? battle::spellOf(ClientGameData::get().data(), *me, slot) : NULL;
+	if (spell == NULL)
+		return;
+
+	std::string error = battle::checkSpellResources(*me, *spell);
+	if (!error.empty())
+	{
+		hud->showMessage(fromServerText(error), sf::Color(255, 110, 90), 1.5f);
+		return;
+	}
+	selectedSpell = slot;
+}
+
+void BattleScreen::sendAction(const std::string & op, const json & body)
+{
+	if (awaitingServer)
+		return;
+	awaitingServer = true;
+	LinkToServer::getInstance()->SendRaw(op + body.dump());
+}
+
+void BattleScreen::refreshPreview()
+{
+	colorator->clearPreview();
+	const battle::Fighter * me = truth.findFighter(you);
+	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
+	hud->setHint("");
+
+	if (!isInteractive() || me == NULL)
+		return;
+
+	const tw::battle::GameData & data = ClientGameData::get().data();
+
+	if (selectedSpell >= 0)
+	{
+		const battle::SpellDef * spell = battle::spellOf(data, *me, selectedSpell);
+		if (spell == NULL)
+			return;
+
+		std::vector<battle::Cell> castable = battle::castableCells(truth, map, data, *me, *spell);
+		colorator->setCastable(castable);
+		if (colorator->isCastable(hoveredCell))
+			colorator->setImpact(battle::impactCells(map, me->position, hoveredCell, spell->impact));
+		hud->setHint(fromServerText(spell->name) + L" : cliquez sur une case bleue (Échap pour annuler)");
+		return;
+	}
+
+	colorator->setReachable(battle::reachableCells(truth, map, *me));
+	if (colorator->isReachable(hoveredCell))
+	{
+		std::vector<battle::Cell> path = battle::findPath(truth, map, *me, hoveredCell);
+		battle::MovePreview preview = battle::previewMove(truth, map, data, *me, path);
+		colorator->setPath(preview.path, preview.path.size() < path.size() || !preview.tackles.empty());
+
+		if (!preview.tackles.empty())
+		{
+			int lostMp = 0;
+			int lostAp = 0;
+			for (const battle::TackleLoss & loss : preview.tackles)
+			{
+				lostMp += loss.lostMp;
+				lostAp += loss.lostAp;
+			}
+			hud->setHint(L"Tacle : -" + num(lostMp) + L" PM, -" + num(lostAp) + L" PA");
 		}
 	}
-	else if (colorator->getBattleState() == BattleState::BATTLE_PHASE)
+}
+
+void BattleScreen::onCellClicked(int cellX, int cellY)
+{
+	if (!hasSnapshot || isMouseOverHud())
+		return;
+
+	battle::Cell cell = { cellX, cellY };
+	const battle::Fighter * me = truth.findFighter(you);
+	if (me == NULL)
+		return;
+
+	if (truth.phase == battle::BattlePhase::PLACEMENT)
 	{
-		
+		const std::vector<battle::Cell> & starts = map.startCells[me->team];
+		if (!me->ready && std::find(starts.begin(), starts.end(), cell) != starts.end())
+			LinkToServer::getInstance()->SendRaw("CP" + json({ { "x", cellX }, { "y", cellY } }).dump());
+		return;
 	}
-	else if (colorator->getBattleState() == BattleState::PREPARATION_PHASE)
+
+	if (!isInteractive())
+		return;
+
+	if (selectedSpell >= 0)
 	{
-		if (m != NULL && !m->isPlayerReady())
-		{
-			CellData * cell = environment->getMapData(cellX, cellY);
-			if (cell->getTeamStartPointNumber() == m->getTeamId())
-			{
-				LinkToServer::getInstance()->Send("CP" + std::to_string(cellX) + ";" + std::to_string(cellY));
-			}
-		}
+		if (colorator->isCastable(cell))
+			sendAction("CL", { { "slot", selectedSpell }, { "x", cellX }, { "y", cellY } });
+		selectedSpell = -1;
+		return;
+	}
+
+	if (colorator->isReachable(cell))
+	{
+		json path = json::array();
+		for (const battle::Cell & step : battle::findPath(truth, map, *me, cell))
+			path.push_back(json::array({ step.x, step.y }));
+		sendAction("Cm", { { "path", path } });
 	}
 }
 
 void BattleScreen::onCellHover(int cellX, int cellY)
 {
-	CellData * cell = environment->getMapData(cellX, cellY);
-	
-	if (selectedSpell == -1)
-	{
-		if (!cell->getIsObstacle() && cell->getIsWalkable())
-		{
-			bool needToReprocess = false;
-			bool isInPathZone = false;
-			for (int i = 0; i < pathZone.size(); i++)
-			{
-				if (pathZone[i].getX() == cellX && pathZone[i].getY() == cellY)
-				{
-					Point2D startPosition(activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-					Point2D targetPosition(cellX, cellY);
-
-					if (startPosition != lastStartPosition || targetPosition != lastTargetPosition)
-					{
-						lastStartPosition = startPosition;
-						lastTargetPosition = targetPosition;
-						needToReprocess = true;
-					}
-
-					isInPathZone = true;
-					break;
-				}
-			}
-
-			if (!isInPathZone)
-			{
-				invalidatePathZone();
-			}
-
-			if (needToReprocess)
-			{
-				std::vector<Point2D> pathToHighlight = Pathfinder::getInstance()->getPath(lastStartPosition, lastTargetPosition, environment, getDynamicObstacles());
-				if (pathToHighlight.size() <= activeCharacter->getCurrentPM())
-				{
-					colorator->setPathToHighlight(pathToHighlight);
-				}
-			}
-		}
-		else
-		{
-			invalidatePathZone();
-		}
-	}
-	else
-	{
-		invalidatePathZone();
-
-		colorator->setSpellImpactZone(std::vector<Point2D>());
-
-		if (!cell->getIsObstacle() && cell->getIsWalkable())
-		{
-			std::vector<Point2D> launchZone = colorator->getSpellLaunchZone();
-
-			bool isInZone = false;
-			for (int i = 0; i < launchZone.size(); i++)
-			{
-				if (launchZone[i] == (*cell))
-				{
-					isInZone = true;
-					break;
-				}
-			}
-
-			if (isInZone)
-			{
-				calculateAndSetSpellImpactZone(cell->getX(), cell->getY());
-			}
-		}
-	}
-}
-
-void BattleScreen::calculateAndSetSpellImpactZone(int targetX, int targetY)
-{
-	int spellMinPO = -1;
-	int spellMaxPO = -1;
-	TypeZoneLaunch zoneType = TypeZoneLaunch::NORMAL;
-
-	if (activeCharacter != NULL)
-	{
-		switch (selectedSpell)
-		{
-		case 1:
-			spellMinPO = activeCharacter->getSpell1ImpactZoneMinPO();
-			spellMaxPO = activeCharacter->getSpell1ImpactZoneMaxPO();
-			zoneType = activeCharacter->getSpell1ImpactZoneType();
-			break;
-
-		case 2:
-			spellMinPO = activeCharacter->getSpell2ImpactZoneMinPO();
-			spellMaxPO = activeCharacter->getSpell2ImpactZoneMaxPO();
-			zoneType = activeCharacter->getSpell2ImpactZoneType();
-			break;
-
-		case 3:
-			spellMinPO = activeCharacter->getSpell3ImpactZoneMinPO();
-			spellMaxPO = activeCharacter->getSpell3ImpactZoneMaxPO();
-			zoneType = activeCharacter->getSpell3ImpactZoneType();
-			break;
-
-		case 4:
-			spellMinPO = activeCharacter->getSpell4ImpactZoneMinPO();
-			spellMaxPO = activeCharacter->getSpell4ImpactZoneMaxPO();
-			zoneType = activeCharacter->getSpell4ImpactZoneType();
-			break;
-		}
-	}
-
-	if (activeCharacter != NULL && selectedSpell != -1)
-	{
-		std::vector<Point2D> impactZone = ZoneAndSightCalculator::getInstance()->generateZone(
-			targetX,
-			targetY,
-			spellMinPO,
-			spellMaxPO,
-			zoneType);
-
-		/*
-		std::vector<Obstacle> obstacles;
-		std::vector<Obstacle> environmentObstacles = environment->getObstacles();
-		std::vector<Obstacle> dynamicsObstacles = getDynamicObstacles();
-		obstacles.insert(obstacles.end(), environmentObstacles.begin(), environmentObstacles.end());
-		obstacles.insert(obstacles.end(), dynamicsObstacles.begin(), dynamicsObstacles.end());
-
-		std::vector<Point2D> targettable = ZoneAndSightCalculator::getInstance()->processLineOfSight(
-			activeCharacter->getCurrentX(),
-			activeCharacter->getCurrentY(),
-			targetZone,
-			obstacles
-		);
-		*/
-
-		colorator->setSpellImpactZone(impactZone);
-	}
+	hoveredCell = { cellX, cellY };
+	const battle::Fighter * fighter = shown.fighterAt(hoveredCell);
+	hoveredFighter = fighter != NULL ? fighter->id : -1;
 }
 
 void BattleScreen::onCellMouseDown(int cellX, int cellY)
 {
-
 }
 
 void BattleScreen::onEvent(void * e)
 {
-	if (e != NULL)
-	{
-		sf::Event * event = (sf::Event*)e;
+	if (e == NULL)
+		return;
 
-		if (event->type == sf::Event::Resized)
+	sf::Event * event = (sf::Event*)e;
+	if (event->type == sf::Event::Resized && window != NULL)
+	{
+		sf::View view = window->getView();
+		view.setSize((float)event->size.width, (float)event->size.height);
+		window->setView(view);
+	}
+	else if (event->type == sf::Event::KeyPressed)
+	{
+		switch (event->key.code)
 		{
+		case sf::Keyboard::Num1: selectSpell(0); break;
+		case sf::Keyboard::Num2: selectSpell(1); break;
+		case sf::Keyboard::Num3: selectSpell(2); break;
+		case sf::Keyboard::Num4: selectSpell(3); break;
+		case sf::Keyboard::Escape: selectSpell(-1); break;
+		case sf::Keyboard::F:
+			camera.setFollowing(!camera.isFollowing());
+			hud->showMessage(camera.isFollowing() ? L"Caméra : suivi du personnage actif" : L"Caméra libre", sf::Color(200, 220, 255), 1.2f);
+			break;
+		case sf::Keyboard::C:
 			if (window != NULL)
-			{
-				int sizeX = event->size.width;
-				int sizeY = event->size.height;
-				sf::View view = window->getView();
-				view.setSize(event->size.width, event->size.height);
-				window->setView(view);
-			}
+				camera.fit(environment->getWidth(), environment->getHeight(), window->getSize(), 1.0f);
+			break;
+		default: break;
 		}
-		else if (event->type == sf::Event::KeyPressed)
+	}
+
+	// Caméra : la molette au-dessus de l'interface (journal) reste à l'interface.
+	if (window != NULL)
+	{
+		bool overHud = isMouseOverHud();
+		bool wheel = event->type == sf::Event::MouseWheelScrolled;
+		bool press = event->type == sf::Event::MouseButtonPressed;
+		if (!((wheel || press) && overHud))
+			camera.handleEvent(*event, *window);
+	}
+
+	if (gui != NULL)
+		gui->handleEvent(*event);
+}
+
+//----------------------------------------------------------
+// Utilitaires
+//----------------------------------------------------------
+
+void BattleScreen::addFloatingText(int fighterId, const sf::String & text, const sf::Color & color)
+{
+	const battle::Fighter * fighter = shown.findFighter(fighterId);
+	if (fighter == NULL)
+		return;
+
+	FloatingText floating;
+	floating.text = text;
+	floating.color = color;
+	floating.x = (float)fighter->position.x;
+	floating.y = (float)fighter->position.y;
+	// Les textes simultanés sur un même combattant sont décalés.
+	for (const FloatingText & other : floatingTexts)
+	{
+		if (other.x == floating.x && other.y == floating.y && other.age < 0.3f)
+			floating.age -= 0.3f;
+	}
+	floatingTexts.push_back(floating);
+}
+
+void BattleScreen::playSound(const std::string & path)
+{
+	if (path.empty() || sounds.empty())
+		return;
+
+	auto it = soundBuffers.find(path);
+	if (it == soundBuffers.end())
+	{
+		sf::SoundBuffer buffer;
+		if (!buffer.loadFromFile(path))
+			return;
+		it = soundBuffers.insert(std::make_pair(path, buffer)).first;
+	}
+
+	for (sf::Sound & sound : sounds)
+	{
+		if (sound.getStatus() != sf::Sound::Playing)
 		{
-			if (event->key.code == sf::Keyboard::Num1)
-			{
-				setSelectedSpell(1);
-			}
-			else if (event->key.code == sf::Keyboard::Num2)
-			{
-				setSelectedSpell(2);
-			}
-			else if (event->key.code == sf::Keyboard::Num3)
-			{
-				setSelectedSpell(3);
-			}
-			else if (event->key.code == sf::Keyboard::Num4)
-			{
-				setSelectedSpell(4);
-			}
-			else if (event->key.code == sf::Keyboard::Escape)
-			{
-				setSelectedSpell(-1);
-			}
-		}
-
-		if(gui != NULL)
-			gui->handleEvent(*event);
-	}
-}
-//----------------------------------------------------------
-
-
-
-//----------------------------------------------------------
-// CharacterEventListener :
-//----------------------------------------------------------
-void BattleScreen::onPositionChanged(BaseCharacterModel * c, int newPositionX, int newPositionY)
-{
-	sf::Clock test;
-	// Refresh the position :
-	if (activeCharacter != NULL && colorator->getBattleState() == BattleState::BATTLE_PHASE_ACTIVE_PLAYER_TURN)
-	{
-		int x = c->getCurrentX();
-		int y = c->getCurrentY();
-
-		Point2D startPoint(x, y);
-
-		std::vector<Point2D> zone = ZoneAndSightCalculator::getInstance()->generateZone(x, y, 1, activeCharacter->getCurrentPM(), TypeZoneLaunch::NORMAL);
-		std::vector<Point2D> realZone;
-		for (int i = 0; i < zone.size(); i++)
-		{
-			std::vector<Point2D> path = Pathfinder::getInstance()->getPath(startPoint, zone[i], environment, getDynamicObstacles());
-			if (path.size() > 0 && path.size() <= activeCharacter->getCurrentPM())
-			{
-				realZone.push_back(zone[i]);
-			}
-		}
-
-		pathZone = realZone;
-		colorator->setPathZone(pathZone);
-	}
-	sf::Time ellapsed = test.restart();
-	std::cout << "Time to reprocess path zone = " << ellapsed.asMilliseconds() << "ms" << std::endl;
-
-	// Reprocess the spell zone :
-	int spellId = selectedSpell;
-	setSelectedSpell(-1);
-	setSelectedSpell(selectedSpell);
-}
-
-//----------------------------------------------------------
-
-
-
-//----------------------------------------------------------
-// ServerMessageListener :
-//----------------------------------------------------------
-void BattleScreen::onMessageReceived(std::string msg)
-{
-	sf::String str = msg;
-	
-	if (str.substring(0, 2) == "CA")	// Add character
-	{
-		std::string data = str.substring(2).toAnsiString();
-		std::vector<std::string> splitedData = StringUtils::explode(data, ';');
-		int i = 0;
-		int characterId = std::atoi(splitedData[i++].c_str());
-		int classId = std::atoi(splitedData[i++].c_str());
-		int teamId = std::atoi(splitedData[i++].c_str());
-		int currentX = std::atoi(splitedData[i++].c_str());
-		int currentY = std::atoi(splitedData[i++].c_str());
-		int currentLife = std::atoi(splitedData[i++].c_str());
-		int currentPA = std::atoi(splitedData[i++].c_str());
-		int currentPM = std::atoi(splitedData[i++].c_str());
-		int cooldown1 = std::atoi(splitedData[i++].c_str());
-		int cooldown2 = std::atoi(splitedData[i++].c_str());
-		int cooldown3 = std::atoi(splitedData[i++].c_str());
-		int cooldown4 = std::atoi(splitedData[i++].c_str());
-		int colorNumber = std::atoi(splitedData[i++].c_str());
-		std::string pseudo = splitedData[i++];
-
-		BaseCharacterModel * c = CharacterFactory::getInstance()->constructCharacter(environment, classId, teamId, currentX, currentY, this);
-		characters[characterId] = c;
-		timeline.push_back(c);
-		c->setCurrentLife(currentLife);
-		c->setCurrentPA(currentPA);
-		c->setCurrentPM(currentPM);
-		c->setAttackCooldown(1, cooldown1);
-		c->setAttackCooldown(2, cooldown2);
-		c->setAttackCooldown(3, cooldown3);
-		c->setAttackCooldown(4, cooldown4);
-		c->setColorNumber(colorNumber);
-		c->setPseudo(pseudo);
-		c->addEventListener(this);
-
-		// To reprocess the path zone with new obstacles :
-		if (activeCharacter != NULL)
-		{
-			onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-		}
-
-		TimelineView::getInstance()->setTimeline(timeline);
-	}
-	else if (str.substring(0, 2) == "CS")	// Set active character
-	{
-		int characterId = std::atoi(str.substring(2).toAnsiString().c_str());
-		activeCharacter = characters[characterId];
-		onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-	}
-	else if (str.substring(0, 2) == "BS")	// Set battle state
-	{
-		int state = std::atoi(str.substring(2).toAnsiString().c_str());
-		BattleState battleState = (BattleState)state;
-		colorator->setBattleState(battleState);
-
-		if (battleState == BattleState::BATTLE_PHASE)
-		{
-			if (activeCharacter != NULL)
-			{
-				onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-			}
+			sound.setBuffer(it->second);
+			sound.play();
+			return;
 		}
 	}
-	else if (str.substring(0, 2) == "Cs")	// Player ready status
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		int status = std::atoi(splited[1].c_str());
-
-		characters[playerId]->setReadyStatus(status == 1);
-	}
-	else if (str.substring(0, 2) == "CP")	// Update character position 
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		int cellX = std::atoi(splited[1].c_str());
-		int cellY = std::atoi(splited[2].c_str());
-
-		AnimationManager::getInstance()->addAnimation(new TeleportAction(this, playerId, cellX, cellY));
-	}
-	else if (str.substring(0, 2) == "Ct")	// Changement de tour
-	{
-		std::string data = str.substring(2);
-		int playerId = std::atoi(data.c_str());
-
-		std::string msg = "";
-
-		if (characters[playerId] == activeCharacter)
-		{			
-			msg = "C'est � votre tour de jouer !";
-		}
-		else
-		{
-			msg = "C'est au tour de " + characters[playerId]->getPseudo();
-		}
-
-		AnimationManager::getInstance()->addAnimation(new ChangeTurnAction(this, playerId, msg, 0));
-	}
-	else if (str.substring(0, 2) == "Cm")	// Mouvement d'un joueur
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		std::string pathStr = splited[1];
-		std::vector<Point2D> path = Pathfinder::deserializePath(pathStr);
-
-		AnimationManager::getInstance()->addAnimation(new CharacterMoveAction(this, playerId, path));
-	}
-	else if (str.substring(0, 2) == "Ca")	// Synchro nombre de PA
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		int pa = std::atoi(splited[1].c_str());
-		
-		AnimationManager::getInstance()->addAnimation(new SynchroPAAction(this, playerId, pa));
-	}
-	else if (str.substring(0, 2) == "Cp")	// Synchro nombre de PM
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		int pm = std::atoi(splited[1].c_str());
-		
-		AnimationManager::getInstance()->addAnimation(new SynchroPMAction(this, playerId, pm));
-	}
-	else if (str.substring(0, 2) == "CL")	// Lancer d'un sort
-	{
-		std::string data = str.substring(2);
-		std::vector<std::string> splited = StringUtils::explode(data, ';');
-		int playerId = std::atoi(splited[0].c_str());
-		int spellId = std::atoi(splited[1].c_str());
-		int cellX = std::atoi(splited[2].c_str());
-		int cellY = std::atoi(splited[3].c_str());
-
-		AnimationManager::getInstance()->addAnimation(new LaunchSpellAction(this, playerId, spellId, cellX, cellY));
-	}
-	else if (str.substring(0, 2) == "BE")	// Fin du combat
-	{
-		std::string data = str.substring(2);
-		int winnerTeamId = std::atoi(data.c_str());
-
-		AnimationManager::getInstance()->addAnimation(new BattleEndAction(this, winnerTeamId));
-	}
-	else if (str.substring(0, 2) == "HC")
-	{
-		AnimationManager::getInstance()->clear();
-		gui->removeAllWidgets();
-		window->setView(window->getDefaultView());
-		tw::ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui));
-		MusicManager::getInstance()->setMenuMusic();
-		delete this;
-	}
 }
 
-void tw::BattleScreen::onDisconnected()
+sf::String BattleScreen::fighterName(int fighterId) const
 {
-	gui->removeAllWidgets();
-	AnimationManager::getInstance()->clear();
-
-	window->setView(window->getDefaultView());
-
-	tw::ScreenManager::getInstance()->setCurrentScreen(new tw::LoginScreen(gui));
-	delete this;
+	const battle::Fighter * fighter = shown.findFighter(fighterId);
+	return fighter != NULL ? fromServerText(fighter->name) : sf::String("?");
 }
-
-//----------------------------------------------------------
-
-//----------------------------------------------------------
-// IScreenActionCallback implementation :
-//----------------------------------------------------------
-void tw::BattleScreen::applyEndOfBattle(int winnerTeam)
-{
-	std::vector<BaseCharacterModel*> winners;
-
-	std::string msg = "";
-	int i = 0;
-
-	auto it = characters.begin();
-	for (; it != characters.end(); it++)
-	{
-		if ((*it).second->getTeamId() == winnerTeam)
-		{
-			if (i > 0)
-				msg += " et ";
-
-			msg += (*it).second->getPseudo();
-			winners.push_back((*it).second);
-			i++;
-		}
-	}
-
-	msg += " ont gagn� !";
-
-	tgui::Label::Ptr endLabel = tgui::Label::create(msg);
-	endLabel->setInheritedFont(font);
-	endLabel->setTextSize(30);
-	endLabel->getRenderer()->setTextColor(tgui::Color::Green);
-	endLabel->getRenderer()->setTextOutlineColor(tgui::Color::Black);
-	endLabel->getRenderer()->setTextOutlineThickness(1.0);
-	endLabel->setPosition(window->getSize().x / 2.0 - endLabel->getSize().x / 2.0, window->getSize().y / 2.0 - endLabel->getSize().y / 2.0);
-	gui->add(endLabel, "endLabel");
-
-	PlayerStatusView::getInstance()->setVisible(false);
-
-	// Return to wait screen button
-	tgui::Button::Ptr backButton = tgui::Button::create("Fermer");
-	backButton->setInheritedFont(font);
-	backButton->setPosition(window->getSize().x / 2.0 - backButton->getSize().x / 2.0, window->getSize().y / 2.0 - backButton->getSize().y / 2.0 + endLabel->getSize().y + 10);
-	backButton->connect("pressed", [&]() {
-		redirectToBattlePreparation = true;
-	});
-	gui->add(backButton, "backButton");
-
-	colorator->setBattleState(BattleState::END_PHASE);
-}
-
-void tw::BattleScreen::applyChangeTurn(float remaining, int idPerso, std::string message)
-{
-	turnToken = idPerso;
-	characters[idPerso]->turnStart();
-
-	TimelineView::getInstance()->setActiveCharacter(characters[idPerso]);
-	setMessage(message);
-
-	if (characters[idPerso] == activeCharacter)
-	{
-		colorator->setBattleState(BattleState::BATTLE_PHASE_ACTIVE_PLAYER_TURN);
-		invalidatePathZone();
-
-		// To reprocess the path zone with new obstacles configuration :
-		if (activeCharacter != NULL)
-		{
-			onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-		}
-	}
-	else
-	{
-		colorator->setBattleState(BattleState::BATTLE_PHASE);
-	}
-}
-
-void tw::BattleScreen::applyCharacterDie(int idPerso)
-{
-
-}
-
-void tw::BattleScreen::applyCharacterLaunchSpell(int persoId, int x, int y, int spellId)
-{
-	// TODO : Ajouter un log des �v�nements de combat ...
-}
-
-tw::BaseCharacterModel* tw::BattleScreen::getCharacter(int persoId)
-{
-	return characters[persoId];
-}
-
-std::vector<tw::BaseCharacterModel*> tw::BattleScreen::getAliveCharacters()
-{
-	std::vector<tw::BaseCharacterModel*> aliveCharacters;
-	auto it = characters.begin();
-	for(;it != characters.end(); it++)
-	{
-		if ((*it).second->isAlive())
-			aliveCharacters.push_back((*it).second);
-	}
-
-	return aliveCharacters;
-}
-
-void tw::BattleScreen::addAnimationToDisplay(SpellView * s)
-{
-	animationsToDisplay.push_back(s);
-}
-
-void tw::BattleScreen::applyCharacterMove(int persoId, std::vector<tw::Point2D> path, MoveActionAnimationEventListener * callback)
-{
-	characters[persoId]->setPath(path, callback);
-}
-
-void tw::BattleScreen::applyCharacterDisconnected(int persoId)
-{
-
-}
-
-void tw::BattleScreen::applyCharacterConnected(int persoId)
-{
-
-}
-
-void tw::BattleScreen::applyTakeDamage(int persoId)
-{
-
-}
-
-void tw::BattleScreen::applyCharacterPosition(int persoId, int x, int y)
-{
-
-}
-
-void tw::BattleScreen::applyEnterBattlePhase()
-{
-
-}
-
-void tw::BattleScreen::applyTeleport(int playerId, int cellX, int cellY)
-{
-	characters[playerId]->setCurrentX(cellX);
-	characters[playerId]->setCurrentY(cellY);
-}
-
-void tw::BattleScreen::applySynchroPA(int playerId, int pa)
-{
-	characters[playerId]->setCurrentPA(pa);
-}
-
-void tw::BattleScreen::applySynchroPM(int playerId, int pm)
-{
-	characters[playerId]->setCurrentPM(pm);
-
-	// To reprocess the path zone with new obstacles configuration :
-	if (activeCharacter != NULL && characters[playerId] == activeCharacter)
-	{
-		onPositionChanged(activeCharacter, activeCharacter->getCurrentX(), activeCharacter->getCurrentY());
-	}
-}
-
-void tw::BattleScreen::playTakeDamageSound()
-{
-	MusicManager::getInstance()->playTakeDamageSound();
-}
-//----------------------------------------------------------
-
-
-
-
-//----------------------------------------------------------
-// IMapKnowledge :
-//----------------------------------------------------------
-
-std::vector<tw::BaseCharacterModel*> BattleScreen::getAliveCharactersInZone(std::vector<tw::Point2D> zone)
-{
-	std::vector<tw::BaseCharacterModel*> result;
-
-	auto it = characters.begin();
-	for ( ; it != characters.end(); it++)
-	{
-		BaseCharacterModel * m = (*it).second;
-		if (m->isAlive())
-		{
-			for (int i = 0; i < zone.size(); i++)
-			{
-				if (m->getCurrentX() == zone[i].getX() && m->getCurrentY() == zone[i].getY())
-				{
-					result.push_back(m);
-					break;
-				}
-			}
-		}
-	}
-
-	return result;
-}
-
-//----------------------------------------------------------

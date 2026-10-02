@@ -1,126 +1,129 @@
-#pragma once
+﻿#pragma once
+
+#include <deque>
+#include <map>
+#include <memory>
+#include <vector>
+#include <SFML/Audio.hpp>
+#include <nlohmann/json.hpp>
 
 #include "Screen.h"
+#include "ServerMessageListener.h"
+#include "BattleColorator.h"
+#include "BattleHud.h"
 #include <IsometricRenderer.h>
+#include <Camera.h>
 #include <Environment.h>
 #include <BaseCharacterModel.h>
-#include "TWColorator.h"
-#include "LinkToServer.h"
-#include <Obstacle.h>
-#include <IScreenActionCallback.h>
-#include <IMapKnowledge.h>
+#include <MoveActionAnimationEventListener.h>
+#include <SpellView.h>
+#include <BattleState.h>
 
 namespace tw
 {
-	class BattleScreen : public Screen, RendererEventListener, CharacterEventListener, ServerMessageListener, IScreenActionCallback, IMapKnowledge
+	// Écran de combat. Le serveur fait autorité :
+	// - "truth" est l'état du combat tel que le serveur l'a annoncé (mis à jour dès réception) ;
+	//   il sert aux prévisualisations (déplacement, zones de sort) avec les mêmes règles que le serveur ;
+	// - "shown" est l'état affiché, mis à jour au rythme des animations des événements.
+	class BattleScreen : public Screen, RendererEventListener, ServerMessageListener, MoveActionAnimationEventListener
 	{
-	private:
-		IsometricRenderer * renderer;
-		Environment * environment;
-		TWColorator * colorator;
-
-		BaseCharacterModel * activeCharacter;
-
-		std::map<int, tw::BaseCharacterModel*> characters;
-		std::vector<tw::BaseCharacterModel*> timeline;
-		sf::Font font;
-		sf::Text FPS;
-
-		sf::RenderWindow * window;
-		tgui::Gui * gui;
-		std::vector<Point2D> pathZone;
-
-
-		Point2D lastStartPosition;
-		Point2D lastTargetPosition;
-		void invalidatePathZone();
-
-		std::vector<Obstacle> getDynamicObstacles();
-
-		bool readyToValidatePosition;
-
-		int turnToken;
-
-		bool hasInitSpellBar;
-
-		void calculateAndSetSpellZone();
-		void clearSpellZone()
-		{
-			colorator->setSpellLaunchZone(std::vector<tw::Point2D>());
-		}
-
-		void calculateAndSetSpellImpactZone(int targetX, int targetY);
-
-		int selectedSpell = -1;
-		void setSelectedSpell(int spellNumber)
-		{
-			selectedSpell = -1;
-			if (activeCharacter != NULL)
-			{
-				if (spellNumber > 0 && spellNumber <= 4 && activeCharacter->canDoAttack(spellNumber))
-				{
-					selectedSpell = spellNumber;
-					calculateAndSetSpellZone();
-				}
-			}
-
-			if (selectedSpell == -1)
-			{
-				clearSpellZone();
-			}
-		}
-
-		bool redirectToBattlePreparation;
-		std::vector<AbstractSpellView<sf::Sprite*>*> animationsToDisplay;
-
-		float msgRemainingTime;
-		tgui::Label::Ptr msgLabel;
-		void setMessage(std::string message);
-
 	public:
-		BattleScreen(tgui::Gui * gui, int environmentId);
+		// PLAYER : joueur du combat ; SPECTATOR / ADMIN : spectateur (retour à la liste des combats
+		// ou à l'écran d'administration).
+		enum class Mode { PLAYER, SPECTATOR, ADMIN };
+
+		BattleScreen(tgui::Gui * gui, int environmentId, Mode mode = Mode::PLAYER);
 		~BattleScreen();
 
 		virtual void handleEvents(sf::RenderWindow * window, tgui::Gui * gui);
 		virtual void update(float deltatime);
 		virtual void render(sf::RenderWindow * window);
 
-
-
-		// Renderer event listener :
+		// RendererEventListener
 		virtual void onCellClicked(int cellX, int cellY);
 		virtual void onCellHover(int cellX, int cellY);
 		virtual void onCellMouseDown(int cellX, int cellY);
 		virtual void onEvent(void * e);
 
-		// CharacterEventListener :
-		virtual void onPositionChanged(BaseCharacterModel * c, int newPositionX, int newPositionY);
-
-		// ServerMessageListener :
+		// ServerMessageListener
 		virtual void onMessageReceived(std::string msg);
 		virtual void onDisconnected();
 
-		// IScreenActionCallback :
-		virtual void applyEndOfBattle(int winnerTeam);
-		virtual void applyChangeTurn(float remaining, int idPerso, std::string message);
-		virtual void applyCharacterDie(int idPerso);
-		virtual void applyCharacterLaunchSpell(int persoId, int x, int y, int spellId);
-		virtual tw::BaseCharacterModel* getCharacter(int persoId);
-		virtual std::vector <tw::BaseCharacterModel*> getAliveCharacters();
-		virtual void addAnimationToDisplay(SpellView * s);
-		virtual void applyCharacterMove(int persoId, std::vector<tw::Point2D> path, MoveActionAnimationEventListener * callback);
-		virtual void applyCharacterDisconnected(int persoId);
-		virtual void applyCharacterConnected(int persoId);
-		virtual void applyTakeDamage(int persoId);
-		virtual void applyCharacterPosition(int persoId, int x, int y);
-		virtual void applyEnterBattlePhase();
-		virtual void applyTeleport(int playerId, int cellX, int cellY);
-		virtual void applySynchroPA(int playerId, int pa);
-		virtual void applySynchroPM(int playerId, int pm);
-		virtual void playTakeDamageSound();
+		// MoveActionAnimationEventListener
+		virtual void onMoveFinished();
 
-		// IMapKnowledge
-		virtual std::vector<tw::BaseCharacterModel*> getAliveCharactersInZone(std::vector<tw::Point2D> zone);
+	private:
+		struct FloatingText
+		{
+			sf::String text;
+			sf::Color color;
+			float x = 0;
+			float y = 0;
+			float age = 0;
+		};
+
+		struct SpellEffect
+		{
+			std::unique_ptr<SpellView> view;
+			float remaining = 0;
+		};
+
+		void applySnapshot(const nlohmann::json & snapshot);
+		void syncView(const battle::Fighter & fighter);
+		BaseCharacterModel * viewOf(int fighterId);
+		float playVisual(const nlohmann::json & event, bool fast);
+		void processVisuals(float deltatime);
+		void refreshPreview();
+		bool isInteractive() const;
+		bool isMouseOverHud() const;
+		void selectSpell(int slot);
+		void sendAction(const std::string & op, const nlohmann::json & body);
+		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
+		void playSound(const std::string & path);
+		sf::String fighterName(int fighterId) const;
+		void showEnd();
+		void leave();
+		sf::String teamLabel(int team) const;
+
+		tgui::Gui * gui;
+		sf::RenderWindow * window;
+		IsometricRenderer * renderer;
+		Environment * environment;
+		BattleColorator * colorator;
+		Camera camera;
+		Mode mode;
+		sf::String teamNames[2];
+		float autoCloseRemaining;
+		bool cameraFitted;
+		std::unique_ptr<BattleHud> hud;
+		sf::Font font;
+
+		battle::BattleMap map;
+		battle::BattleState truth;
+		battle::BattleState shown;
+		int you;
+		std::uint64_t lastSeq;
+		bool hasSnapshot;
+		bool awaitingServer;
+
+		std::deque<nlohmann::json> visualQueue;
+		float stepRemaining;
+		bool waitingMove;
+		float waitingMoveTime;
+		std::map<int, float> pendingDeaths;
+
+		std::map<int, BaseCharacterModel*> views;
+		std::vector<FloatingText> floatingTexts;
+		std::vector<SpellEffect> spellEffects;
+		std::map<std::string, sf::SoundBuffer> soundBuffers;
+		std::vector<sf::Sound> sounds;
+
+		sf::Clock clock;
+		float deadline;		// En secondes de "clock"
+		int selectedSpell;
+		battle::Cell hoveredCell;
+		int hoveredFighter;
+		bool closeRequested;
+		bool endShown;
 	};
 }
-

@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "ZoneAndSightCalculator.h"
 #include <iostream>
 #include <TypeZoneLaunch.h>
@@ -393,12 +393,12 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 		Point2D cell = cellsToTest[i];
 		bool bCellIsTargettable = true;
 
-		// On peut se cibler soit même :
+		// On peut se cibler soit mÃªme :
 		if (cell.getX() == launcherX && cell.getY() == launcherY)
 		{
 
 		}
-		// Cas simplifié : ciblage en ligne
+		// Cas simplifiÃ© : ciblage en ligne
 		else if (cell.getX() == launcherX || cell.getY() == launcherY)
 		{
 			// Cible dans la ligne
@@ -408,7 +408,7 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 				{
 					Obstacle o = obstacles[i];
 
-					// Si l'obstacle n'est pas nous même :
+					// Si l'obstacle n'est pas nous mÃªme :
 					if (o.getX() != launcherX || o.getY() != launcherY)
 					{
 						// Si c'est un obstacle sur la ligne :
@@ -449,7 +449,7 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 						}
 					}
 
-					// On s'arrête au premier obstacle bloquant rencontré :
+					// On s'arrÃªte au premier obstacle bloquant rencontrÃ© :
 					if (!bCellIsTargettable)
 						break;
 				}
@@ -460,7 +460,7 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 				{
 					Obstacle o = obstacles[i];
 
-					// Si l'obstacle n'est pas nous même :
+					// Si l'obstacle n'est pas nous mÃªme :
 					if (o.getX() != launcherX || o.getY() != launcherY)
 					{
 						// Si c'est un obstacle sur la colonne :
@@ -501,13 +501,13 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 						}
 					}
 
-					// On s'arrête au premier obstacle bloquant rencontré :
+					// On s'arrÃªte au premier obstacle bloquant rencontrÃ© :
 					if (!bCellIsTargettable)
 						break;
 				}
 			}
 		}
-		// Cas général
+		// Cas gÃ©nÃ©ral
 		else
 		{
 			// Calcul du vecteur Lanceur/Cible :
@@ -549,7 +549,7 @@ std::vector<Point2D> ZoneAndSightCalculator::processLineOfSight(int launcherX, i
 						||
 						(yMin <= o.getY() && yMax >= (o.getY() + 1)))
 					{
-						// Les vecteurs se croisent, on vérifie que l'obstacle
+						// Les vecteurs se croisent, on vÃ©rifie que l'obstacle
 						// est bien entre le lanceur et la cible :
 						// Test sur x :
 						if (

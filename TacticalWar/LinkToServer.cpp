@@ -1,5 +1,8 @@
-#include "LinkToServer.h"
-#include <stdlib.h>
+﻿#include "LinkToServer.h"
+#include "ClientConfig.h"
+#include "ClientGameData.h"
+#include <EnvironmentManager.h>
+#include <Opcodes.h>
 #include <iostream>
 
 LinkToServer * LinkToServer::instance = NULL;
@@ -14,31 +17,27 @@ LinkToServer * LinkToServer::getInstance()
 
 LinkToServer::LinkToServer()
 {
-	buffer = new char[10240];
-
-	maxRecv = 1024;
-	effRecv = 0;
-	bufIndex = 0;
-
 	isConnected = false;
 }
 
 LinkToServer::~LinkToServer()
 {
-	delete buffer;
 }
 
 bool LinkToServer::Connect()
 {
-	sf::Socket::Status status = socket.connect("127.0.0.1", 12345);
+	const ClientConfig & config = ClientConfig::get();
+
+	socket.setBlocking(true);
+	sf::Socket::Status status = socket.connect(config.serverHost, config.serverPort, sf::seconds(3));
 	if (status != sf::Socket::Done)
 	{
-		// erreur...
-		std::cout << "Erreur de connexion" << std::endl;
+		std::cout << "Erreur de connexion a " << config.serverHost << ":" << config.serverPort << std::endl;
 		isConnected = false;
 		return false;
 	}
 
+	framer.clear();
 	isConnected = true;
 	return true;
 }
@@ -47,122 +46,94 @@ bool LinkToServer::Disconnect()
 {
 	if(isConnected)
 		socket.disconnect();
+
+	framer.clear();
 	isConnected = false;
 	return true;
 }
 
 void LinkToServer::Send(sf::String sContent)
 {
-	sContent += "\n";
 	std::basic_string<sf::Uint8> utf8Content = sContent.toUtf8();
-	socket.send(utf8Content.c_str(), utf8Content.length());
+	SendRaw(std::string(utf8Content.begin(), utf8Content.end()));
 }
 
-/*
-sf::String LinkToServer::Receive()
+void LinkToServer::SendRaw(const std::string & utf8Line)
 {
-	sf::String receivedData = "";
-	bool bReceivedSomething = false;
-
-	while (!bReceivedSomething)
-	{
-		int recvEndIndex = -1;
-		for (int i = 0; i < bufIndex; i++)
-		{
-			if (buffer[i] == '\n')
-			{
-				bReceivedSomething = true;
-				recvEndIndex = i;
-				break;
-			}
-			else
-			{
-				receivedData += buffer[i];
-			}
-		}
-
-		if (bReceivedSomething)
-		{
-			std::cout << "Received " << receivedData.toAnsiString() << std::endl;
-			std::cout << receivedData.getSize() << std::endl;
-
-			for (int i = recvEndIndex + 1; i < 10240 && i < bufIndex; i++)
-			{
-				buffer[i - (recvEndIndex + 1)] = buffer[i];
-			}
-
-			bufIndex -= (recvEndIndex + 1);
-		}
-		else
-		{
-			receivedData = "";
-
-			int bufCapability = 10240 - bufIndex;
-			std::size_t maxToRecv = bufCapability < maxRecv ? bufCapability : maxRecv;
-			socket.receive(&buffer[bufIndex], maxToRecv, effRecv);
-			if (effRecv == 0)
-				return "";
-			bufIndex += effRecv;
-		}
-	}
-
-	return receivedData;
+	std::string data = utf8Line + "\n";
+	socket.send(data.c_str(), data.length());
 }
-*/
 
 void LinkToServer::UpdateReceivedData()
 {
-	socket.setBlocking(false);
-	
-	sf::String receivedData = "";
-	bool bReceivedSomething = false;
+	if (!isConnected)
+		return;
 
-	int bufCapability = 10240 - bufIndex;
-	std::size_t maxToRecv = bufCapability < maxRecv ? bufCapability : maxRecv;
-	sf::Socket::Status status = socket.receive(&buffer[bufIndex], maxToRecv, effRecv);
-	if (status == sf::Socket::Status::Disconnected)
+	bool disconnected = false;
+	char chunk[16 * 1024];
+	std::size_t received = 0;
+
+	socket.setBlocking(false);
+	while (true)
 	{
+		sf::Socket::Status status = socket.receive(chunk, sizeof(chunk), received);
+		if (status == sf::Socket::Done)
+		{
+			if (!framer.feed(chunk, received))
+			{
+				std::cout << "Message trop long recu du serveur : deconnexion." << std::endl;
+				disconnected = true;
+				break;
+			}
+		}
+		else
+		{
+			if (status == sf::Socket::Disconnected || status == sf::Socket::Error)
+				disconnected = true;
+			break;
+		}
+	}
+	socket.setBlocking(true);
+
+	std::string line;
+	while (framer.nextLine(line))
+	{
+		// Keepalive : répondu ici, jamais transmis aux écrans.
+		if (line == tw::protocol::KEEPALIVE_PING)
+		{
+			SendRaw(tw::protocol::KEEPALIVE_PONG);
+			continue;
+		}
+
+		// Données de jeu : conservées pour tous les écrans.
+		if (line.compare(0, 2, "GD") == 0)
+		{
+			ClientGameData::get().loadFromServer(line.substr(2));
+			continue;
+		}
+
+		// Carte du prochain combat : utilisée à la place du fichier local (voir EnvironmentManager).
+		if (line.compare(0, 2, "MP") == 0)
+		{
+			if (!tw::EnvironmentManager::getInstance()->registerReceivedMap(line.substr(2)))
+				std::cout << "Carte recue du serveur invalide." << std::endl;
+			continue;
+		}
+
+		// Un message inattendu (ex : JSON incomplet) ne doit pas faire planter le client.
+		try
+		{
+			notifyMessage(line);
+		}
+		catch (const std::exception & e)
+		{
+			std::cout << "Message ignore (" << line.substr(0, 2) << ") : " << e.what() << std::endl;
+		}
+	}
+
+	if (disconnected)
+	{
+		Disconnect();
 		notifyDisconnected();
 	}
-	else if (status == sf::Socket::Status::Done)
-	{
-		bufIndex += effRecv;
-
-		do
-		{
-			receivedData = "";
-			bReceivedSomething = false;
-			int recvEndIndex = -1;
-			for (int i = 0; i < bufIndex; i++)
-			{
-				if (buffer[i] == '\n')
-				{
-					bReceivedSomething = true;
-					recvEndIndex = i;
-					break;
-				}
-				else
-				{
-					receivedData += buffer[i];
-				}
-			}
-
-			if (bReceivedSomething)
-			{
-				std::cout << "Received " << receivedData.toAnsiString() << std::endl;
-				std::cout << receivedData.getSize() << std::endl;
-
-				for (int i = recvEndIndex + 1; i < 10240 && i < bufIndex; i++)
-				{
-					buffer[i - (recvEndIndex + 1)] = buffer[i];
-				}
-
-				bufIndex -= (recvEndIndex + 1);
-
-				notifyMessage(receivedData.toAnsiString());
-			}
-		} while (bReceivedSomething);
-	}
-
-	socket.setBlocking(true);
 }

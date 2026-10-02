@@ -1,10 +1,9 @@
 #include "ClientState.h"
 
-
-
-ClientState::ClientState(SOCKET sock)
+ClientState::ClientState(tw::net::ConnId connId, const std::string & remoteAddress)
 {
-	this->sock = sock;
+	this->connId = connId;
+	this->remoteAddress = remoteAddress;
 	this->pseudo = "";
 	this->isAdm = false;
 }

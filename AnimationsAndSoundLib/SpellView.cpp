@@ -109,7 +109,6 @@ sf::Sprite* SpellView::getImageToDraw()
 	p /= nbImg;
 	int index;
 	index = fmod(time / p, nbImg);
-	std::cout << index << std::endl;
 	return animationsMap[index];
 }
 

@@ -21,19 +21,7 @@
     <ClCompile Include="ClientState.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="Parser.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="TcpServer.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="ThreadSafeQueue.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="TWParser.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="ParserEventListener.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,20 +29,34 @@
     <ClInclude Include="ClientState.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="Parser.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="TcpServer.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="ThreadSafeQueue.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="TWParser.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="ParserEventListener.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="net\NetServer.cpp" />
+    <ClInclude Include="net\NetServer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserTeams.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BattleSession.cpp" />
+    <ClCompile Include="TWParserBattle.cpp" />
+    <ClInclude Include="BattleSession.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserTournament.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserPublic.cpp" />
+    <ClCompile Include="http\HttpFrontend.cpp" />
+    <ClInclude Include="http\HttpFrontend.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserSpectator.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TWParserReplay.cpp" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <BaseCharacterModel.h>
 #include <Environment.h>
@@ -12,7 +12,8 @@ private:
 public:
 	static CharacterFactory * getInstance();
 
-	tw::BaseCharacterModel * constructCharacter(tw::Environment * environment, int classId, int teamId, int posX, int posY, tw::IMapKnowledge * map);
+	// Personnage affiché pour la classe donnée (NULL si la classe est inconnue).
+	tw::BaseCharacterModel * constructCharacter(tw::Environment * environment, int classId, int teamId, int posX, int posY);
 
 	std::vector<int> getClassesIds()
 	{

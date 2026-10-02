@@ -1,14 +1,14 @@
-#pragma once
+ï»¿#pragma once
 
 
-// TODO : Classe à compléter par la team effets de sorts ...
+// TODO : Classe Ã  complÃ©ter par la team effets de sorts ...
 
 class Effect
 {
 private:
-	int sourceClassId;			// Pour bien différencier les effets des différents sorts de chaque classe
+	int sourceClassId;			// Pour bien diffÃ©rencier les effets des diffÃ©rents sorts de chaque classe
 	int sourceSpellNumber;		// (gestion du non cumul des effets).
-								// Cela permet de vérifier de quel sort de quelle classe est issu l'effet.
+								// Cela permet de vÃ©rifier de quel sort de quelle classe est issu l'effet.
 
 public:
 	Effect(int srcClassId, int srcSpellNumber)

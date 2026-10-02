@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 #include <string>
+#include <IMapKnowledge.h>
 #include <vector>
 #include <Player.h>
 #include "StringUtils.h"
@@ -25,7 +26,7 @@ namespace tw
 	{
 	private:
 		//-------------------------------------------------------
-		// Ne pas se soucier de �a :
+		// Ne pas se soucier de ça :
 		std::vector<Player> team1Client;
 		std::vector<Player> team2Client;
 		void clientSetTeam1(std::vector<Player> team)

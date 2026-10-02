@@ -1,0 +1,88 @@
+﻿#pragma once
+
+#include <functional>
+#include <map>
+#include <vector>
+#include <TGUI/TGUI.hpp>
+#include <BattleState.h>
+#include <GameData.h>
+
+// Interface du combat : ordre de jeu, barre de sorts, minuteur, journal, détails.
+class BattleHud
+{
+public:
+	BattleHud(tgui::Gui * gui, const sf::Font & font);
+
+	std::function<void(int)> onSpellClicked;
+	std::function<void()> onEndTurn;
+	std::function<void(bool)> onReady;
+	std::function<void()> onClose;
+
+	void layout(const sf::Vector2u & windowSize);
+	void update(float deltatime);
+
+	// Met à jour l'affichage depuis l'état affiché du combat.
+	void refresh(const tw::battle::BattleState & state, const tw::battle::GameData & data, int you,
+		int hoveredFighter, int selectedSpell, bool myTurn, float remainingSeconds);
+
+	void showMessage(const sf::String & text, const sf::Color & color, float seconds);
+	void setHint(const sf::String & text);
+	void log(const sf::String & line, const sf::Color & color = sf::Color(230, 230, 230));
+	void showEnd(const sf::String & title, const sf::String & details, bool victory);
+
+	// Mode spectateur : bandeau (équipes en présence) et bouton "Quitter" permanent.
+	void setSpectator(const sf::String & banner);
+	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
+	void setEndButtonText(const sf::String & text);
+
+	static sf::String fighterSummary(const tw::battle::BattleState & state, const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
+
+private:
+	struct TimelineRow
+	{
+		tgui::Panel::Ptr panel;
+		tgui::Label::Ptr name;
+		tgui::Label::Ptr life;
+		tgui::Label::Ptr details;
+	};
+
+	struct SpellButton
+	{
+		tgui::Picture::Ptr icon;
+		tgui::Label::Ptr cost;
+		tgui::Label::Ptr cooldown;
+		tgui::Label::Ptr key;
+		tgui::Label::Ptr tooltip;
+		std::string iconPath;
+		std::string spellId;
+	};
+
+	tgui::Label::Ptr createLabel(unsigned int size, const sf::Color & color);
+	void setSpellBar(const tw::battle::ClassDef & classDef);
+
+	tgui::Gui * gui;
+	const sf::Font & font;
+	sf::Vector2u windowSize;
+
+	tgui::Panel::Ptr timelinePanel;
+	std::vector<TimelineRow> rows;
+	tgui::Label::Ptr timerLabel;
+	tgui::Label::Ptr messageLabel;
+	float messageRemaining;
+	tgui::Label::Ptr hintLabel;
+	tgui::Panel::Ptr detailsPanel;
+	tgui::Label::Ptr detailsLabel;
+	tgui::ChatBox::Ptr logBox;
+	std::vector<SpellButton> spells;
+	int spellBarClassId;
+	tgui::Button::Ptr endTurnButton;
+	tgui::Button::Ptr readyButton;
+	bool readyState;
+	tgui::Panel::Ptr endPanel;
+	tgui::Button::Ptr endButton;
+
+	bool spectator;
+	tgui::Label::Ptr bannerLabel;
+	tgui::Button::Ptr leaveButton;
+	tgui::Label::Ptr cameraHelp;
+};

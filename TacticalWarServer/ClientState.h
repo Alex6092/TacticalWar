@@ -1,27 +1,27 @@
-#pragma once
+﻿#pragma once
 
-#include <WS2tcpip.h>
-#include <deque>
+#include <string>
+#include "net/NetServer.h"
 
+// État d'un client connecté au serveur.
 class ClientState
 {
 private:
-	SOCKET sock;
-	std::deque<unsigned char> buffer;
-
+	tw::net::ConnId connId;
+	std::string remoteAddress;
 	std::string pseudo;
 	bool isAdm;
 
 public:
-	ClientState(SOCKET sock);
+	ClientState(tw::net::ConnId connId, const std::string & remoteAddress);
 	virtual ~ClientState();
 
-	inline SOCKET getSocket() {
-		return sock;
+	inline tw::net::ConnId getConnId() {
+		return connId;
 	}
 
-	inline std::deque<unsigned char> & getBuffer() {
-		return buffer;
+	inline const std::string & getRemoteAddress() {
+		return remoteAddress;
 	}
 
 	inline void setPseudo(std::string pseudo)
@@ -49,4 +49,3 @@ public:
 		this->isAdm = bAdmin;
 	}
 };
-

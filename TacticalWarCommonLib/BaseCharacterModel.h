@@ -1,21 +1,9 @@
-#pragma once
+Ôªø#pragma once
 #include "Environment.h"
+#include <algorithm>
+#include <string>
 #include <vector>
 #include "MoveActionAnimationEventListener.h"
-#include "Effect.h"
-#include "TypeZoneLaunch.h"
-#include "IMapKnowledge.h"
-#include "IZoneAndSightCalculator.h"
-
-
-#include <chrono>
-#include <iostream>
-#include <ctime>
-#include <math.h>
-
-#ifndef M_PI
-#define M_PI 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679
-#endif
 
 namespace tw
 {
@@ -38,36 +26,10 @@ namespace tw
 		virtual void onLookAt(int targetX, int targetY) {}
 	};
 
-	class AttackDamageResult
-	{
-	private:
-		BaseCharacterModel * character;
-		int damage;
-
-	public:
-		AttackDamageResult()
-		{
-			character = NULL;
-			damage = 0;
-		}
-
-		AttackDamageResult(BaseCharacterModel * character, int damage)
-		{
-			this->character = character;
-			this->damage = damage;
-		}
-
-		BaseCharacterModel * getCharacter()
-		{
-			return character;
-		}
-
-		int getDamage()
-		{
-			return damage;
-		}
-	};
-
+	// Personnage affich√© par le client : position (interpol√©e pendant les d√©placements),
+	// animation en cours, PV / PA / PM affich√©s. Les r√®gles du jeu (sorts, d√©g√¢ts, effets) sont
+	// appliqu√©es par le serveur (BattleEngineLib) : ce mod√®le ne fait qu'afficher leur r√©sultat.
+	// Les classes filles (ClassesLib) indiquent le dossier des graphismes de la classe.
 	class BaseCharacterModel
 	{
 	private:
@@ -85,7 +47,7 @@ namespace tw
 		int colorNumber;	// Colorisation
 
 		//---------------------------------
-		// Pour gÈrer le dÈplacement :
+		// Pour g√©rer le d√©placement :
 		float interpolatedX;
 		float interpolatedY;
 
@@ -101,24 +63,7 @@ namespace tw
 		int currentLife;
 		int currentPM;
 		int currentPA;
-
-		void consumePM(int nb)
-		{
-			currentPM -= nb;
-			if (currentPM < 0)
-			{
-				currentPM = 0;
-			}
-		}
-
-		void consumePA(int nb)
-		{
-			currentPA -= nb;
-			if (currentPA < 0)
-			{
-				currentPA = 0;
-			}
-		}
+		int displayMaxLife;
 
 		void setNextPositionFromPath()
 		{
@@ -138,7 +83,6 @@ namespace tw
 			}
 		}
 
-
 		std::vector<CharacterEventListener*> listeners;
 
 		void notifyPositionChanged(int newPositionX, int newPositionY)
@@ -151,70 +95,9 @@ namespace tw
 
 		MoveActionAnimationEventListener * currentMoveCallback;
 
-
-		// Liste des effets appliquÈs sur le personnage :
-		std::vector<Effect *> appliedEffects;
-
-		// Gestion du mouvement (server side) :
-		long long lastMoveEndTime;
-
-		IMapKnowledge * map;
-		IZoneAndSightCalculator * zoneCalculator;
-
-	protected:
-		IMapKnowledge * getMapKnowledge()
-		{
-			return map;
-		}
-
-		std::vector<Point2D> getImpactZoneForSpell(int spellId, int targetX, int targetY)
-		{
-			int spellMinPO = -1;
-			int spellMaxPO = -1;
-			TypeZoneLaunch zoneType = TypeZoneLaunch::NORMAL;
-
-			switch (spellId)
-			{
-			case 1:
-				spellMinPO = getSpell1ImpactZoneMinPO();
-				spellMaxPO = getSpell1ImpactZoneMaxPO();
-				zoneType = getSpell1ImpactZoneType();
-				break;
-
-			case 2:
-				spellMinPO = getSpell2ImpactZoneMinPO();
-				spellMaxPO = getSpell2ImpactZoneMaxPO();
-				zoneType = getSpell2ImpactZoneType();
-				break;
-
-			case 3:
-				spellMinPO = getSpell3ImpactZoneMinPO();
-				spellMaxPO = getSpell3ImpactZoneMaxPO();
-				zoneType = getSpell3ImpactZoneType();
-				break;
-
-			case 4:
-				spellMinPO = getSpell4ImpactZoneMinPO();
-				spellMaxPO = getSpell4ImpactZoneMaxPO();
-				zoneType = getSpell4ImpactZoneType();
-				break;
-			}
-			
-
-			std::vector<Point2D> impactZone = zoneCalculator->generateZone(
-				targetX,
-				targetY,
-				spellMinPO,
-				spellMaxPO,
-				zoneType);
-
-			return impactZone;
-		}
-
 	public:
-		BaseCharacterModel(Environment* environment, int teamId, int currentX, int currentY, IMapKnowledge * map = NULL)
+		BaseCharacterModel(Environment* environment, int teamId, int currentX, int currentY)
 		{
-			this->map = map;
 			this->isReady = false;
 			this->neededAnimation = Animation::IDLE;
 			this->animationDuration = -1;
@@ -226,17 +109,25 @@ namespace tw
 			this->environment = environment;
 			this->currentX = currentX;
 			this->currentY = currentY;
+			this->interpolatedX = (float)currentX;
+			this->interpolatedY = (float)currentY;
 
 			this->colorNumber = 1;
+			this->currentLife = 1;
+			this->currentPA = 0;
+			this->currentPM = 0;
+			this->displayMaxLife = -1;
 
 			setNoTargetPosition();
-			lastMoveEndTime = 0;
 		}
 
-		void setZoneCalculator(IZoneAndSightCalculator * calculator)
+		virtual ~BaseCharacterModel()
 		{
-			this->zoneCalculator = calculator;
 		}
+
+		// Identifiant de la classe (voir assets/data/gamedata.json) et dossier de ses graphismes.
+		virtual int getClassId() = 0;
+		virtual std::string getGraphicsPath() = 0;
 
 		std::string getPseudo()
 		{
@@ -248,45 +139,9 @@ namespace tw
 			this->pseudo = pseudo;
 		}
 
-		void initializeValues()
-		{
-			this->currentLife = getBaseMaxLife();
-			this->currentPA = getBasePa();
-			this->currentPM = getBasePm();
-		}
-
-		virtual ~BaseCharacterModel()
-		{
-
-		}
-
-		std::vector<Effect *> getAppliedEffects()
-		{
-			return appliedEffects;
-		}
-
-		// MÈthode permettant d'appliquer des effets sur le personnage
-		void addEffects(std::vector<Effect*> effects)
-		{
-			// TODO ...
-		}
-
 		bool isAlive()
 		{
 			return currentLife > 0;
-		}
-
-		void modifyCurrentLife(int value)
-		{
-			currentLife += value;
-			if (currentLife > getBaseMaxLife())
-			{
-				currentLife = getBaseMaxLife();
-			}
-			else if (currentLife < 0)
-			{
-				currentLife = 0;
-			}
 		}
 
 		void setCurrentLife(int life)
@@ -294,14 +149,20 @@ namespace tw
 			currentLife = life;
 		}
 
-		bool hasEnoughPM(int neededPM)
+		inline int getCurrentLife()
 		{
-			return currentPM >= neededPM;
+			return currentLife;
 		}
 
-		bool hasEnoughPA(int neededPA)
+		// PV max affich√©s (fournis par le serveur : ils baissent avec l'√©rosion).
+		void setDisplayMaxLife(int maxLife)
 		{
-			return currentPA >= neededPA;
+			displayMaxLife = maxLife;
+		}
+
+		int getDisplayMaxLife()
+		{
+			return displayMaxLife > 0 ? displayMaxLife : std::max(1, currentLife);
 		}
 
 		int getCurrentPM()
@@ -323,122 +184,6 @@ namespace tw
 		{
 			currentPA = pa;
 		}
-
-		void resetPM()
-		{
-			currentPM = getBasePm();
-		}
-
-		void resetPA()
-		{
-			currentPA = getBasePa();
-		}
-
-		virtual void turnStart()
-		{
-			resetPA();
-			resetPM();
-		}
-
-		virtual int getClassId() = 0;
-		virtual std::string getGraphicsPath() = 0;
-
-		// MÈthodes rajoutÈes :
-		virtual std::string getClassName() = 0;
-		virtual std::string getClassDescription() = 0;
-		virtual std::string getClassIconPath() = 0;
-		virtual std::string getClassPreviewPath() = 0;
-
-
-
-
-		virtual std::string getSpell1Name() = 0;
-		virtual std::string getSpell2Name() = 0;
-		virtual std::string getSpell3Name() = 0;
-		virtual std::string getSpell4Name() = 0;
-
-		virtual std::string getSpell1Description() = 0;
-		virtual std::string getSpell2Description() = 0;
-		virtual std::string getSpell3Description() = 0;
-		virtual std::string getSpell4Description() = 0;
-
-		virtual std::string getSpell1IconPath() = 0;
-		virtual std::string getSpell2IconPath() = 0;
-		virtual std::string getSpell3IconPath() = 0;
-		virtual std::string getSpell4IconPath() = 0;
-
-		virtual std::vector<Effect> getSpell1Effects() = 0;
-		virtual std::vector<Effect> getSpell2Effects() = 0;
-		virtual std::vector<Effect> getSpell3Effects() = 0;
-		virtual std::vector<Effect> getSpell4Effects() = 0;
-
-		virtual int getSpell1ManaCost() = 0;
-		virtual int getSpell2ManaCost() = 0;
-		virtual int getSpell3ManaCost() = 0;
-		virtual int getSpell4ManaCost() = 0;
-
-		virtual int getSpell1MinPO() = 0;
-		virtual int getSpell2MinPO() = 0;
-		virtual int getSpell3MinPO() = 0;
-		virtual int getSpell4MinPO() = 0;
-
-		virtual int getSpell1MaxPO() = 0;
-		virtual int getSpell2MaxPO() = 0;
-		virtual int getSpell3MaxPO() = 0;
-		virtual int getSpell4MaxPO() = 0;
-
-		virtual TypeZoneLaunch getSpell1LaunchZoneType() = 0;
-		virtual TypeZoneLaunch getSpell2LaunchZoneType() = 0;
-		virtual TypeZoneLaunch getSpell3LaunchZoneType() = 0;
-		virtual TypeZoneLaunch getSpell4LaunchZoneType() = 0;
-
-		virtual TypeZoneLaunch getSpell1ImpactZoneType() = 0;
-		virtual TypeZoneLaunch getSpell2ImpactZoneType() = 0;
-		virtual TypeZoneLaunch getSpell3ImpactZoneType() = 0;
-		virtual TypeZoneLaunch getSpell4ImpactZoneType() = 0;
-
-		virtual int getSpell1ImpactZoneMinPO() = 0;
-		virtual int getSpell2ImpactZoneMinPO() = 0;
-		virtual int getSpell3ImpactZoneMinPO() = 0;
-		virtual int getSpell4ImpactZoneMinPO() = 0;
-
-		virtual int getSpell1ImpactZoneMaxPO() = 0;
-		virtual int getSpell2ImpactZoneMaxPO() = 0;
-		virtual int getSpell3ImpactZoneMaxPO() = 0;
-		virtual int getSpell4ImpactZoneMaxPO() = 0;
-
-		virtual std::string getSpell1AnimationPath() = 0;
-		virtual std::string getSpell2AnimationPath() = 0;
-		virtual std::string getSpell3AnimationPath() = 0;
-		virtual std::string getSpell4AnimationPath() = 0;
-
-		virtual std::string getSpell1SoundPath() = 0;
-		virtual std::string getSpell2SoundPath() = 0;
-		virtual std::string getSpell3SoundPath() = 0;
-		virtual std::string getSpell4SoundPath() = 0;
-
-		virtual Animation getSpell1AttackerAnimation() = 0;
-		virtual Animation getSpell2AttackerAnimation() = 0;
-		virtual Animation getSpell3AttackerAnimation() = 0;
-		virtual Animation getSpell4AttackerAnimation() = 0;
-		//----------------------------------------------------------
-
-		// Retourne la valeur du maximum de point de vie de base (sans altÈration d'effet). C'est une caractÈristique de base de la classe.
-		virtual int getBaseMaxLife() = 0;
-		virtual int getBaseAttack() = 0;
-		virtual int getBaseDefense() = 0;
-		virtual int getBasePa() = 0;
-		virtual int getBasePm() = 0;
-
-
-		// Ces mÈthodes permettent de lancer les attaques 
-		// (c'est ‡ dire appliquer le cooldown quand il y en a un, 
-		// trouver les cibles et leur appliquer les effets, etc...)
-		virtual std::vector<AttackDamageResult> doAttack1(int targetX, int targetY) = 0;
-		virtual std::vector<AttackDamageResult> doAttack2(int targetX, int targetY) = 0;
-		virtual std::vector<AttackDamageResult> doAttack3(int targetX, int targetY) = 0;
-		virtual std::vector<AttackDamageResult> doAttack4(int targetX, int targetY) = 0;
-		virtual std::vector<AttackDamageResult> doAttack5(int targetX, int targetY) = 0;
 
 		inline int getTeamId() {
 			return teamId;
@@ -467,11 +212,6 @@ namespace tw
 			return environment;
 		}
 
-		inline int getCurrentLife()
-		{
-			return currentLife;
-		}
-
 		inline bool isPlayerReady()
 		{
 			return isReady;
@@ -481,7 +221,6 @@ namespace tw
 		{
 			isReady = ready;
 		}
-
 
 		inline float getInterpolatedX()
 		{
@@ -506,13 +245,8 @@ namespace tw
 
 			if (currentTargetX >= 0 && currentTargetY >= 0)
 			{
-				// 1) DÈterminer la direction
-				// 2) Effectuer le mouvement dans la bonne direction sur les coordonnÈes interpolÈes
-				// 3) DÈterminer si le mouvement vers la cible est terminÈ
-				// Si le mouvement est terminÈ :
-				//		4) Mettre ‡ jour la position courante
-				//		5) Appeler setNoTargetPosition si le mouvement est terminÈ
-
+				// D√©placement case par case : on avance les coordonn√©es interpol√©es vers la case
+				// cible, puis on passe √† la case suivante du chemin.
 				float moveXVector = 0;
 				float moveYVector = 0;
 
@@ -537,7 +271,6 @@ namespace tw
 				interpolatedX += moveXVector * deltatime * speed;
 				interpolatedY += moveYVector * deltatime * speed;
 
-
 				bool isMoveFinished = (moveXVector > 0 && interpolatedX > currentTargetX || moveXVector < 0 && interpolatedX < currentTargetX)
 					||
 					(moveYVector > 0 && interpolatedY > currentTargetY || moveYVector < 0 && interpolatedY < currentTargetY);
@@ -552,7 +285,7 @@ namespace tw
 
 					setNoTargetPosition();
 
-					// On ne notifie qu'‡ la fin du dÈplacement (but : Èviter les freeze ‡ chaque
+					// On ne notifie qu'√† la fin du d√©placement (but : √©viter les freeze √† chaque
 					// changement de cellule).
 					if (path.size() == 0)
 						notifyPositionChanged(currentX, currentY);
@@ -567,33 +300,9 @@ namespace tw
 			}
 		}
 
-		inline long long getLastMoveEndTime()
-		{
-			return lastMoveEndTime;
-		}
-
-		// Le mouvement n'est pas terminÈ si le temps n'est pas dÈpassÈ.
-		inline bool isMoving()
-		{
-			return lastMoveEndTime > std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		}
-
-		void serverSetPath(std::vector<Point2D> path)
-		{
-			if (path.size() > 0)
-			{
-				setCurrentX(path[0].getX());
-				setCurrentY(path[0].getY());
-				consumePM(path.size());
-				long long currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-				lastMoveEndTime = currentTime + (path.size() * (1000.0 / getSpeed()));
-			}
-		}
-
-
+		// Chemin √† parcourir (destination en premier, premier pas en dernier).
 		void setPath(std::vector<Point2D> path, MoveActionAnimationEventListener * callback = NULL)
 		{
-			consumePM(path.size());
 			this->path = path;
 			this->currentMoveCallback = callback;
 		}
@@ -640,9 +349,6 @@ namespace tw
 			}
 		}
 
-
-
-
 		Animation getNeededAnimation()
 		{
 			return neededAnimation;
@@ -679,284 +385,19 @@ namespace tw
 			neededAnimation = Animation::IDLE;
 			animationDuration = -1;
 		}
+
 		void startDieAction(float duration)
 		{
 			neededAnimation = Animation::DIE;
 			animationDuration = duration;
 			reinitViewTime = true;
 		}
+
 		void startTakeDmg(float duration)
 		{
 			neededAnimation = Animation::TAKE_DAMAGE;
 			animationDuration = duration;
 			reinitViewTime = true;
-		}
-
-		// A redefinir dans les classes filles pour la gestion des cooldowns :
-		// Cette mÈthode ne prend pas en compte le nombre de PA disponible.
-		// Elle ne permet que de savoir si le cooldown est passÈ.
-		virtual bool canDoAttack(int spellId) {
-			return true;
-		}
-
-		// A redefinir dans les classes filles pour la gestion des cooldowns :
-		virtual int getAttackCooldown(int spellId)
-		{
-			return 0;
-		}
-
-		virtual void setAttackCooldown(int spellId, int value)
-		{
-
-		}
-
-		int getAttackPACost(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1ManaCost();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2ManaCost();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3ManaCost();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4ManaCost();
-			}
-
-			return -1;
-		}
-
-		std::vector<AttackDamageResult> doAttack(int spellId, int targetX, int targetY)
-		{
-			int paCost = getAttackPACost(spellId);
-			if (paCost != -1)
-			{
-				consumePA(paCost);
-				if (spellId == 1)
-				{
-					return doAttack1(targetX, targetY);
-				}
-				else if (spellId == 2)
-				{
-					return doAttack2(targetX, targetY);
-				}
-				else if (spellId == 3)
-				{
-					return doAttack3(targetX, targetY);
-				}
-				else if (spellId == 4)
-				{
-					return doAttack4(targetX, targetY);
-				}
-			}
-
-			return std::vector<AttackDamageResult>();
-		}
-
-		std::string getSpellAnimationPath(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1AnimationPath();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2AnimationPath();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3AnimationPath();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4AnimationPath();
-			}
-
-			return "";
-		}
-
-		std::string getSpellSoundPath(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1SoundPath();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2SoundPath();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3SoundPath();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4SoundPath();
-			}
-
-			return "";
-		}
-
-		Animation getSpellAttackerAnimation(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1AttackerAnimation();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2AttackerAnimation();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3AttackerAnimation();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4AttackerAnimation();
-			}
-
-			return Animation::ATTACK1;
-		}
-
-		std::string getSpellIconPath(int spellId)
-		{
-			switch (spellId)
-			{
-			case 1:
-				return getSpell1IconPath();
-				break;
-
-			case 2:
-				return getSpell2IconPath();
-				break;
-
-			case 3:
-				return getSpell3IconPath();
-				break;
-
-			case 4:
-				return getSpell4IconPath();
-				break;
-			}
-
-			return "";
-		}
-
-		std::string getSpellName(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1Name();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2Name();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3Name();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4Name();
-			}
-
-			return "Undefined";
-		}
-
-		std::string getSpellDescription(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1Description();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2Description();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3Description();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4Description();
-			}
-
-			return "Undefined";
-		}
-
-		int getSpellMinPO(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1MinPO();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2MinPO();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3MinPO();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4MinPO();
-			}
-
-			return 0;
-		}
-
-		int getSpellMaxPO(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1MaxPO();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2MaxPO();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3MaxPO();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4MaxPO();
-			}
-
-			return 0;
-		}
-
-		TypeZoneLaunch getSpellLaunchZoneType(int spellId)
-		{
-			if (spellId == 1)
-			{
-				return getSpell1LaunchZoneType();
-			}
-			else if (spellId == 2)
-			{
-				return getSpell2LaunchZoneType();
-			}
-			else if (spellId == 3)
-			{
-				return getSpell3LaunchZoneType();
-			}
-			else if (spellId == 4)
-			{
-				return getSpell4LaunchZoneType();
-			}
-
-			return TypeZoneLaunch::NORMAL;
 		}
 
 		void setOrientationToLookAt(int targetX, int targetY)

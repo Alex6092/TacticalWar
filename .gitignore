@@ -70,3 +70,16 @@ ClassesLib/x64/
 ClassesTestModule/x64/
 ZSightTestModule/x64/
 AnimationTestModule/x64/
+# Build intermediates and runtime data
+*.idb
+*.ilk
+/data/
+x64/Debug/data/
+x64/Release/data/
+x64/*/server.json
+x64/*/client.json
+__pycache__/
+*/x64/
+*/*/x64/
+tools/tilegen/preview.png
+tools/spellicons/preview.png

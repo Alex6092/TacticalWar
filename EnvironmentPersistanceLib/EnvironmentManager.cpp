@@ -1,19 +1,53 @@
-#include "pch.h"
+Ôªø#include "pch.h"
 #include "EnvironmentManager.h"
-#include <stdlib.h>
+
+#include <algorithm>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <stdio.h>
-#include <StringUtils.h>
-//#include <fstream>
+#include <set>
+#include <sstream>
+#include <nlohmann/json.hpp>
+#include <TileRegistry.h>
+
+// fs::u8path est d√©pr√©ci√© en C++20 mais reste le moyen simple de passer un chemin UTF-8.
 #pragma warning(disable : 4996)
-#define TAILLE_MAX 1000 // Tableau de taille 1000
 
-
-using namespace std;
-
-
+namespace fs = std::filesystem;
+using nlohmann::json;
 
 tw::EnvironmentManager * tw::EnvironmentManager::instance = NULL;
+
+namespace
+{
+	bool readFile(const std::string & path, std::string & content)
+	{
+		std::ifstream file(path, std::ios::binary);
+		if (!file)
+			return false;
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		content = buffer.str();
+		// BOM UTF-8 √©ventuel.
+		if (content.size() >= 3 && content.compare(0, 3, "\xEF\xBB\xBF") == 0)
+			content.erase(0, 3);
+		return true;
+	}
+
+	std::string withSlash(const std::string & directory)
+	{
+		if (directory.empty())
+			return "./";
+		char last = directory.back();
+		return (last == '/' || last == '\\') ? directory : directory + "/";
+	}
+}
+
+tw::EnvironmentManager::EnvironmentManager()
+	: mapDirectory("./assets/map/")
+{
+}
 
 tw::EnvironmentManager * tw::EnvironmentManager::getInstance()
 {
@@ -23,126 +57,309 @@ tw::EnvironmentManager * tw::EnvironmentManager::getInstance()
 	return instance;
 }
 
-tw::Environment * tw::EnvironmentManager::testEnvironment = NULL;
-void tw::EnvironmentManager::createTestEnvironmentIfNotExists()
+void tw::EnvironmentManager::setMapDirectory(const std::string & directory)
 {
-	if (testEnvironment == NULL)
-	{
-		testEnvironment = new tw::Environment(15, 15, 1);
-		testEnvironment->getMapData(1, 1)->setIsWalkable(false);
-		testEnvironment->getMapData(2, 2)->setIsObstacle(true);
-
-		testEnvironment->getMapData(13, 13)->setIsWalkable(false);
-		testEnvironment->getMapData(12, 12)->setIsObstacle(true);
-
-		testEnvironment->getMapData(0, 0)->setTeamStartPoint(1);
-		testEnvironment->getMapData(0, 1)->setTeamStartPoint(1);
-
-		testEnvironment->getMapData(14, 14)->setTeamStartPoint(2);
-		testEnvironment->getMapData(13, 14)->setTeamStartPoint(2);
-	}
+	mapDirectory = withSlash(directory);
 }
-
 
 tw::Environment * tw::EnvironmentManager::loadEnvironment(int environmentId)
 {
+	auto received = receivedMaps.find(environmentId);
+	if (received != receivedMaps.end())
+	{
+		Environment * environment = fromJson(received->second);
+		if (environment != NULL)
+			return environment;
+	}
 
-	Environment* environment;
-	CellData* cell;
-	std::map<int, std::map<CellData*, int>> map;
+	return loadEnvironmentFrom(mapDirectory, environmentId);
+}
 
-	FILE* fichier;
-	char caractere;
-	int heightenv;
-	int widthenv;
-	int idenv;
-	int i = 0;
-	long cursor;
-	int x;
-	int y;
-	int walkable;
-	int obstacle;
-	int teamNumber;
+tw::Environment * tw::EnvironmentManager::loadEnvironmentFrom(const std::string & directory, int environmentId)
+{
+	std::string base = withSlash(directory) + std::to_string(environmentId);
+	std::string content;
+	std::string error;
 
-	std::string filepath = "./assets/map/" + std::to_string(environmentId) + ".txt";
-	fichier = fopen(filepath.c_str(), "r");
+	if (readFile(base + ".json", content))
+	{
+		Environment * environment = fromJson(content, &error);
+		if (environment == NULL)
+			std::cout << "Carte " << base << ".json invalide : " << error << std::endl;
+		else
+			environment->setId(environmentId);
+		return environment;
+	}
 
-	
-		do
+	if (readFile(base + ".txt", content))
+	{
+		Environment * environment = fromV1Text(content, environmentId, &error);
+		if (environment == NULL)
+			std::cout << "Carte " << base << ".txt invalide : " << error << std::endl;
+		return environment;
+	}
+
+	return NULL;
+}
+
+bool tw::EnvironmentManager::saveEnvironment(Environment * environment, std::string * error)
+{
+	return saveEnvironmentTo(environment, mapDirectory, error);
+}
+
+bool tw::EnvironmentManager::saveEnvironmentTo(Environment * environment, const std::string & directory, std::string * error)
+{
+	try
+	{
+		fs::create_directories(fs::u8path(withSlash(directory)));
+	}
+	catch (const std::exception &)
+	{
+	}
+
+	std::string path = withSlash(directory) + std::to_string(environment->getId()) + ".json";
+	std::string temporary = path + ".tmp";
+	{
+		std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
+		if (!file)
 		{
-			if (i == 0)
-			{
-				fscanf(fichier, "%d", &heightenv);
-			}
-
-			if (i == 1)
-			{
-				fscanf(fichier, "%d", &widthenv);
-			}
-
-			if (i == 2)
-			{
-				fscanf(fichier, "%d", &idenv);
-			}
-			
-			i++;
-		} while (i<3 ); 
-		
-		environment = new Environment(widthenv, heightenv, idenv);
-
-		i = 4;
-
-		//if (ftell(fichier) ==3) //on a deja parcouru la hauteur, la largeur et l'id de l'environnement
-		{
-			do
-			{
-				fscanf(fichier, "%d,%d,%d,%d,%d", &x, &y, &obstacle, &walkable, &teamNumber);
-				CellData * cell = environment->getMapData(x, y);
-				cell->setIsWalkable(walkable);
-				cell->setIsObstacle(obstacle);
-				cell->setTeamStartPoint(teamNumber);
-
-			} while (!feof(fichier));
+			if (error != nullptr)
+				*error = "Impossible d'√©crire " + path;
+			return false;
 		}
-	
-		fclose(fichier);
-	
+		file << toJson(environment);
+	}
 
-	// Equipe Èditeur de map : Il faudra charger les donnÈes depuis le fichier environmentId.txt
-	// situÈ dans le dossier /assets/map/ et construire une variable de type Environment que vous retournerez.
-	
-	//createTestEnvironmentIfNotExists();
+	std::error_code code;
+	fs::rename(fs::u8path(temporary), fs::u8path(path), code);
+	if (code)
+	{
+		if (error != nullptr)
+			*error = "Impossible de remplacer " + path + " : " + code.message();
+		return false;
+	}
+	return true;
+}
+
+std::string tw::EnvironmentManager::toJson(Environment * environment, bool withRules, bool compact)
+{
+	int width = environment->getWidth();
+	int height = environment->getHeight();
+
+	// Palette : tuiles utilis√©es, dans l'ordre d'apparition.
+	std::vector<std::string> palette;
+	std::map<std::string, int> paletteIndex;
+	json rules = json::object();
+	json starts = { { "1", json::array() }, { "2", json::array() } };
+
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			CellData * cell = environment->getMapData(x, y);
+			std::string tile = cell->getDisplayTile();
+			if (paletteIndex.find(tile) == paletteIndex.end())
+			{
+				paletteIndex[tile] = (int)palette.size();
+				palette.push_back(tile);
+				rules[tile] = { { "walkable", cell->getIsWalkable() && !cell->getIsObstacle() }, { "obstacle", cell->getIsObstacle() } };
+			}
+
+			int team = cell->getTeamStartPointNumber();
+			if (team == 1 || team == 2)
+				starts[std::to_string(team)].push_back(json::array({ x, y }));
+		}
+	}
+
+	json root = json::object();
+	root["format"] = "tw-map";
+	root["version"] = 2;
+	root["id"] = environment->getId();
+	root["name"] = environment->getName();
+	root["width"] = width;
+	root["height"] = height;
+	root["tournament"] = environment->isInTournamentPool();
+	root["palette"] = palette;
+	if (withRules)
+		root["rules"] = rules;
+	root["start"] = starts;
+
+	json rows = json::array();
+	for (int y = 0; y < height; y++)
+	{
+		json row = json::array();
+		for (int x = 0; x < width; x++)
+			row.push_back(paletteIndex[environment->getMapData(x, y)->getDisplayTile()]);
+		rows.push_back(row);
+	}
+
+	if (compact)
+	{
+		root["tiles"] = rows;
+		return root.dump(-1, ' ', false, json::error_handler_t::replace);
+	}
+
+	// Fichier lisible et facile √† comparer : une ligne de la carte par ligne de texte.
+	std::string text = "{\n";
+	for (auto it = root.begin(); it != root.end(); ++it)
+		text += "  " + json(it.key()).dump() + ": " + it.value().dump(-1, ' ', false, json::error_handler_t::replace) + ",\n";
+	text += "  \"tiles\": [\n";
+	for (int y = 0; y < height; y++)
+		text += "    " + rows[y].dump() + (y + 1 < height ? ",\n" : "\n");
+	text += "  ]\n}\n";
+	return text;
+}
+
+tw::Environment * tw::EnvironmentManager::fromJson(const std::string & text, std::string * error)
+{
+	json root = json::parse(text, nullptr, false);
+	if (root.is_discarded() || !root.is_object())
+	{
+		if (error != nullptr)
+			*error = "JSON invalide";
+		return NULL;
+	}
+
+	try
+	{
+		if (root.value("format", std::string()) != "tw-map" || root.value("version", 0) != 2)
+		{
+			if (error != nullptr)
+				*error = "format \"tw-map\" version 2 attendu";
+			return NULL;
+		}
+
+		int width = root.at("width").get<int>();
+		int height = root.at("height").get<int>();
+		if (width <= 0 || height <= 0 || width > 200 || height > 200)
+		{
+			if (error != nullptr)
+				*error = "dimensions invalides";
+			return NULL;
+		}
+
+		std::vector<std::string> palette = root.at("palette").get<std::vector<std::string>>();
+		const json & rows = root.at("tiles");
+		const json & rules = root.contains("rules") ? root["rules"] : json::object();
+
+		Environment * environment = new Environment(width, height, root.value("id", 0));
+		environment->setName(root.value("name", std::string()));
+		environment->setInTournamentPool(root.value("tournament", true));
+
+		for (int y = 0; y < height && y < (int)rows.size(); y++)
+		{
+			const json & row = rows[y];
+			for (int x = 0; x < width && x < (int)row.size(); x++)
+			{
+				int index = row[x].get<int>();
+				std::string tile = index >= 0 && index < (int)palette.size() ? palette[index] : TileRegistry::LEGACY_GROUND;
+				if (rules.contains(tile))
+					environment->setTile(x, y, tile, rules[tile].value("walkable", false), rules[tile].value("obstacle", true));
+				else
+					environment->setTile(x, y, tile);
+			}
+		}
+
+		const json & starts = root.value("start", json::object());
+		for (int team = 1; team <= 2; team++)
+		{
+			for (const json & cell : starts.value(std::to_string(team), json::array()))
+			{
+				CellData * data = environment->getMapData(cell.at(0).get<int>(), cell.at(1).get<int>());
+				if (data != NULL)
+					data->setTeamStartPoint(team);
+			}
+		}
+		return environment;
+	}
+	catch (const json::exception & e)
+	{
+		if (error != nullptr)
+			*error = e.what();
+		return NULL;
+	}
+}
+
+tw::Environment * tw::EnvironmentManager::fromV1Text(const std::string & text, int environmentId, std::string * error)
+{
+	std::istringstream input(text);
+	int height = 0;
+	int width = 0;
+	int id = 0;
+	if (!(input >> height >> width >> id) || width <= 0 || height <= 0 || width > 200 || height > 200)
+	{
+		if (error != nullptr)
+			*error = "en-t√™te invalide";
+		return NULL;
+	}
+
+	Environment * environment = new Environment(width, height, environmentId);
+	std::string line;
+	while (std::getline(input, line))
+	{
+		int x, y, obstacle, walkable, team;
+		if (std::sscanf(line.c_str(), "%d,%d,%d,%d,%d", &x, &y, &obstacle, &walkable, &team) != 5)
+			continue;
+
+		CellData * cell = environment->getMapData(x, y);
+		if (cell == NULL)
+			continue;
+		environment->setTile(x, y, TileRegistry::legacyTile(walkable != 0, obstacle != 0));
+		cell->setTeamStartPoint(team);
+	}
 	return environment;
 }
 
-void tw::EnvironmentManager::saveEnvironment(Environment * environment)
+bool tw::EnvironmentManager::registerReceivedMap(const std::string & text)
 {
-	// Equipe Èditeur de map : Il faudra enregistrer dans un fichier la map
-	// passÈe en paramËtre dans le dossier /assets/map/.
-	// L'extension du fichier sera .txt
-	FILE* fichier;
-	std::string filepath = "./assets/map/" + std::to_string(environment->getId()) + ".txt";
-	fichier = fopen(filepath.c_str(), "w");
+	Environment * environment = fromJson(text);
+	if (environment == NULL)
+		return false;
 
-	
-		fprintf(fichier,"%d\n",environment->getHeight());
-		fprintf(fichier, "%d\n", environment->getWidth());
-		fprintf(fichier, "%d\n", environment->getId());
-		
-	
-		
-		for (int i = 0; i < environment->getWidth(); i++) //pour avoir les coordonnÈes de chaque cellule
+	receivedMaps[environment->getId()] = text;
+	delete environment;
+	return true;
+}
+
+std::vector<int> tw::EnvironmentManager::getAlreadyExistingIds()
+{
+	return getAlreadyExistingIds(mapDirectory);
+}
+
+std::vector<int> tw::EnvironmentManager::getAlreadyExistingIds(const std::string & directory)
+{
+	std::set<int> ids;
+	try
+	{
+		for (auto & entry : fs::directory_iterator(fs::u8path(directory)))
 		{
-			for (int j = 0; j < environment->getHeight(); j++)
+			std::string extension = entry.path().extension().string();
+			if (extension != ".json" && extension != ".txt")
+				continue;
+
+			try
 			{
-				CellData* cell = environment->getMapData(i, j);
-				fprintf(fichier, "%d,%d,%d,%d,%d\n", cell->getX(), cell->getY(), cell->getIsObstacle()?1:0, cell->getIsWalkable()?1:0, cell->getTeamStartPointNumber());
+				std::string stem = entry.path().stem().string();
+				std::size_t used = 0;
+				int id = std::stoi(stem, &used);
+				if (id > 0 && used == stem.size())
+					ids.insert(id);
+			}
+			catch (const std::exception &)
+			{
 			}
 		}
-	
+	}
+	catch (const std::exception &)
+	{
+		// Dossier absent : aucune carte.
+	}
 
+	return std::vector<int>(ids.begin(), ids.end());
+}
 
-	fclose(fichier);
-	
-
+int tw::EnvironmentManager::getAvailableId()
+{
+	std::vector<int> used = getAlreadyExistingIds();
+	return used.empty() ? 1 : used.back() + 1;
 }

@@ -24,12 +24,6 @@
     <ClCompile Include="Screen.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="TestCharacterModel.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="TWColorator.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="LoginScreen.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
@@ -66,24 +60,12 @@
     <ClCompile Include="PictureCharacterView.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="SpellSlot.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="TimelineView.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BattleScreen.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Screen.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="TestCharacterModel.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="TWColorator.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="LoginScreen.h">
@@ -122,11 +104,33 @@
     <ClInclude Include="PictureCharacterView.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="SpellSlot.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="TimelineView.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ClientConfig.cpp" />
+    <ClInclude Include="ClientConfig.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TeamsAdminPanel.cpp" />
+    <ClInclude Include="TeamsAdminPanel.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ClientGameData.cpp" />
+    <ClCompile Include="BattleColorator.cpp" />
+    <ClCompile Include="BattleHud.cpp" />
+    <ClInclude Include="ClientGameData.h" />
+    <ClInclude Include="BattleColorator.h" />
+    <ClInclude Include="BattleHud.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TournamentAdminPanel.cpp" />
+    <ClInclude Include="TournamentAdminPanel.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LiveSessionsPanel.cpp" />
+    <ClInclude Include="LiveSessionsPanel.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ReplaysPanel.cpp" />
+    <ClInclude Include="ReplaysPanel.h" />
   </ItemGroup>
 </Project>

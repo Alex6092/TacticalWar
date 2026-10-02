@@ -1,4 +1,4 @@
-#include "MatchView.h"
+ï»¿#include "MatchView.h"
 #include <string>
 
 MatchView::MatchView(tw::Match m, bool isSpectator)
@@ -11,7 +11,7 @@ MatchView::MatchView(tw::Match m, bool isSpectator)
 	switch (m.getStatus())
 	{
 	case tw::MatchStatus::NOT_STARTED:
-		statusStr += "Planifié";
+		statusStr += "PlanifiÃ©";
 		break;
 
 	case tw::MatchStatus::STARTED:
@@ -29,7 +29,7 @@ MatchView::MatchView(tw::Match m, bool isSpectator)
 	matchName->setPosition(5, 5);	
 
 	tgui::Label::Ptr vsMessage = tgui::Label::create();
-	vsMessage->setText("Equipe " + std::to_string(team1[0].getTeamNumber()) + " VS équipe " + std::to_string(team2[0].getTeamNumber()));
+	vsMessage->setText("Equipe " + std::to_string(team1[0].getTeamNumber()) + " VS Ã©quipe " + std::to_string(team2[0].getTeamNumber()));
 	vsMessage->getRenderer()->setTextColor(sf::Color::Black);
 	add(vsMessage);
 	vsMessage->setSize(tgui::Layout("100%"), 25);

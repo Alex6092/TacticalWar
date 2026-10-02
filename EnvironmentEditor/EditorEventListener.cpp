@@ -1,8 +1,6 @@
 #include "EditorEventListener.h"
 #include "EditorUI.h"
 
-#include <iostream>
-
 using namespace EnvironmentEditor;
 
 EditorEventListener::EditorEventListener(EditorUI ^ hmi)
@@ -15,18 +13,22 @@ EditorEventListener::~EditorEventListener()
 }
 
 void EditorEventListener::onCellClicked(int x, int y)
-{	
-	// Clic sur la cellule X;Y indique à l'éditeur 
-	// qu'il faut modifier l'environnement à cette position
-	hmi->editCell(x, y);
+{
+	hmi->onCellPressed(x, y);
 }
 
 void EditorEventListener::onCellHover(int x, int y)
 {
-
+	hmi->onCellHover(x, y);
 }
 
 void EditorEventListener::onCellMouseDown(int x, int y)
 {
-	hmi->editCell(x, y);
+	hmi->onCellDragged(x, y);
+}
+
+void EditorEventListener::onEvent(void * e)
+{
+	if (e != NULL)
+		hmi->onSfmlEvent(*(sf::Event*)e);
 }

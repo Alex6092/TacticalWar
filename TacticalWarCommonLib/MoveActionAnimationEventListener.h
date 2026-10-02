@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-// Pour la lib Animation mais � partager 
+// Pour la lib Animation mais à partager 
 
 class MoveActionAnimationEventListener
 {

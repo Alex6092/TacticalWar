@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tactical War - Tournoi en direct</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Tactical War</div>
+    <div class="title">
+      <h1 id="tournament-name">En attente d'un tournoi...</h1>
+      <span id="tournament-status" class="pill"></span>
+    </div>
+    <div class="meta">
+      <span id="connection" class="dot" title="Connexion au serveur"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel board">
+      <div class="panel-head">
+        <h2 id="board-title">Tableau</h2>
+        <div id="board-tabs" class="tabs"></div>
+      </div>
+      <div id="board" class="board-content"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><h2>En direct</h2><span id="live-count" class="count"></span></div>
+        <div id="live" class="live"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>À venir</h2></div>
+        <ol id="upcoming" class="upcoming"></ol>
+      </section>
+      <section class="panel" id="ranking-panel" hidden>
+        <div class="panel-head"><h2>Classement final</h2></div>
+        <div id="ranking"></div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

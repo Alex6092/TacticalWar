@@ -1,4 +1,4 @@
-// IsometricRendererLib.cpp : Définit les fonctions de la bibliothèque statique.
+﻿// IsometricRendererLib.cpp : Définit les fonctions de la bibliothèque statique.
 //
 
 #include "pch.h"

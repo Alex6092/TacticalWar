@@ -34,6 +34,11 @@ namespace tw
 			return teamNumber;
 		}
 
+		inline void setTeamNumber(int teamNumber)
+		{
+			this->teamNumber = teamNumber;
+		}
+
 		inline bool getHasJoinBattle()
 		{
 			return hasJoinBattle;

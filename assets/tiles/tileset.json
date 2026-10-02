@@ -1,0 +1,204 @@
+{
+  "format": "tw-tileset",
+  "version": 1,
+  "tiles": [
+    {
+      "id": "grass",
+      "name": "Herbe",
+      "category": "ground",
+      "texture": "assets/tiles/resized/Grass_01.png",
+      "anchor": [66, 45],
+      "group": "Sols"
+    },
+    {
+      "id": "stone",
+      "name": "Rocher",
+      "category": "obstacle",
+      "texture": "assets/tiles/resized/Stone_02.png",
+      "anchor": [70, 59],
+      "group": "Obstacles"
+    },
+    {
+      "id": "tree",
+      "name": "Arbre",
+      "category": "obstacle",
+      "texture": "assets/tiles/resized/Tree_01.png",
+      "anchor": [89, 182],
+      "group": "Obstacles"
+    },
+    {
+      "id": "water",
+      "name": "Eau",
+      "category": "liquid",
+      "texture": "assets/tiles/resized/Water_01.png",
+      "anchor": [69, 33],
+      "group": "Liquides",
+      "shader": "water"
+    },
+    {
+      "id": "hole",
+      "name": "Vide",
+      "category": "empty",
+      "group": "Spécial"
+    },
+    {
+      "id": "grass_autumn",
+      "name": "Herbe d'automne",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/grass_autumn.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "dirt",
+      "name": "Terre",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/dirt.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "sand",
+      "name": "Sable",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/sand.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "snow",
+      "name": "Neige",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/snow.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "flagstones",
+      "name": "Dalles",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/flagstones.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "grass_pebbles",
+      "name": "Herbe caillouteuse",
+      "category": "ground",
+      "group": "Sols",
+      "texture": "assets/tiles/generated/grass_pebbles.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "stone_dark",
+      "name": "Rocher sombre",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/stone_dark.png",
+      "anchor": [70.0, 59.0],
+      "generated": true
+    },
+    {
+      "id": "stone_sand",
+      "name": "Grès",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/stone_sand.png",
+      "anchor": [70.0, 59.0],
+      "generated": true
+    },
+    {
+      "id": "stone_snow",
+      "name": "Rocher enneigé",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/stone_snow.png",
+      "anchor": [70.0, 59.0],
+      "generated": true
+    },
+    {
+      "id": "tree_autumn",
+      "name": "Arbre d'automne",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/tree_autumn.png",
+      "anchor": [89.0, 182.0],
+      "generated": true
+    },
+    {
+      "id": "tree_snow",
+      "name": "Arbre enneigé",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/tree_snow.png",
+      "anchor": [89.0, 182.0],
+      "generated": true
+    },
+    {
+      "id": "tree_mirror",
+      "name": "Arbre (miroir)",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/tree_mirror.png",
+      "anchor": [85.8, 182.0],
+      "generated": true
+    },
+    {
+      "id": "bush",
+      "name": "Buisson",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "walkable": false,
+      "blocksLineOfSight": false,
+      "texture": "assets/tiles/generated/bush.png",
+      "anchor": [66.0, 68.9],
+      "generated": true
+    },
+    {
+      "id": "water_deep",
+      "name": "Eau profonde",
+      "category": "liquid",
+      "group": "Liquides",
+      "shader": "water",
+      "texture": "assets/tiles/generated/water_deep.png",
+      "anchor": [69.0, 33.0],
+      "generated": true
+    },
+    {
+      "id": "lava",
+      "name": "Lave",
+      "category": "liquid",
+      "group": "Liquides",
+      "shader": "lava",
+      "texture": "assets/tiles/generated/lava.png",
+      "anchor": [69.0, 33.0],
+      "generated": true
+    },
+    {
+      "id": "stone_volcanic",
+      "name": "Roche volcanique",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "texture": "assets/tiles/generated/stone_volcanic.png",
+      "anchor": [70.0, 59.0],
+      "generated": true
+    },
+    {
+      "id": "bush_autumn",
+      "name": "Buisson d'automne",
+      "category": "obstacle",
+      "group": "Obstacles",
+      "walkable": false,
+      "blocksLineOfSight": false,
+      "texture": "assets/tiles/generated/bush_autumn.png",
+      "anchor": [66.0, 68.9],
+      "generated": true
+    }
+  ]
+}

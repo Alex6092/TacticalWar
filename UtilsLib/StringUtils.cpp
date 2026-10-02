@@ -1,4 +1,4 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "StringUtils.h"
 
 
@@ -14,13 +14,13 @@ StringUtils::~StringUtils()
 
 bool StringUtils::startsWith(std::string mainStr, std::string toMatch)
 {
-	// std::string::find retourne 0 si toMatch est trouvé au début du message
+	// std::string::find retourne 0 si toMatch est trouvÃ© au dÃ©but du message
 	if (mainStr.find(toMatch) == 0)
 		return true;
 	else
 		return false;
 }
-//cette methode permet de découper une trame
+//cette methode permet de dÃ©couper une trame
 const std::vector<std::string> StringUtils::explode(const std::string& msg, const char& c)
 {
 	std::string buff = "";

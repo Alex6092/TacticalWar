@@ -1,4 +1,4 @@
-#include "ClassSelectionScreen.h"
+﻿#include "ClassSelectionScreen.h"
 #include "LinkToServer.h"
 #include <Match.h>
 #include "MatchView.h"
@@ -8,7 +8,8 @@
 #include <CharacterFactory.h>
 #include "PictureCharacterView.h"
 #include "BattleScreen.h"
-#include "SpellSlot.h"
+#include "ClientGameData.h"
+#include "WaitMatchScreen.h"
 
 
 
@@ -33,7 +34,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 
 	subtitle.setFont(font);
 	subtitle.setCharacterSize(32);
-	subtitle.setString("S�lection de la classe");
+	subtitle.setString("Sélection de la classe");
 	subtitle.setFillColor(sf::Color::Red);
 	subtitle.setOutlineColor(sf::Color(255, 215, 0));
 	subtitle.setOutlineThickness(1.5);
@@ -69,23 +70,18 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	
 	for (int i = 0; i < classesIds.size(); i++)
 	{
-		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classesIds[i], 1, 0, 0, NULL));
+		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classesIds[i], 1, 0, 0));
 	}
 
 	indexClass = 0;
 	characterView = NULL;
 	
 	
-	tgui::Picture::Ptr Icon = tgui::Picture::create();	
-	std::shared_ptr<SpellSlot> spell1 = std::make_shared<SpellSlot>(classesInstances[0], 1, "");
-	std::shared_ptr<SpellSlot> spell2 = std::make_shared<SpellSlot>(classesInstances[0], 2, "");
-	std::shared_ptr<SpellSlot> spell3 = std::make_shared<SpellSlot>(classesInstances[0], 3, "");
-	std::shared_ptr<SpellSlot> spell4 = std::make_shared<SpellSlot>(classesInstances[0], 4, "");
-
-	spell1->setCooldownVisible(false);
-	spell2->setCooldownVisible(false);
-	spell3->setCooldownVisible(false);
-	spell4->setCooldownVisible(false);
+	tgui::Picture::Ptr Icon = tgui::Picture::create();
+	tgui::Picture::Ptr spell1 = tgui::Picture::create();
+	tgui::Picture::Ptr spell2 = tgui::Picture::create();
+	tgui::Picture::Ptr spell3 = tgui::Picture::create();
+	tgui::Picture::Ptr spell4 = tgui::Picture::create();
 
 	tgui::Picture::Ptr card = tgui::Picture::create();
 	std::shared_ptr<PictureCharacterView> classCharacterView = std::make_shared<PictureCharacterView>();
@@ -222,18 +218,21 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 
 void ClassSelectionScreen::setClassView()
 {
-
+	auto num = [](int value) { return sf::String(std::to_string(value)); };
 	tw::BaseCharacterModel * model = classesInstances[indexClass];
 
-	std::string pathClassPreview = model->getClassPreviewPath();
+	// Textes et chiffres : données de jeu envoyées par le serveur (assets/data/gamedata.json).
+	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(model->getClassId());
+
+	std::string pathClassPreview = classDef != NULL ? classDef->preview : std::string();
 	sf::Texture TextureClassPreview;
 	TextureClassPreview.loadFromFile(pathClassPreview);
 	TextureClassPreview.setSmooth(true);
 	tgui::Picture::Ptr previewClass = gui->get<tgui::Picture>("classPreview");
 	previewClass->setPosition(PositionOfCardX, PositionOfCardY);
 	previewClass->getRenderer()->setTexture(TextureClassPreview);
-	
-	std::string path = model->getClassIconPath();
+
+	std::string path = classDef != NULL ? classDef->icon : std::string();
 	sf::Texture TextureIconClass;
 	TextureIconClass.loadFromFile(path);
 	TextureIconClass.setSmooth(true);
@@ -242,137 +241,86 @@ void ClassSelectionScreen::setClassView()
 	IconClass->setSize(70, 75);
 	IconClass->setPosition(PositionOfCardX, PositionOfCardY);
 
-
 	tgui::Label::Ptr stats= gui->get<tgui::Label>("stats");
 	stats->setText("STATS");
 	stats->setPosition(PositionOfCardX + 700, PositionOfCardY);
 	stats->setTextSize(35);
 
-	std::string className = model->getClassName();
 	tgui::Label::Ptr classNameLabel = gui->get<tgui::Label>("classNameLabel");
-	classNameLabel->setText(className);
-	classNameLabel->setPosition(PositionOfCardX + 700, PositionOfCardY+ 300);
+	classNameLabel->setText(classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(model->getClassId()));
+	classNameLabel->setPosition(PositionOfCardX + 700, PositionOfCardY + 300);
 	classNameLabel->setTextSize(25);
-	
-	std::string attaque = std::to_string(model->getBaseAttack());
+
+	// Caractéristiques regroupées dans un seul bloc de texte.
+	sf::String statsText;
+	if (classDef != NULL)
+	{
+		const tw::battle::Stats & s = classDef->baseStats;
+		statsText = L"Points de vie : " + num(s.get(tw::battle::Stat::MAX_HP))
+			+ L"\nPA : " + num(s.get(tw::battle::Stat::AP)) + L"     PM : " + num(s.get(tw::battle::Stat::MP))
+			+ L"\nInitiative : " + num(s.get(tw::battle::Stat::INITIATIVE))
+			+ L"\nPuissance : " + num(s.get(tw::battle::Stat::POWER)) + L" %"
+			+ L"\nRésistance : " + num(s.get(tw::battle::Stat::RESISTANCE)) + L" %"
+			+ L"\nTacle : " + num(s.get(tw::battle::Stat::LOCK)) + L"     Fuite : " + num(s.get(tw::battle::Stat::DODGE));
+	}
 	tgui::Label::Ptr atkLabel = gui->get<tgui::Label>("atkLabel");
-	atkLabel->setText("Attaque : " + attaque);
+	atkLabel->setText(statsText);
 	atkLabel->setTextSize(frontsize2);
-	atkLabel->setHorizontalAlignment(Horizontale_AlignementRight);
-	
-	std::string pm = std::to_string(model->getBasePm());
-	tgui::Label::Ptr pmLabel = gui->get<tgui::Label>("pmLabel");
-	pmLabel->setText("Point de d�placement: " + pm);
-	pmLabel->setTextSize(frontsize2);
-	pmLabel->setHorizontalAlignment(Horizontale_AlignementRight);
+	atkLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Left);
 
+	for (const char * unused : { "pmLabel", "lifeLabel", "paLabel", "defLabel" })
+		gui->get<tgui::Label>(unused)->setText("");
 
-	std::string life = std::to_string(model->getBaseMaxLife());
-	tgui::Label::Ptr lifeLabel = gui->get<tgui::Label>("lifeLabel");
-	lifeLabel->setText("Point de vie : " + life);
-	lifeLabel->setTextSize(frontsize2);
-	lifeLabel->setHorizontalAlignment(Horizontale_AlignementRight);
-
-	std::string pa = std::to_string(model->getBasePa());
-	tgui::Label::Ptr paLabel = gui->get<tgui::Label>("paLabel");
-	paLabel->setText("Points d'attaque : " + pa);
-	paLabel->setTextSize(frontsize2);
-	paLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Right);
-
-
-	std::string def = std::to_string(model->getBaseDefense());
-	tgui::Label::Ptr defLabel = gui->get<tgui::Label>("defLabel");
-	defLabel->setText("D�fense : " + def);
-	defLabel->setTextSize(frontsize2);
-	defLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Right);
-
-	std::string description = model->getClassDescription();
+	sf::String description;
+	if (classDef != NULL)
+	{
+		description = fromServerText(classDef->description);
+		if (classDef->passive.type != tw::battle::PassiveType::NONE)
+			description += L"\n\nPassif - " + fromServerText(classDef->passive.name) + L" : " + fromServerText(classDef->passive.description);
+	}
 	tgui::Label::Ptr descriptionLabel = gui->get<tgui::Label>("description");
 	descriptionLabel->setText(description);
-	descriptionLabel->setSize(500, 200);
+	descriptionLabel->setSize(500, 260);
 	descriptionLabel->setTextSize(18);
-
-
-	std::shared_ptr<tgui::Picture> baseSpell1 = gui->get<tgui::Picture>("spell1");
-	std::shared_ptr<SpellSlot> spell1 = std::dynamic_pointer_cast<SpellSlot>(baseSpell1);
-	spell1->setModel(model);
-	spell1->setSize(tgui::Layout2d(100, 100));
-
-	
-	std::shared_ptr<tgui::Picture> baseSpell2 = gui->get<tgui::Picture>("spell2");
-	std::shared_ptr<SpellSlot> spell2 = std::dynamic_pointer_cast<SpellSlot>(baseSpell2);
-	spell2->setModel(model);
-	spell2->setSize(tgui::Layout2d(100, 100));
-
-	std::shared_ptr<tgui::Picture> baseSpell3 = gui->get<tgui::Picture>("spell3");
-	std::shared_ptr<SpellSlot> spell3 = std::dynamic_pointer_cast<SpellSlot>(baseSpell3);
-	spell3->setModel(model);
-	spell3->setSize(tgui::Layout2d(100, 100));
-
-	std::shared_ptr<tgui::Picture> baseSpell4 = gui->get<tgui::Picture>("spell4");
-	std::shared_ptr<SpellSlot> spell4 = std::dynamic_pointer_cast<SpellSlot>(baseSpell4);
-	spell4->setModel(model);
-	spell4->setSize(tgui::Layout2d(100, 100));
-
 
 	tgui::Color outlineColor = tgui::Color::White;
 	float outlineWidth = 1;
 
-	std::string spell1Name = model->getSpell1Name();
-	std::string spell1Description = model->getSpell1Description();
-	tgui::Label::Ptr labelSpell1Description = gui->get<tgui::Label>("spell1Description");
-	labelSpell1Description->setText(spell1Name + "\n" + spell1Description);
-	labelSpell1Description->setSize(sizeTextX, sizeTextY * 2 + 10);
-	labelSpell1Description->setTextSize(18);
-	labelSpell1Description->getRenderer()->setTextStyle(sf::Text::Bold);
-	labelSpell1Description->getRenderer()->setTextOutlineColor(outlineColor);
-	labelSpell1Description->getRenderer()->setTextOutlineThickness(outlineWidth);
+	for (int i = 0; i < 4; i++)
+	{
+		std::string index = std::to_string(i + 1);
+		tgui::Picture::Ptr icon = gui->get<tgui::Picture>("spell" + index);
+		tgui::Label::Ptr label = gui->get<tgui::Label>("spell" + index + "Description");
 
-	std::string spell2Name = model->getSpell2Name();
-	std::string spell2Description = model->getSpell2Description();
-	tgui::Label::Ptr labelSpell2Description = gui->get<tgui::Label>("spell2Description");
-	labelSpell2Description->setText(spell2Name + "\n" + spell2Description);
-	labelSpell2Description->setSize(sizeTextX, sizeTextY * 2 + 10);
-	labelSpell2Description->setTextSize(18);
-	labelSpell2Description->getRenderer()->setTextStyle(sf::Text::Bold);
-	labelSpell2Description->getRenderer()->setTextOutlineColor(outlineColor);
-	labelSpell2Description->getRenderer()->setTextOutlineThickness(outlineWidth);
+		sf::String text;
+		if (classDef != NULL && i < (int)classDef->spells.size())
+		{
+			const tw::battle::SpellDef & spell = classDef->spells[i];
+			sf::Texture texture;
+			if (texture.loadFromFile(spell.icon))
+				icon->getRenderer()->setTexture(texture);
 
-	std::string spell3Name = model->getSpell3Name();
-	std::string spell3Description = model->getSpell3Description();
-	tgui::Label::Ptr labelSpell3Description = gui->get<tgui::Label>("spell3Description");
-	labelSpell3Description->setText(spell3Name + "\n" + spell3Description);
-	labelSpell3Description->setSize(sizeTextX, sizeTextY * 2 + 10);
-	labelSpell3Description->setTextSize(18);
-	labelSpell3Description->getRenderer()->setTextStyle(sf::Text::Bold);
-	labelSpell3Description->getRenderer()->setTextOutlineColor(outlineColor);
-	labelSpell3Description->getRenderer()->setTextOutlineThickness(outlineWidth);
+			text = fromServerText(spell.name) + L" - " + num(spell.apCost) + L" PA";
+			if (spell.launch != tw::battle::LaunchShape::SELF)
+				text += L", portée " + num(spell.minRange) + L"-" + num(spell.maxRange);
+			if (spell.cooldown > 0)
+				text += L", relance " + num(spell.cooldown);
+			text += L"\n" + fromServerText(spell.description);
+		}
 
-	std::string spell4Name = model->getSpell4Name();
-	std::string spell4Description = model->getSpell4Description();
-	tgui::Label::Ptr labelSpell4Description = gui->get<tgui::Label>("spell4Description");
-	labelSpell4Description->setText(spell4Name + "\n" + spell4Description);
-	labelSpell4Description->setSize(sizeTextX, sizeTextY * 2 + 10);
-	labelSpell4Description->setTextSize(18);
-	labelSpell4Description->getRenderer()->setTextStyle(sf::Text::Bold);
-	labelSpell4Description->getRenderer()->setTextOutlineColor(outlineColor);
-	labelSpell4Description->getRenderer()->setTextOutlineThickness(outlineWidth);
-	
-	atkLabel->setPosition(PositionOfCardX + 510, PositionOfCardY +100);
-	pmLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 130);
-	lifeLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 160);
-	paLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 190);
-	defLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 220);
-	descriptionLabel->setPosition(DescriptionX, DescriptionY+100);
-	spell1->setPosition(tgui::Layout2d(215, 300));
-	spell2->setPosition(tgui::Layout2d(215, 400));
-	spell3->setPosition(tgui::Layout2d(215, 500));
-	spell4->setPosition(tgui::Layout2d(215, 600));
-	labelSpell1Description->setPosition(310, 315);
-	labelSpell2Description->setPosition(310, 415);
-	labelSpell3Description->setPosition(310, 515);
-	labelSpell4Description->setPosition(310, 615);
+		icon->setSize(tgui::Layout2d(80, 80));
+		icon->setPosition(tgui::Layout2d(215, 300 + i * 110));
+		label->setText(text);
+		label->setSize(sizeTextX + 100, 100);
+		label->setTextSize(16);
+		label->getRenderer()->setTextStyle(sf::Text::Bold);
+		label->getRenderer()->setTextOutlineColor(outlineColor);
+		label->getRenderer()->setTextOutlineThickness(outlineWidth);
+		label->setPosition(310, 300 + i * 110);
+	}
 
+	atkLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 60);
+	descriptionLabel->setPosition(DescriptionX, DescriptionY + 60);
 
 	std::shared_ptr<tgui::Picture> classCharacterView = gui->get<tgui::Picture>("classCharacterView");
 	std::shared_ptr<PictureCharacterView> convertedCharacterView = std::dynamic_pointer_cast<PictureCharacterView>(classCharacterView);
@@ -500,14 +448,14 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 {
 	sf::String m = msg;
 
-	// Le status des joueurs est g�r� dans PlayerStatusView (widget autonome)
+	// Le status des joueurs est géré dans PlayerStatusView (widget autonome)
 
-	// Choix classe verrouill� :
+	// Choix classe verrouillé :
 	if (m.substring(0, 2) == "PO")
 	{
 		tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
 		lockButton->setEnabled(false);
-		lockButton->setText("Choix verrouill�");
+		lockButton->setText("Choix verrouillé");
 		tgui::Button::Ptr previousButton = gui->get<tgui::Button>("buttonPrecedent");
 		previousButton->setEnabled(false);
 		previousButton->setVisible(false);
@@ -531,6 +479,13 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		int environmentId = std::atoi(m.substring(2).toAnsiString().c_str());
 		gui->removeAllWidgets();
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::BattleScreen(gui, environmentId));
+		delete this;
+	}
+	else if (m.substring(0, 2) == "HW")
+	{
+		// Match annulé ou gagné par forfait : retour à l'attente.
+		gui->removeAllWidgets();
+		tw::ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
 		delete this;
 	}
 }

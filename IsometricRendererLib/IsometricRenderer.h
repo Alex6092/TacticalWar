@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <AbstractRenderer.h>
 #include <AbstractSpellView.h>
@@ -6,6 +6,8 @@
 #include <BaseCharacterModel.h>
 #include "CellColorator.h"
 
+#include <map>
+#include <string>
 #include <vector>
 #include <SFML\Graphics.hpp>
 #include <iostream>
@@ -14,12 +16,17 @@
 namespace tw
 {
 	class CharacterView;
+	struct TileDef;
 
+	// Rendu isométrique : cases de 120 x 60 pixels, la case (x, y) a son centre en
+	// ((x - y) * 60 + 60, (x + y) * 30 + 30) dans le repère du monde.
+	// Les tuiles et les personnages sont dessinés de l'arrière vers l'avant (diagonale x + y),
+	// pour qu'un arbre ou un rocher situé devant un personnage le masque.
 	class IsometricRenderer : public AbstractRenderer<sf::Sprite>
 	{
 		bool hasFocus;
 		bool forcedFocus;
-		
+
 		sf::RenderWindow * window;
 		CellColorator * colorator;
 
@@ -27,27 +34,55 @@ namespace tw
 		CharacterView & getCharacterView(BaseCharacterModel * model);
 
 		void manageEvents(Environment * environment, std::vector<BaseCharacterModel*> & characters);
-		sf::Texture textureGrass;
-		sf::Texture textureWater;
-		sf::Texture textureStone;
-		sf::Texture textureTree;
 
-		sf::Sprite spriteGrass;
-		sf::Sprite spriteStone;
-		sf::Sprite spriteWater;
-		sf::Sprite spriteTree;
+		// Textures des tuiles (registre TileRegistry), chargées à la demande.
+		std::map<std::string, sf::Texture> tileTextures;
+		sf::Texture missingTexture;
+		const sf::Texture & getTileTexture(const TileDef & tile);
+		sf::Sprite tileSprite;
 
-		sf::Vector2i screenCoordinatesToIsoGridCoordinates(int screenX, int screenY);
+		void drawCell(Environment * environment, int x, int y);
+		void drawCharacter(BaseCharacterModel * model, float deltatime);
+		void drawCharacterSprite(BaseCharacterModel * model, sf::RenderTarget & target, bool mirrored);
+		void drawCharacterOverlay(BaseCharacterModel * model);
+
+		// Liquides (eau, lave) : shader animé ; reflets des personnages et du décor voisin dans l'eau,
+		// dessinés à l'envers dans une texture de la taille de la fenêtre.
+		bool isLiquid(Environment * environment, int x, int y);
+		bool renderReflections(Environment * environment, std::vector<BaseCharacterModel*> & characters);
+		sf::Shader liquidShader;
+		bool liquidShaderReady;
+		sf::RenderTexture * reflections;
+		bool reflectionsAvailable;
+		bool reflectionsDrawn;
+
+		sf::Vector2i screenCoordinatesToIsoGridCoordinates(float worldX, float worldY);
 
 		sf::Shader shader;
-		sf::Shader waterShader;
 
 		float ellapsedTime;
 
+		// Caméra (voir Camera) : sans caméra, la carte est centrée dans la vue courante.
+		bool hasCamera;
+		sf::Vector2f cameraCenter;
+		float cameraZoom;
+
 	public:
 		IsometricRenderer(sf::RenderWindow * window);
+		~IsometricRenderer();
 		inline void modifyWindow(sf::RenderWindow * newWindow) { this->window = newWindow; }
 		virtual void render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime);
+
+		// Oublie les textures chargées (après une modification du jeu de tuiles).
+		void reloadTiles();
+
+		// Centre (repère du monde) et facteur de zoom de la vue (> 1 : vue plus large).
+		void setCamera(const sf::Vector2f & center, float zoom)
+		{
+			hasCamera = true;
+			cameraCenter = center;
+			cameraZoom = zoom;
+		}
 
 		void setColorator(CellColorator * colorator)
 		{
@@ -58,14 +93,12 @@ namespace tw
 		{
 			forcedFocus = true;
 			hasFocus = true;
-			std::cout << "Force gain focus" << std::endl;
 		}
 
 		inline void forceUnfocus()
 		{
 			forcedFocus = true;
 			hasFocus = false;
-			std::cout << "Force lost focus" << std::endl;
 		}
 
 		void ellapseTime(float deltatime)

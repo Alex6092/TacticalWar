@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "pch.h"
 #include <AbstractCharacterView.h>
@@ -8,6 +8,12 @@
 #include <deque>
 #include <map>
 #include <BaseCharacterModel.h>
+#include <cmath>
+#include <iostream>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace tw
 {
@@ -54,7 +60,7 @@ namespace tw
 
 		sf::Text * getLifeText()
 		{
-			lifeTxt.setString(std::to_string(getModel()->getCurrentLife()) + "/" + std::to_string(getModel()->getBaseMaxLife()));
+			lifeTxt.setString(std::to_string(getModel()->getCurrentLife()) + "/" + std::to_string(getModel()->getDisplayMaxLife()));
 			return &lifeTxt;
 		}
 
@@ -110,7 +116,7 @@ namespace tw
 
 			// Vecteur nord = [1;-1];
 
-			if (diffX != 0 || diffY != 0) {  // Si c'est pas un lancer sur soi-m�me
+			if (diffX != 0 || diffY != 0) {  // Si c'est pas un lancer sur soi-même
 				double normeVecteur = sqrt((diffX * diffX) + (diffY * diffY));
 				double normeNorth = sqrt(2.0);
 				double scalaire = (diffX * 1) + (diffY * -1);

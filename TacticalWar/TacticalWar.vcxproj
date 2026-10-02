@@ -23,32 +23,32 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{c3f4d50f-95cc-42ad-8e36-c8acb94d1c5b}</ProjectGuid>
     <RootNamespace>TacticalWar</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -127,7 +127,9 @@
       <AdditionalDependencies>sfml-audio-d.lib;sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;sfml-network-d.lib;tgui-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
+      <Command>robocopy "$(SolutionDir)assets" "$(OutDir)assets" /E /XO /R:5 /W:1 /NFL /NDL /NJH /NJS /NP
+if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
+exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -138,7 +140,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\BattleEngineLib;..\ProtocolLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -150,10 +152,20 @@
       <AdditionalDependencies>sfml-audio.lib;sfml-graphics.lib;sfml-system.lib;sfml-window.lib;sfml-network.lib;tgui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)assets $(OutDir)assets\ /E /Y /I</Command>
+      <Command>robocopy "$(SolutionDir)assets" "$(OutDir)assets" /E /XO /R:5 /W:1 /NFL /NDL /NJH /NJS /NP
+if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%
+exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ReplaysPanel.cpp" />
+    <ClCompile Include="LiveSessionsPanel.cpp" />
+    <ClCompile Include="TournamentAdminPanel.cpp" />
+    <ClCompile Include="ClientGameData.cpp" />
+    <ClCompile Include="BattleColorator.cpp" />
+    <ClCompile Include="BattleHud.cpp" />
+    <ClCompile Include="TeamsAdminPanel.cpp" />
+    <ClCompile Include="ClientConfig.cpp" />
     <ClCompile Include="AdminScreen.cpp" />
     <ClCompile Include="BattleScreen.cpp" />
     <ClCompile Include="ClassSelectionScreen.cpp" />
@@ -168,13 +180,15 @@
     <ClCompile Include="ScreenManager.cpp" />
     <ClCompile Include="ServerMessageListener.cpp" />
     <ClCompile Include="SpectatorModeScreen.cpp" />
-    <ClCompile Include="SpellSlot.cpp" />
-    <ClCompile Include="TestCharacterModel.cpp" />
-    <ClCompile Include="TimelineView.cpp" />
-    <ClCompile Include="TWColorator.cpp" />
     <ClCompile Include="WaitMatchScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BattleEngineLib\BattleEngineLib.vcxproj">
+      <Project>{501a17cd-3a0d-4143-9c9c-4d2cf98c4b87}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
+      <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\AnimationsAndSoundLib\AnimationsAndSoundLib.vcxproj">
       <Project>{2978aeb2-241e-4795-9480-a715e4213640}</Project>
     </ProjectReference>
@@ -193,9 +207,6 @@
     <ProjectReference Include="..\PathfindingLib\PathfindingLib.vcxproj">
       <Project>{f579ad13-4a80-40f5-aba4-88e8e8739a71}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\TacticalWarBattleLib\TacticalWarBattleLib.vcxproj">
-      <Project>{c5a2fcbb-be73-4c99-9ed0-96ca39f959c0}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\TacticalWarClientCommonLib\TacticalWarClientCommonLib.vcxproj">
       <Project>{b62c37fc-cdbb-4c56-a9da-15c134509611}</Project>
     </ProjectReference>
@@ -210,6 +221,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ReplaysPanel.h" />
+    <ClInclude Include="LiveSessionsPanel.h" />
+    <ClInclude Include="TournamentAdminPanel.h" />
+    <ClInclude Include="ClientGameData.h" />
+    <ClInclude Include="BattleColorator.h" />
+    <ClInclude Include="BattleHud.h" />
+    <ClInclude Include="TeamsAdminPanel.h" />
+    <ClInclude Include="ClientConfig.h" />
     <ClInclude Include="AdminScreen.h" />
     <ClInclude Include="BattleScreen.h" />
     <ClInclude Include="ClassSelectionScreen.h" />
@@ -223,10 +242,6 @@
     <ClInclude Include="ScreenManager.h" />
     <ClInclude Include="ServerMessageListener.h" />
     <ClInclude Include="SpectatorModeScreen.h" />
-    <ClInclude Include="SpellSlot.h" />
-    <ClInclude Include="TestCharacterModel.h" />
-    <ClInclude Include="TimelineView.h" />
-    <ClInclude Include="TWColorator.h" />
     <ClInclude Include="WaitMatchScreen.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

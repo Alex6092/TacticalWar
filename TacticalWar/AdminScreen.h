@@ -1,13 +1,16 @@
-#pragma once
+﻿#pragma once
 
 #include "Screen.h"
 #include "ServerMessageListener.h"
 #include <Player.h>
+#include "TeamsAdminPanel.h"
+#include "TournamentAdminPanel.h"
+#include "LiveSessionsPanel.h"
+#include <memory>
 
 class AdminScreen : public tw::Screen, ServerMessageListener
 {
 private:
-	std::map<int, std::vector<tw::Player> > teamIdToPlayer;
 	bool readyForCreate;
 
 	sf::Shader shader;
@@ -36,6 +39,16 @@ private:
 
 
 	tgui::Gui * gui;
+
+	// Onglets : "Matchs" (création manuelle de matchs) et "Équipes".
+	tgui::Tabs::Ptr tabs;
+	tgui::Group::Ptr matchesGroup;
+	std::unique_ptr<TeamsAdminPanel> teamsPanel;
+	std::unique_ptr<TournamentAdminPanel> tournamentPanel;
+	std::unique_ptr<LiveSessionsPanel> livePanel;
+	// Onglet affiché, conservé quand l'admin revient d'un combat regardé.
+	static sf::String currentTab;
+	void showTab(const sf::String & tab);
 
 	void updateListTeam(tgui::ListBox::Ptr listTeam);
 
