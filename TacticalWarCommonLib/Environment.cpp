@@ -1,32 +1,57 @@
 #include "pch.h"
 #include "Environment.h"
+#include "TileRegistry.h"
 
 using namespace tw;
 
-Environment::Environment(int width, int height, int environmentId)
+Environment::Environment(int width, int height, int environmentId, const std::string & fillTile)
 {
 	this->obstacleCacheInitDone = false;
 	this->id = environmentId;
-	this->width = width;
-	this->height = height;
+	this->width = width > 0 ? width : 1;
+	this->height = height > 0 ? height : 1;
+	this->tournamentPool = true;
 
-	for (int i = 0; i < width; i++)
+	cells.reserve(this->width * this->height);
+	for (int i = 0; i < this->width; i++)
 	{
-		for (int j = 0; j < height; j++)
+		for (int j = 0; j < this->height; j++)
 		{
-			mapData[i][j] = new CellData(i, j);
+			cells.push_back(new CellData(i, j));
+			if (!fillTile.empty())
+				setTile(i, j, fillTile);
 		}
 	}
 }
 
+Environment::~Environment()
+{
+	for (CellData * cell : cells)
+		delete cell;
+}
+
 CellData* Environment::getMapData(int x, int y)
 {
-	CellData* result = NULL;
-
 	if (x >= 0 && x < width && y >= 0 && y < height)
-	{
-		result = mapData[x][y];
-	}
+		return cells[x * height + y];
+	return NULL;
+}
 
-	return result;
+void Environment::setTile(int x, int y, const std::string & tile)
+{
+	const TileDef * def = TileRegistry::get().find(tile);
+	bool walkable = def != nullptr && def->walkable;
+	bool obstacle = def == nullptr || def->blocksLineOfSight;
+	setTile(x, y, tile, walkable, obstacle);
+}
+
+void Environment::setTile(int x, int y, const std::string & tile, bool walkable, bool obstacle)
+{
+	CellData * cell = getMapData(x, y);
+	if (cell == NULL)
+		return;
+
+	cell->setTile(tile, walkable, obstacle);
+	obstacleCacheInitDone = false;
+	staticObstacles.clear();
 }

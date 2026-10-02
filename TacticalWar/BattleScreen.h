@@ -98,6 +98,7 @@ namespace tw
 		Mode mode;
 		sf::String teamNames[2];
 		float autoCloseRemaining;
+		bool cameraFitted;
 		std::unique_ptr<BattleHud> hud;
 		sf::Font font;
 

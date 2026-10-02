@@ -29,6 +29,20 @@ void Camera::reset(int mapWidth, int mapHeight)
 	dragging = false;
 }
 
+void Camera::fit(int mapWidth, int mapHeight, const sf::Vector2u & viewSize, float margin)
+{
+	reset(mapWidth, mapHeight);
+	if (viewSize.x == 0 || viewSize.y == 0)
+		return;
+
+	// Emprise de la carte : losange de (largeur + hauteur) x 60 par (largeur + hauteur) x 30 pixels,
+	// plus la hauteur des blocs et des décors.
+	float pixelWidth = (this->mapWidth + this->mapHeight) * 60.f;
+	float pixelHeight = (this->mapWidth + this->mapHeight) * 30.f + 80.f;
+	float needed = std::max(pixelWidth / viewSize.x, pixelHeight / viewSize.y) * margin;
+	zoom = std::min(MAX_ZOOM, std::max(MIN_ZOOM, needed));
+}
+
 bool Camera::handleEvent(const sf::Event & event, const sf::RenderWindow & window)
 {
 	sf::Vector2f half(window.getSize().x / 2.f, window.getSize().y / 2.f);
@@ -85,6 +99,13 @@ void Camera::followCell(float cellX, float cellY)
 {
 	if (following && !dragging)
 		target = cellToWorld(cellX, cellY);
+}
+
+void Camera::centerOn(float cellX, float cellY)
+{
+	center = cellToWorld(cellX, cellY);
+	clampCenter();
+	target = center;
 }
 
 void Camera::update(float deltatime)

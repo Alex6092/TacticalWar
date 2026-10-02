@@ -59,6 +59,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BattleEngineLib", "BattleEn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TacticalWarBot", "TacticalWarBot\TacticalWarBot.vcxproj", "{5E0443AF-013A-44EF-852B-B6CCE6417E2D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MapEditorLib", "MapEditorLib\MapEditorLib.vcxproj", "{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -305,6 +307,14 @@ Global
 		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x64.ActiveCfg = Release|x64
 		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x64.Build.0 = Release|x64
 		{5E0443AF-013A-44EF-852B-B6CCE6417E2D}.Release|x86.ActiveCfg = Release|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Debug|x64.ActiveCfg = Debug|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Debug|x64.Build.0 = Debug|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Debug|x86.ActiveCfg = Debug|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Release|Any CPU.ActiveCfg = Release|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Release|x64.ActiveCfg = Release|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Release|x64.Build.0 = Release|x64
+		{9182FE37-A33B-4BF7-ABF7-BBB1E32E8745}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

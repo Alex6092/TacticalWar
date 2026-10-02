@@ -101,6 +101,7 @@ namespace tw
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
 			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },
+			{ "MP", Direction::SERVER_TO_CLIENT, Role::ANY, "Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG" },
 
 			// Combat (contenu JSON). Le serveur fait autorité : il valide et diffuse des événements.
 			{ "BI", Direction::SERVER_TO_CLIENT, Role::ANY, "État complet du combat {seq, you, phase, fighters...}" },

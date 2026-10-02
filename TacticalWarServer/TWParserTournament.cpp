@@ -306,7 +306,7 @@ void TWParser::dispatchTournamentMatches()
 
 		// Carte tirée de façon reproductible à partir de la graine du tournoi.
 		std::uint32_t pick = tournament.rngSeed + (std::uint32_t)request.matchId * 7919u;
-		m->setEnvironment(environments[pick % environments.size()]);
+		m->setEnvironment(tournamentEnvironments[pick % tournamentEnvironments.size()]);
 
 		m->addEventListener(this);
 		tw::PlayerManager::addMatch(m);

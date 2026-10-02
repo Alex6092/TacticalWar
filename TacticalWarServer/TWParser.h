@@ -21,6 +21,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::map<tw::net::ConnId, ClientState*> clients;
 
 	std::vector<tw::Environment*> environments;
+	// Cartes tirées pour les matchs de tournoi (option "tournament" des cartes ; toutes si aucune).
+	std::vector<tw::Environment*> tournamentEnvironments;
+	// Message MP (carte au format v2 avec ses règles) par identifiant de carte.
+	std::map<int, std::string> mapMessages;
 
 	void loadEnvironments();
 

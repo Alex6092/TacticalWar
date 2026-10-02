@@ -15,6 +15,8 @@ namespace tw
 
 		// Recentre la caméra sur la carte, au zoom 1.
 		void reset(int mapWidth, int mapHeight);
+		// Recentre la caméra et choisit le zoom pour que toute la carte tienne dans la vue.
+		void fit(int mapWidth, int mapHeight, const sf::Vector2u & viewSize, float margin = 1.05f);
 
 		// Traite un événement de la fenêtre. Renvoie true si la caméra l'a consommé.
 		bool handleEvent(const sf::Event & event, const sf::RenderWindow & window);
@@ -24,6 +26,8 @@ namespace tw
 		void setFollowing(bool following) { this->following = following; }
 		bool isFollowing() const { return following; }
 		void followCell(float cellX, float cellY);
+		// Centre immédiatement la vue sur une case.
+		void centerOn(float cellX, float cellY);
 
 		void apply(IsometricRenderer & renderer) const;
 

@@ -1,6 +1,7 @@
 ﻿#include "LinkToServer.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
+#include <EnvironmentManager.h>
 #include <Opcodes.h>
 #include <iostream>
 
@@ -108,6 +109,14 @@ void LinkToServer::UpdateReceivedData()
 		if (line.compare(0, 2, "GD") == 0)
 		{
 			ClientGameData::get().loadFromServer(line.substr(2));
+			continue;
+		}
+
+		// Carte du prochain combat : utilisée à la place du fichier local (voir EnvironmentManager).
+		if (line.compare(0, 2, "MP") == 0)
+		{
+			if (!tw::EnvironmentManager::getInstance()->registerReceivedMap(line.substr(2)))
+				std::cout << "Carte recue du serveur invalide." << std::endl;
 			continue;
 		}
 

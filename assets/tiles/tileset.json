@@ -1,0 +1,45 @@
+{
+  "format": "tw-tileset",
+  "version": 1,
+  "tiles": [
+    {
+      "id": "grass",
+      "name": "Herbe",
+      "category": "ground",
+      "texture": "assets/tiles/resized/Grass_01.png",
+      "anchor": [66, 45],
+      "group": "Sols"
+    },
+    {
+      "id": "stone",
+      "name": "Rocher",
+      "category": "obstacle",
+      "texture": "assets/tiles/resized/Stone_02.png",
+      "anchor": [70, 59],
+      "group": "Obstacles"
+    },
+    {
+      "id": "tree",
+      "name": "Arbre",
+      "category": "obstacle",
+      "texture": "assets/tiles/resized/Tree_01.png",
+      "anchor": [89, 182],
+      "group": "Obstacles"
+    },
+    {
+      "id": "water",
+      "name": "Eau",
+      "category": "liquid",
+      "texture": "assets/tiles/resized/Water_01.png",
+      "anchor": [69, 33],
+      "group": "Liquides",
+      "shader": "water"
+    },
+    {
+      "id": "hole",
+      "name": "Vide",
+      "category": "empty",
+      "group": "Spécial"
+    }
+  ]
+}

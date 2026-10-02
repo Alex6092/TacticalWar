@@ -186,6 +186,11 @@ void Bot::onLine(const std::string & line)
 		if (!data.loadFromJsonText(message.payload, error))
 			log(error);
 	}
+	else if (op == "MP")
+	{
+		if (!tw::EnvironmentManager::getInstance()->registerReceivedMap(message.payload))
+			log("Carte recue invalide.");
+	}
 	else if (op == "HW")
 	{
 		log("En attente d'un match...");

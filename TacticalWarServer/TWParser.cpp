@@ -49,8 +49,15 @@ void TWParser::loadEnvironments()
 		if (e != NULL)
 		{
 			environments.push_back(e);
+			if (e->isInTournamentPool())
+				tournamentEnvironments.push_back(e);
+			mapMessages[e->getId()] = "MP" + tw::EnvironmentManager::toJson(e, true, true) + "\n";
 		}
 	}
+
+	if (tournamentEnvironments.empty())
+		tournamentEnvironments = environments;
+	std::cout << environments.size() << " carte(s) chargée(s), dont " << tournamentEnvironments.size() << " pour les tournois." << std::endl;
 }
 
 TWParser::~TWParser()

@@ -59,7 +59,7 @@ namespace
 }
 
 BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
-	: gui(gui), window(NULL), mode(mode), autoCloseRemaining(-1), you(-1), lastSeq(0), hasSnapshot(false), awaitingServer(false),
+	: gui(gui), window(NULL), mode(mode), autoCloseRemaining(-1), cameraFitted(false), you(-1), lastSeq(0), hasSnapshot(false), awaitingServer(false),
 	stepRemaining(0), waitingMove(false), waitingMoveTime(0), deadline(0), selectedSpell(-1), hoveredFighter(-1),
 	closeRequested(false), endShown(false)
 {
@@ -113,6 +113,13 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	this->window = window;
 	this->gui = gui;
 	hud->layout(window->getSize());
+
+	// Première image : toute la carte tient dans la fenêtre.
+	if (!cameraFitted)
+	{
+		camera.fit(environment->getWidth(), environment->getHeight(), window->getSize(), 1.0f);
+		cameraFitted = true;
+	}
 }
 
 void BattleScreen::update(float deltatime)
@@ -838,7 +845,8 @@ void BattleScreen::onEvent(void * e)
 			hud->showMessage(camera.isFollowing() ? L"Caméra : suivi du personnage actif" : L"Caméra libre", sf::Color(200, 220, 255), 1.2f);
 			break;
 		case sf::Keyboard::C:
-			camera.reset(environment->getWidth(), environment->getHeight());
+			if (window != NULL)
+				camera.fit(environment->getWidth(), environment->getHeight(), window->getSize(), 1.0f);
 			break;
 		default: break;
 		}

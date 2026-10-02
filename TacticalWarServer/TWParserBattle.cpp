@@ -95,7 +95,13 @@ void TWParser::startBattle(BattleSession * session)
 void TWParser::sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen)
 {
 	if (enterScreen)
+	{
+		// La carte est envoyée avec ses règles : le client n'a pas besoin d'en avoir une copie à jour.
+		auto map = mapMessages.find(session->getMapId());
+		if (map != mapMessages.end())
+			send(client, map->second);
 		send(client, "HG" + std::to_string(session->getMapId()) + "\n");
+	}
 
 	int fighterId = player != NULL ? session->fighterIdOf(player) : -1;
 	nlohmann::json snapshot = session->getEngine()->snapshot(fighterId, nowMs());

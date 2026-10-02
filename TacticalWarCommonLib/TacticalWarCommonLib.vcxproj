@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="TileRegistry.h" />
     <ClInclude Include="AttackDetails.h" />
     <ClInclude Include="BaseCharacterModel.h" />
     <ClInclude Include="CellData.h" />
@@ -171,6 +172,7 @@
     <ClInclude Include="TypeZoneLaunch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="TileRegistry.cpp" />
     <ClCompile Include="AttackDetails.cpp" />
     <ClCompile Include="BaseCharacterModel.cpp" />
     <ClCompile Include="CellData.cpp" />
