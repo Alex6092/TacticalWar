@@ -81,3 +81,4 @@ x64/*/client.json
 __pycache__/
 */x64/
 */*/x64/
+tools/tilegen/preview.png

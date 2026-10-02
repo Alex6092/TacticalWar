@@ -1,0 +1,127 @@
+{
+  "seed": 2026,
+  "supersampling": 4,
+  "outputDir": "assets/tiles/generated",
+  "bases": {
+    "grass": { "source": "assets/tiles/Grass_01.png", "tile": "grass" },
+    "stone": { "source": "assets/tiles/Stone_02.png", "tile": "stone" },
+    "tree": { "source": "assets/tiles/Tree_01.png", "tile": "tree" },
+    "water": { "source": "assets/tiles/Water_01.png", "tile": "water" }
+  },
+  "tiles": [
+    {
+      "id": "grass_autumn", "name": "Herbe d'automne", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 40, "sat": 1.05, "val": 1.0 },
+        { "op": "noise", "mask": "top", "amount": 0.08, "scale": 10 }
+      ]
+    },
+    {
+      "id": "dirt", "name": "Terre", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 26, "sat": 0.75, "val": 0.72 },
+        { "op": "noise", "mask": "top", "amount": 0.12, "scale": 6 }
+      ]
+    },
+    {
+      "id": "sand", "name": "Sable", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 43, "sat": 0.5, "val": 1.3 },
+        { "op": "noise", "mask": "top", "amount": 0.06, "scale": 4 }
+      ]
+    },
+    {
+      "id": "snow", "name": "Neige", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 215, "sat": 0.14, "val": 1.0, "lift": 0.55 },
+        { "op": "noise", "mask": "top", "amount": 0.07, "scale": 7 }
+      ]
+    },
+    {
+      "id": "flagstones", "name": "Dalles", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 40, "sat": 0.12, "val": 1.15 },
+        { "op": "flagstones", "count": 3, "joint": 0.05, "darkness": 0.6, "variation": 0.16 }
+      ]
+    },
+    {
+      "id": "grass_pebbles", "name": "Herbe caillouteuse", "category": "ground", "group": "Sols", "base": "grass",
+      "ops": [
+        { "op": "overlay", "from": "stone", "mask": "object", "scale": 0.26, "at": [[-24, 2], [20, 12]] },
+        { "op": "overlay", "from": "stone", "mask": "object", "scale": 0.18, "at": [[8, -10]] }
+      ]
+    },
+    {
+      "id": "stone_dark", "name": "Rocher sombre", "category": "obstacle", "group": "Obstacles", "base": "stone",
+      "ops": [
+        { "op": "recolor", "mask": "object", "sat": 0.35, "val": 0.72 }
+      ]
+    },
+    {
+      "id": "stone_volcanic", "name": "Roche volcanique", "category": "obstacle", "group": "Obstacles", "base": "stone",
+      "ops": [
+        { "op": "recolor", "mask": "object", "hue": 10, "sat": 0.4, "val": 0.55 },
+        { "op": "recolor", "mask": "top", "hue": 26, "sat": 0.75, "val": 0.72 },
+        { "op": "noise", "mask": "top", "amount": 0.12, "scale": 6 }
+      ]
+    },
+    {
+      "id": "stone_sand", "name": "Grès", "category": "obstacle", "group": "Obstacles", "base": "stone",
+      "ops": [
+        { "op": "recolor", "mask": "object", "hue": 28, "sat": 1.3, "val": 1.15 },
+        { "op": "recolor", "mask": "top", "hue": 43, "sat": 0.5, "val": 1.3 }
+      ]
+    },
+    {
+      "id": "stone_snow", "name": "Rocher enneigé", "category": "obstacle", "group": "Obstacles", "base": "stone",
+      "ops": [
+        { "op": "recolor", "mask": "object", "hue": 225, "sat": 0.45, "val": 0.95 },
+        { "op": "highlight", "mask": "object", "threshold": 0.5, "amount": 0.85 },
+        { "op": "recolor", "mask": "top", "hue": 215, "sat": 0.12, "val": 1.0, "lift": 0.7 }
+      ]
+    },
+    {
+      "id": "tree_autumn", "name": "Arbre d'automne", "category": "obstacle", "group": "Obstacles", "base": "tree",
+      "ops": [
+        { "op": "recolor", "mask": "leaves", "hue": 24, "sat": 1.15, "val": 0.95 }
+      ]
+    },
+    {
+      "id": "tree_snow", "name": "Arbre enneigé", "category": "obstacle", "group": "Obstacles", "base": "tree",
+      "ops": [
+        { "op": "recolor", "mask": "leaves", "hue": 150, "sat": 0.35, "val": 0.8 },
+        { "op": "highlight", "mask": "leaves", "threshold": 0.5, "amount": 0.8 },
+        { "op": "recolor", "mask": "top", "hue": 215, "sat": 0.12, "val": 1.0, "lift": 0.7 }
+      ]
+    },
+    {
+      "id": "tree_mirror", "name": "Arbre (miroir)", "category": "obstacle", "group": "Obstacles", "base": "tree",
+      "ops": [
+        { "op": "mirror" }
+      ]
+    },
+    {
+      "id": "bush", "name": "Buisson", "category": "obstacle", "group": "Obstacles", "base": "grass",
+      "walkable": false, "blocksLineOfSight": false,
+      "ops": [
+        { "op": "overlay", "from": "tree", "mask": "leaves", "scale": 0.62, "at": [[0, 16]],
+          "tint": { "hue": 95, "sat": 1.0, "val": 0.8 } }
+      ]
+    },
+    {
+      "id": "water_deep", "name": "Eau profonde", "category": "liquid", "group": "Liquides", "base": "water",
+      "shader": "water",
+      "ops": [
+        { "op": "recolor", "mask": "water", "hueShift": 14, "sat": 1.1, "val": 0.62 }
+      ]
+    },
+    {
+      "id": "lava", "name": "Lave", "category": "liquid", "group": "Liquides", "base": "water",
+      "shader": "lava",
+      "ops": [
+        { "op": "recolor", "mask": "water", "hue": 16, "sat": 1.0, "val": 1.05 },
+        { "op": "noise", "mask": "water", "amount": 0.25, "scale": 9 }
+      ]
+    }
+  ]
+}
