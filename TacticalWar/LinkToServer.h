@@ -1,35 +1,30 @@
-#pragma once
-
+﻿#pragma once
 #include <SFML/Network.hpp>
 #include "ServerMessageListener.h"
+#include <LineFramer.h>
 #include <vector>
+#include <string>
 
 class LinkToServer
 {
 private:
 	LinkToServer();
 	~LinkToServer();
+
 	static LinkToServer * instance;
 
 	sf::TcpSocket socket;
-
-	char * buffer;
-
-	std::size_t maxRecv;
-	std::size_t effRecv;
-	std::size_t bufIndex;
+	tw::protocol::LineFramer framer;
 
 	std::vector<ServerMessageListener *> listeners;
-
 	sf::Mutex mutex;
 	bool isConnected;
 
 	void notifyMessage(std::string msg)
 	{
 		mutex.lock();
-
 		// Work on a copy, this way it avoid bugs when a listener
-		// is removed during notification (if it unsubscribes from 
+		// is removed during notification (if it unsubscribes from
 		// this objects event notifications)
 		std::vector<ServerMessageListener*> cpy = listeners;
 		mutex.unlock();	// Unlock happens here to avoid deadlock in previously described situation.
@@ -38,15 +33,13 @@ private:
 		{
 			cpy[i]->onMessageReceived(msg);
 		}
-		
 	}
 
 	void notifyDisconnected()
 	{
 		mutex.lock();
-
 		// Work on a copy, this way it avoid bugs when a listener
-		// is removed during notification (if it unsubscribes from 
+		// is removed during notification (if it unsubscribes from
 		// this objects event notifications)
 		std::vector<ServerMessageListener*> cpy = listeners;
 		mutex.unlock();	// Unlock happens here to avoid deadlock in previously described situation.
@@ -78,12 +71,21 @@ public:
 		mutex.unlock();
 	}
 
+	// Se connecte au serveur configuré dans client.json (timeout de 3 secondes).
 	bool Connect();
 	bool Disconnect();
+
+	// Envoie un message (le '\n' est ajouté). Le texte est envoyé en UTF-8.
 	void Send(sf::String sContent);
+	// Envoie une ligne déjà encodée en UTF-8 (le '\n' est ajouté).
+	void SendRaw(const std::string & utf8Line);
 
+	// Lit les données reçues et transmet chaque message complet (en UTF-8) aux listeners.
 	void UpdateReceivedData();
-
-	//sf::String Receive();
 };
 
+// Convertit un texte UTF-8 reçu du serveur en sf::String pour l'affichage.
+inline sf::String fromServerText(const std::string & utf8)
+{
+	return sf::String::fromUtf8(utf8.begin(), utf8.end());
+}

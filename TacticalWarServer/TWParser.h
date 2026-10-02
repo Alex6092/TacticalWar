@@ -1,8 +1,7 @@
 ﻿#pragma once
 
-#include "Parser.h"
-#include "ParserEventListener.h"
-#include "ThreadSafeQueue.h"
+#include "ClientState.h"
+#include "net/NetServer.h"
 #include <Player.h>
 #include <map>
 #include <Battle.h>
@@ -10,14 +9,15 @@
 #include <Environment.h>
 #include <Battle.h>
 
-class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEventListener
+class TWParser : public tw::net::NetHandler, tw::MatchEventListener, BattleEventListener
 {
+	tw::net::NetServer * net;
+	std::map<tw::net::ConnId, ClientState*> clients;
+
 	std::vector<tw::Environment*> environments;
 
 	void loadEnvironments();
 
-	bool hasCompleteMessage(ClientState * client);
-	std::string extractCompleteMessageFromBuffer(ClientState * client);
 	std::vector<tw::Player*> players;
 	std::map<std::string, tw::Player*> playersMap;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
@@ -58,7 +58,6 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 	std::vector<tw::Point2D> calculateSpellZone(tw::BaseCharacterModel * character, int selectedSpell, tw::Match * match, tw::Environment * environment);
 
 
-	bool initRandom;
 
 
 	ClientState * getClientStateFromPlayer(tw::Player * p)
@@ -91,16 +90,21 @@ class TWParser : public Parser<ClientState>, tw::MatchEventListener, BattleEvent
 	ClientState * admin;
 
 	void sendToMatch(tw::Match * match, std::string str);
+	void send(ClientState * client, const std::string & data);
+
+	void handleMessage(ClientState * client, const std::string & toParse);
 
 public:
 	TWParser();
 	~TWParser();
 
-	virtual void onClientConnected(ClientState * client);
-	virtual void parse(ClientState * client, std::vector<unsigned char> & receivedPacket);
-	virtual void parse(SOCKET sock, unsigned char * buf, int length);
-	virtual void onClientDisconnected(SOCKET sock);
-	virtual void onClientDisconnected(ClientState * client);
+	void setNetServer(tw::net::NetServer * net);
+
+	// NetHandler implementation :
+	virtual void onConnected(tw::net::ConnId id, const std::string & remoteAddress);
+	virtual void onMessage(tw::net::ConnId id, const std::string & line);
+	virtual void onDisconnected(tw::net::ConnId id);
+	virtual void onTick(tw::net::Clock::time_point now);
 
 	void kick(ClientState * client);
 

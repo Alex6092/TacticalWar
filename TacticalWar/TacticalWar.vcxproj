@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -140,7 +140,7 @@ exit /b 0</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\ProtocolLib;..\TacticalWarBattleLib;..\AnimationsAndSoundLib;..\ClassesLib;..\EnvironmentPersistanceLib;..\ZoneAndSightLib;..\PathfindingLib;..\MatchmakingLib;..\UtilsLib;..\IsometricRendererLib;..\TacticalWarClientCommonLib;..\TacticalWarCommonLib;..\lib\SFML-2.5.1\include;..\lib\TGUI-0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -158,6 +158,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ClientConfig.cpp" />
     <ClCompile Include="AdminScreen.cpp" />
     <ClCompile Include="BattleScreen.cpp" />
     <ClCompile Include="ClassSelectionScreen.cpp" />
@@ -179,6 +180,9 @@ exit /b 0</Command>
     <ClCompile Include="WaitMatchScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ProtocolLib\ProtocolLib.vcxproj">
+      <Project>{e766568a-04c5-4db1-adf9-8bf3f0c9bacb}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\AnimationsAndSoundLib\AnimationsAndSoundLib.vcxproj">
       <Project>{2978aeb2-241e-4795-9480-a715e4213640}</Project>
     </ProjectReference>
@@ -214,6 +218,7 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClientConfig.h" />
     <ClInclude Include="AdminScreen.h" />
     <ClInclude Include="BattleScreen.h" />
     <ClInclude Include="ClassSelectionScreen.h" />

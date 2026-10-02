@@ -129,4 +129,8 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ClientConfig.cpp" />
+    <ClInclude Include="ClientConfig.h" />
+  </ItemGroup>
 </Project>

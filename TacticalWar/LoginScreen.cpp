@@ -1,4 +1,4 @@
-#include "LoginScreen.h"
+﻿#include "LoginScreen.h"
 #include "ScreenManager.h"
 #include "BattleScreen.h"
 #include "LinkToServer.h"
@@ -7,6 +7,7 @@
 #include "AdminScreen.h"
 #include "WaitMatchScreen.h"
 #include "MusicManager.h"
+#include "ClientConfig.h"
 
 using namespace tw;
 
@@ -55,6 +56,19 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	password->setSize(formElementWidth, formElementHeight);
 	password->getRenderer()->setBackgroundColor(sf::Color(255, 255, 255, 180));
 
+	tgui::Label::Ptr serverLabel = tgui::Label::create();
+	serverLabel->setInheritedFont(font);
+	serverLabel->setText("Serveur :");
+	serverLabel->setTextSize(formFontSize);
+	serverLabel->setSize(formElementWidth, formElementHeight);
+
+	tgui::EditBox::Ptr server = tgui::EditBox::create();
+	server->setInheritedFont(font);
+	server->setTextSize(formFontSize);
+	server->setSize(formElementWidth, formElementHeight);
+	server->setText(ClientConfig::get().getServerAddress());
+	server->getRenderer()->setBackgroundColor(sf::Color(255, 255, 255, 180));
+
 	tgui::Button::Ptr button = tgui::Button::create();
 	button->setInheritedFont(font);
 	button->setTextSize(formFontSize);
@@ -75,6 +89,8 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	gui->add(login, "loginEdit");
 	gui->add(passwordLabel, "passwordLabel");
 	gui->add(password, "passwordEdit");
+	gui->add(serverLabel, "serverLabel");
+	gui->add(server, "serverEdit");
 
 	gui->add(button, "connectBtn");
 
@@ -98,6 +114,8 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	tgui::Label::Ptr passwordLabel = gui->get<tgui::Label>("passwordLabel");
 	tgui::EditBox::Ptr login = gui->get<tgui::EditBox>("loginEdit");
 	tgui::EditBox::Ptr password = gui->get<tgui::EditBox>("passwordEdit");
+	tgui::Label::Ptr serverLabel = gui->get<tgui::Label>("serverLabel");
+	tgui::EditBox::Ptr server = gui->get<tgui::EditBox>("serverEdit");
 	tgui::Button::Ptr btn = gui->get<tgui::Button>("connectBtn");
 
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
@@ -111,10 +129,13 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	passwordLabel->setPosition(formX - 4, formY + 2 * formElementHeight + 10);
 	password->setPosition(formX, formY + 3 * formElementHeight + 10);
 
-	btn->setPosition(formX, formY + 4 * formElementHeight + 20);
+	serverLabel->setPosition(formX - 4, formY + 4 * formElementHeight + 20);
+	server->setPosition(formX, formY + 5 * formElementHeight + 20);
+
+	btn->setPosition(formX, formY + 6 * formElementHeight + 30);
 
 	errorMsg->setSize(window->getSize().x, 40);
-	errorMsg->setPosition(0, formY + 5 * formElementHeight + 30);
+	errorMsg->setPosition(0, formY + 7 * formElementHeight + 40);
 	
 
 	sf::Event event;
@@ -136,15 +157,26 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 	if (readyForConnect)
 	{
-		if (LinkToServer::getInstance()->Connect())
+		std::string serverAddress = server->getText().toAnsiString();
+		if (!ClientConfig::get().setServerAddress(serverAddress))
 		{
-			LinkToServer::getInstance()->Send("HG" + login->getText() + ";" + password->getText());
-			// The sentence will be treated in onMessageReceived callback.
+			messageDuration = 5;
+			errorMsg->setText("Adresse du serveur invalide (exemple : 192.168.1.10 ou 192.168.1.10:12345)");
 		}
 		else
 		{
-			messageDuration = 5;
-			errorMsg->setText("Serveur introuvable !");
+			ClientConfig::get().save();
+
+			if (LinkToServer::getInstance()->Connect())
+			{
+				LinkToServer::getInstance()->Send("HG" + login->getText() + ";" + password->getText());
+				// The sentence will be treated in onMessageReceived callback.
+			}
+			else
+			{
+				messageDuration = 5;
+				errorMsg->setText("Serveur introuvable : " + ClientConfig::get().getServerAddress());
+			}
 		}
 
 		readyForConnect = false;
@@ -227,12 +259,13 @@ void LoginScreen::onMessageReceived(std::string msg)
 		ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
 		delete this;
 	}
-	else
+	else if (sentence.substring(0, 2) == "HK")
 	{
 		LinkToServer::getInstance()->Disconnect();
 		messageDuration = 5;
 		errorMsg->setText("Login ou mot de passe incorrect ...");
 	}
+	// Les autres messages ne concernent pas cet écran.
 }
 
 void tw::LoginScreen::onDisconnected()
