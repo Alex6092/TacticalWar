@@ -31,7 +31,8 @@ namespace tw
 		virtual void onCellHover(int cellX, int cellY);
 
 	protected:
-		virtual void sendAction(const std::string & op, const nlohmann::json & body);
+		// Messages du joueur traités par le moteur local (actions, émotes, signaux).
+		virtual void sendToServer(const std::string & op, const nlohmann::json & body);
 
 	private:
 		// Personnages, dans l'ordre de création (identifiants du moteur).

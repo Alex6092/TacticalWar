@@ -17,6 +17,8 @@ public:
 	std::function<void()> onEndTurn;
 	std::function<void(bool)> onReady;
 	std::function<void()> onClose;
+	// Émote choisie dans la liste (identifiant de BattleEngineLib/Emotes.h).
+	std::function<void(int)> onEmote;
 
 	void layout(const sf::Vector2u & windowSize);
 	void update(float deltatime);
@@ -76,6 +78,8 @@ private:
 	std::vector<SpellButton> spells;
 	int spellBarClassId;
 	tgui::Button::Ptr endTurnButton;
+	tgui::Button::Ptr emoteButton;
+	tgui::Panel::Ptr emotePanel;
 	tgui::Button::Ptr readyButton;
 	bool readyState;
 	tgui::Panel::Ptr endPanel;

@@ -57,6 +57,9 @@ La section `events` associe un effet aux événements qui ne dépendent pas d'un
 - `push`, `pull`, `dash` : poussée, attraction, bond ;
 - `lifesteal` : vol de vie.
 
+Le client joue aussi directement `ping` et `ping_arrow` : le signal d'un coéquipier (anneau au sol et
+flèche, dessinés par `tools/fx/import_fx.py`).
+
 ## Galerie de réglage
 
 ```
@@ -104,6 +107,8 @@ Les animations et les sons viennent du projet Exode (voir `assets/CREDITS.md`). 
 py tools/fx/import_fx.py --preview                  (planches réduites dans assets/spellsprites)
 py -m pip install miniaudio soundfile
 py tools/fx/convert_sounds.py                       (MP3 convertis en OGG dans assets/sound/spells)
+py -m pip install numpy
+py tools/fx/make_ui_sounds.py                       (sons d'interface synthétisés dans assets/sound/ui)
 ```
 
 Options d'un effet dans `selection.json` :

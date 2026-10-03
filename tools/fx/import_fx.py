@@ -8,9 +8,9 @@ Chaque animation est réduite à la taille utile pour le jeu (côté le plus lon
 limité à "maxFrameSize" pixels), puis réécrite avec un atlas au même format. Options par effet
 dans selection.json : "as" (nom de la planche produite), "grayscale" (niveaux de gris clairs, à
 teinter dans le catalogue d'effets), "step" (une image sur n, pour les animations très longues).
-La flèche des
-tirs de l'Archer, la bulle de bouclier et l'aura au sol des effets durables (blanche, teintée par le
-catalogue d'effets), absentes des animations d'origine, sont dessinées par le script.
+La flèche des tirs de l'Archer, la bulle de bouclier, l'aura au sol des effets durables et le
+signal d'équipe (anneau et flèche), absents des animations d'origine, sont dessinés par le script
+(en blanc, teintés par le catalogue d'effets).
 """
 import argparse
 import json
@@ -162,6 +162,43 @@ def make_aura(output, frames=12, width=128, height=64):
     write_sheet('aura', result, output)
 
 
+def make_ping_ring(output, frames=12, width=128, height=64):
+    """Signal d'équipe au sol : anneau elliptique qui s'élargit et s'efface (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k / 2
+        # Anneau qui s'élargit en s'effaçant, et un anneau fixe au centre.
+        rx, ry = width * k * (0.12 + 0.34 * t), height * k * (0.12 + 0.34 * t)
+        alpha = int(255 * (1 - t) ** 1.2)
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(255, 255, 255, alpha), width=3 * k)
+        draw.ellipse((cx - width * k * 0.14, cy - height * k * 0.14, cx + width * k * 0.14, cy + height * k * 0.14),
+                     outline=(255, 255, 255, 230), width=2 * k)
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('ping_ring', result, output)
+
+
+def make_ping_arrow(output, frames=12, width=40, height=64):
+    """Flèche du signal d'équipe : chevron pointé vers le bas qui rebondit (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        bounce = abs(math.sin(math.pi * i / frames)) * 10 * k
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        top = 4 * k + (10 * k - bounce)
+        cx = width * k / 2
+        points = [(cx - 9 * k, top), (cx + 9 * k, top), (cx + 9 * k, top + 22 * k), (cx + 17 * k, top + 22 * k),
+                  (cx, top + 46 * k), (cx - 17 * k, top + 22 * k), (cx - 9 * k, top + 22 * k)]
+        draw.polygon(points, fill=(255, 255, 255, 255), outline=(60, 50, 20, 255))
+        draw.line(points + [points[0]], fill=(60, 50, 20, 255), width=2 * k)
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('ping_arrow', result, output)
+
+
 def make_preview(names, output, path):
     """Planche : image du milieu de chaque animation, avec son nom."""
     thumbs = []
@@ -208,8 +245,10 @@ def main():
     make_arrow(OUTPUT)
     make_bubble(OUTPUT)
     make_aura(OUTPUT)
-    names += ['arrow', 'bubble', 'aura']
-    print('arrow, bubble, aura        dessinées')
+    make_ping_ring(OUTPUT)
+    make_ping_arrow(OUTPUT)
+    names += ['arrow', 'bubble', 'aura', 'ping_ring', 'ping_arrow']
+    print('arrow, bubble, aura, ping  dessinées')
 
     if args.preview:
         path = os.path.join(HERE, 'preview.png')
