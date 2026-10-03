@@ -190,7 +190,29 @@ Le bilan s'affiche sur l'écran de fin (joueurs, spectateurs, rediffusions). Les
 tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
 - **les derniers combats**, avec le vainqueur et le MVP ;
 - **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
-  titres de MVP.
+  titres de MVP et de hauts faits.
+
+### Hauts faits
+
+Le bilan décerne aussi des **hauts faits**, affichés sous le nom de chaque combattant sur l'écran de fin
+(description au survol) et annoncés dans le journal :
+
+| Haut fait | Condition |
+|---|---|
+| Premier sang | Premier ennemi mis hors combat du combat |
+| Coup double | Au moins 2 ennemis mis hors combat |
+| Maître des combos | Au moins 2 combinaisons déclenchées |
+| Démolisseur | Au moins 150 dégâts infligés |
+| Ange gardien | Au moins 60 PV rendus ou protégés (soins et boucliers) |
+| Intouchable | Aucun dégât subi, et debout à la fin du combat |
+| Dernier debout | Seul survivant de l'équipe gagnante |
+| Gardien de la zone | Dans la zone pour au moins 3 points marqués (mode zone) |
+| Victoire éclair | Victoire en 5 tours ou moins |
+
+- Un forfait ou une décision de l'organisateur ne donne ni « Intouchable » ni « Victoire éclair ».
+- Les hauts faits sont enregistrés avec les résultats du tournoi. La page projetée montre ceux du MVP
+  dans les derniers combats.
+- Liste et descriptions : `BattleEngineLib/Achievements.h` ; conditions : `Achievements.cpp`.
 
 ## Entraînement hors ligne
 

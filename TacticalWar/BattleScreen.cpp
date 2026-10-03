@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 
+#include <Achievements.h>
 #include <BattleMirror.h>
 #include <BattleRules.h>
 #include <CharacterFactory.h>
@@ -15,6 +16,7 @@
 #include "AdminScreen.h"
 #include "BattleEventView.h"
 #include "ClassSelectionScreen.h"
+#include "ClientConfig.h"
 #include "ClientGameData.h"
 #include "LinkToServer.h"
 #include "LoginScreen.h"
@@ -633,12 +635,24 @@ void BattleScreen::showEnd()
 			row.healed = fighter.record.healed;
 			row.shielded = fighter.record.shielded;
 			row.kills = fighter.record.kills;
+			for (const std::string & id : fighter.record.badges)
+			{
+				const battle::AchievementDef * achievement = battle::findAchievement(id);
+				if (achievement == nullptr)
+					continue;
+				sf::String name = fromServerText(achievement->name);
+				row.badges += (row.badges.isEmpty() ? sf::String() : sf::String(L" · ")) + name;
+				row.badgeDetails += (row.badgeDetails.isEmpty() ? sf::String() : sf::String(L"\n")) + name + L" : " + fromServerText(achievement->description);
+				hud->log(L"Haut fait de " + fromServerText(fighter.name) + L" : " + name, sf::Color(255, 205, 90));
+			}
 			rows.push_back(row);
 			if (row.mvp)
 				hud->log(L"MVP du combat : " + row.name, sf::Color(255, 215, 70));
 		}
 	}
 	hud->showEnd(title, details, victory || me == NULL, rows);
+	if (ClientConfig::get().screenshotAtEnd)
+		ClientConfig::get().screenshotDelaySeconds = 0;
 	hud->log(title, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 
 	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())

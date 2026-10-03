@@ -660,12 +660,14 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	detailsText->setPosition(20, 76);
 	endPanel->add(detailsText);
 
-	// Bilan : une ligne par combattant (couleur de son équipe), le MVP en doré.
+	// Bilan : une ligne par combattant (couleur de son équipe), le MVP en doré, et ses hauts faits
+	// en dessous (descriptions au survol).
 	// Colonne des noms assez large pour "Prénom (Classe)   MVP".
 	const float columns[5] = { 20, 400, 495, 580, 700 };
 	const sf::String headers[5] = { L"Combattant", L"Dégâts", L"Soins", L"Boucliers", L"KO" };
 	// Sous le texte (3 ou 4 lignes selon le mode de combat).
 	float tableTop = std::max(160.f, 76.f + detailsText->getSize().y + 12.f);
+	float rowTop = tableTop + 28;
 	if (!rows.empty())
 	{
 		for (int column = 0; column < 5; column++)
@@ -684,12 +686,30 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 			{
 				tgui::Label::Ptr cell = createLabel(17, color);
 				cell->setText(cells[column]);
-				cell->setPosition(columns[column], tableTop + 28 + i * 28.f);
+				cell->setPosition(columns[column], rowTop);
 				endPanel->add(cell);
+			}
+			rowTop += 28;
+			if (!row.badges.isEmpty())
+			{
+				tgui::Label::Ptr badges = createLabel(14, sf::Color(255, 205, 90));
+				badges->setMaximumTextWidth(endPanelSize.x - 60);
+				badges->setText(L"Hauts faits : " + row.badges);
+				badges->setPosition(columns[0] + 18, rowTop - 4);
+				tgui::Label::Ptr tip = createLabel(14, sf::Color::White);
+				tip->setMaximumTextWidth(420);
+				tip->setText(row.badgeDetails);
+				tip->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 235));
+				tip->getRenderer()->setBorders(1);
+				tip->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
+				tip->getRenderer()->setPadding(6);
+				badges->setToolTip(tip);
+				endPanel->add(badges);
+				rowTop += 22;
 			}
 		}
 	}
-	float buttonTop = rows.empty() ? tableTop : tableTop + 28 + rows.size() * 28.f + 20;
+	float buttonTop = rows.empty() ? tableTop : rowTop + 20;
 	endPanelSize.y = buttonTop + 44 + 16;
 
 	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : onReplay ? L"Retour" : L"Fermer");

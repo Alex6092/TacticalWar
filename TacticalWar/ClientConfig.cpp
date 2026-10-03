@@ -126,7 +126,9 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		}
 		else if (arg == "--screenshot-after" && hasValue)
 		{
-			screenshotDelaySeconds = (float)std::atof(argv[++i]);
+			std::string value = argv[++i];
+			screenshotAtEnd = value == "end";
+			screenshotDelaySeconds = screenshotAtEnd ? 1e9f : (float)std::atof(value.c_str());
 		}
 		else if (arg == "--no-sound")
 		{

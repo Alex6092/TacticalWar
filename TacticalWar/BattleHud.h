@@ -42,6 +42,8 @@ public:
 		int healed = 0;
 		int shielded = 0;
 		int kills = 0;
+		sf::String badges;			// Hauts faits (noms), sous la ligne
+		sf::String badgeDetails;	// Leurs descriptions, au survol
 	};
 	void showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows);
 

@@ -31,12 +31,13 @@ public:
 	std::string autoLogin;
 	std::string autoPassword;
 
-	// Outils de développement : --window LxH, --screenshot <fichier.png> [--screenshot-after <s>]
-	// (la fenêtre se ferme après la capture).
+	// Outils de développement : --window LxH, --screenshot <fichier.png> [--screenshot-after <s>|end]
+	// (la fenêtre se ferme après la capture ; "end" : dès l'affichage de l'écran de fin du combat).
 	unsigned int windowWidth = 0;
 	unsigned int windowHeight = 0;
 	std::string screenshotPath;
 	float screenshotDelaySeconds = 3;
+	bool screenshotAtEnd = false;
 	// Galerie des effets de sorts, sans serveur : --fx-gallery [--fx-spell <id>] [--fx-map <id>].
 	bool fxGallery = false;
 	std::string fxSpell;
