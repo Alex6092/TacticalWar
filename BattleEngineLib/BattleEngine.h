@@ -110,6 +110,7 @@ namespace tw
 			nlohmann::json fighterJson(const Fighter & fighter) const;
 			nlohmann::json effectJson(const ActiveEffect & effect) const;
 			nlohmann::json glyphJson(const Glyph & glyph) const;
+			static nlohmann::json recordJson(const FighterRecord & record);
 			void emit(const nlohmann::json & event);
 			void emitStats(const Fighter & fighter);
 

@@ -73,6 +73,17 @@ namespace tw
 			std::string state;
 		};
 
+		// Bilan d'un combattant sur tout le combat (écran de fin, page projetée).
+		struct FighterRecord
+		{
+			int dealt = 0;		// Dégâts infligés aux ennemis, bouclier compris
+			int taken = 0;		// Dégâts subis, bouclier compris
+			int healed = 0;		// PV rendus (lui compris)
+			int shielded = 0;	// Boucliers donnés
+			int kills = 0;		// Ennemis mis hors combat
+			int casts = 0;		// Sorts lancés
+		};
+
 		struct Fighter
 		{
 			int id = 0;
@@ -94,6 +105,7 @@ namespace tw
 			std::map<std::string, int> castsThisTurn;
 			std::map<std::string, std::map<int, int>> castsOnTarget;	// sort -> combattant -> lancers ce tour
 			std::vector<ActiveEffect> effects;
+			FighterRecord record;
 
 			int initialMaxHp() const { return baseStats.get(Stat::MAX_HP); }
 			bool hasState(const std::string & state) const;
@@ -139,6 +151,7 @@ namespace tw
 			std::int64_t deadlineMs = 0;	// Fin du tour (ou du placement) en cours
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
+			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
 			int nextUid = 1;
 
 			int activeFighterId() const;

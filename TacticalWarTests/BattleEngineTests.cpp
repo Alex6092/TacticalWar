@@ -694,3 +694,79 @@ TEST_CASE("Emotes are broadcast as events and rate limited per fighter")
 	BattleMirror::applyEvent(mirror, { { "t", "emote" }, { "f", 0 }, { "id", 1 } });
 	CHECK(mirror.fighters.size() == before.fighters.size());
 }
+
+TEST_CASE("Battle records credit damage, shields, casts and knockouts to the right fighter")
+{
+	Arena arena({ { ARCHER, { 2, 2 } }, { PROTECTEUR, { 3, 2 } } }, { { MAGE, { 2, 7 } } });
+	int shot = spellIndex(ARCHER, "tir_precis");
+
+	// Tir précis de l'Archer : dégâts infligés et subis, sort compté.
+	arena.playUntilTurnOf(0);
+	arena.engine->flushEvents();
+	REQUIRE(arena.engine->cast(0, shot, { 2, 7 }, arena.now).ok);
+	std::vector<nlohmann::json> damage = arena.eventsOfType("damage");
+	REQUIRE(damage.size() == 1);
+	int amount = damage[0]["amount"].get<int>();
+	CHECK(arena.fighter(0).record.dealt == amount);
+	CHECK(arena.fighter(0).record.casts == 1);
+	CHECK(arena.fighter(2).record.taken == amount);
+	CHECK(arena.fighter(2).record.dealt == 0);
+
+	// Bouclier sacré du Protecteur sur l'Archer.
+	arena.playUntilTurnOf(1);
+	REQUIRE(arena.engine->cast(1, spellIndex(PROTECTEUR, "bouclier_sacre"), { 2, 2 }, arena.now).ok);
+	CHECK(arena.fighter(1).record.shielded > 0);
+	CHECK(arena.fighter(1).record.dealt == 0);
+
+	// L'Archer tire jusqu'à la mise hors combat du Mage : un KO, et il est le meilleur du combat.
+	for (int guard = 0; guard < 80 && !arena.engine->isOver(); guard++)
+	{
+		if (arena.active() != 0)
+			REQUIRE(arena.engine->endTurn(arena.active(), arena.now).ok);
+		else if (!arena.engine->cast(0, shot, { 2, 7 }, arena.now).ok)
+			REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	}
+	REQUIRE(arena.engine->isOver());
+	CHECK(arena.fighter(0).record.kills == 1);
+	CHECK(arena.fighter(0).record.dealt == arena.fighter(2).record.taken);
+	CHECK(arena.state().mvpFighterId == 0);
+
+	std::vector<nlohmann::json> ends = arena.eventsOfType("end");
+	REQUIRE(ends.size() == 1);
+	CHECK(ends[0]["mvp"].get<int>() == 0);
+	CHECK(ends[0]["records"].size() == 3);
+
+	// Les clients retrouvent le bilan dans l'état complet.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(-1, arena.now));
+	CHECK(mirror.mvpFighterId == 0);
+	CHECK(mirror.findFighter(0)->record.kills == 1);
+	CHECK(mirror.findFighter(1)->record.shielded == arena.fighter(1).record.shielded);
+}
+
+TEST_CASE("The MVP has the best record score, the winning team breaking ties")
+{
+	BattleState state;
+	state.winnerTeam = 2;
+	Fighter striker;
+	striker.id = 0;
+	striker.team = 1;
+	striker.record.dealt = 50;
+	Fighter healer;
+	healer.id = 1;
+	healer.team = 2;
+	healer.record.healed = 30;
+	healer.record.shielded = 40;
+	state.fighters = { striker, healer };
+
+	CHECK(recordScore(healer.record) == 50);
+	CHECK(chooseMvp(state) == 1);
+	state.fighters[0].record.kills = 1;
+	CHECK(recordScore(state.fighters[0].record) == 75);
+	CHECK(chooseMvp(state) == 0);
+
+	BattleState idle;
+	idle.fighters = { Fighter() };
+	CHECK(chooseMvp(idle) == -1);
+}

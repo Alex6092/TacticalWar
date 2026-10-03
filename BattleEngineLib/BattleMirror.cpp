@@ -87,6 +87,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 	fresh.turnOrder = snapshot.value("order", std::vector<int>());
 	fresh.winnerTeam = snapshot.value("winner", 0);
 	fresh.endReason = reasonFromString(snapshot.value("reason", std::string()));
+	fresh.mvpFighterId = snapshot.value("mvp", -1);
 
 	int active = snapshot.value("active", -1);
 	for (int i = 0; i < (int)fresh.turnOrder.size(); i++)
@@ -121,6 +122,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.castsThisTurn = intMap(value.value("casts", json::object()));
 		for (const json & effect : value.value("effects", json::array()))
 			fighter.effects.push_back(effectFromJson(effect));
+		fighter.record = recordFromJson(value.value("record", json::object()));
 		fresh.fighters.push_back(fighter);
 	}
 
@@ -279,5 +281,24 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		state.phase = BattlePhase::ENDED;
 		state.winnerTeam = event.value("winner", 0);
 		state.endReason = reasonFromString(event.value("reason", std::string()));
+		state.mvpFighterId = event.value("mvp", -1);
+		for (const json & record : event.value("records", json::array()))
+		{
+			Fighter * fighter = state.findFighter(record.value("f", -1));
+			if (fighter != nullptr)
+				fighter->record = recordFromJson(record);
+		}
 	}
+}
+
+FighterRecord BattleMirror::recordFromJson(const json & value)
+{
+	FighterRecord record;
+	record.dealt = value.value("dealt", 0);
+	record.taken = value.value("taken", 0);
+	record.healed = value.value("healed", 0);
+	record.shielded = value.value("shielded", 0);
+	record.kills = value.value("kills", 0);
+	record.casts = value.value("casts", 0);
+	return record;
 }

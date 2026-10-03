@@ -66,6 +66,12 @@ namespace tw
 		// Simule un déplacement (tacle compris) sans modifier l'état.
 		MovePreview previewMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & fighter, const std::vector<Cell> & path);
 
+		// Score du bilan d'un combattant : dégâts infligés + soins + boucliers / 2 + 25 par KO.
+		int recordScore(const FighterRecord & record);
+		// Meilleur combattant du combat (MVP) : plus haut score, l'équipe gagnante en cas d'égalité.
+		// -1 si personne n'a rien fait.
+		int chooseMvp(const BattleState & state);
+
 		// Direction dominante de "from" vers "to" (pas en x et y : -1, 0 ou 1).
 		Cell directionBetween(const Cell & from, const Cell & to);
 	}

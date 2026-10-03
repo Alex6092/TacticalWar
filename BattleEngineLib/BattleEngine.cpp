@@ -378,6 +378,7 @@ ActionResult BattleEngine::cast(int fighterId, int spellIndex, const Cell & targ
 		return ActionResult::failure(error);
 
 	caster.ap -= spell->apCost;
+	caster.record.casts++;
 	if (spell->cooldown > 0)
 		caster.cooldowns[spell->id] = spell->cooldown;
 	caster.castsThisTurn[spell->id]++;
@@ -535,6 +536,16 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	state.winnerTeam = winnerTeam;
 	state.endReason = reason;
 	state.deadlineMs = 0;
+	state.mvpFighterId = chooseMvp(state);
+
+	// Bilan de chaque combattant, pour l'écran de fin (joueurs, spectateurs, rediffusions).
+	json records = json::array();
+	for (const Fighter & fighter : state.fighters)
+	{
+		json record = recordJson(fighter.record);
+		record["f"] = fighter.id;
+		records.push_back(record);
+	}
 
 	emit({
 		{ "t", "end" },
@@ -542,7 +553,9 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 		{ "reason", toString(reason) },
 		{ "hp1", teamHpPercent(1) },
 		{ "hp2", teamHpPercent(2) },
-		{ "round", state.round }
+		{ "round", state.round },
+		{ "records", records },
+		{ "mvp", state.mvpFighterId }
 	});
 }
 
@@ -638,6 +651,18 @@ json BattleEngine::glyphJson(const Glyph & glyph) const
 	};
 }
 
+json BattleEngine::recordJson(const FighterRecord & record)
+{
+	return {
+		{ "dealt", record.dealt },
+		{ "taken", record.taken },
+		{ "healed", record.healed },
+		{ "shielded", record.shielded },
+		{ "kills", record.kills },
+		{ "casts", record.casts }
+	};
+}
+
 json BattleEngine::fighterJson(const Fighter & fighter) const
 {
 	json cooldowns = json::object();
@@ -674,7 +699,8 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "connected", fighter.connected },
 		{ "cooldowns", cooldowns },
 		{ "casts", casts },
-		{ "effects", effects }
+		{ "effects", effects },
+		{ "record", recordJson(fighter.record) }
 	};
 }
 
@@ -711,6 +737,7 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 		{ "glyphs", glyphs },
 		{ "startCells", startCells },
 		{ "winner", state.winnerTeam },
-		{ "reason", toString(state.endReason) }
+		{ "reason", toString(state.endReason) },
+		{ "mvp", state.mvpFighterId }
 	};
 }

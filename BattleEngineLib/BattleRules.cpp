@@ -56,6 +56,30 @@ int tw::battle::effectiveStat(const BattleState & state, const GameData & data, 
 	return value;
 }
 
+int tw::battle::recordScore(const FighterRecord & record)
+{
+	return record.dealt + record.healed + record.shielded / 2 + 25 * record.kills;
+}
+
+int tw::battle::chooseMvp(const BattleState & state)
+{
+	int best = -1;
+	int bestScore = 0;
+	bool bestWinner = false;
+	for (const Fighter & fighter : state.fighters)
+	{
+		int score = recordScore(fighter.record);
+		bool winner = fighter.team == state.winnerTeam;
+		if (score > 0 && (score > bestScore || (score == bestScore && winner && !bestWinner)))
+		{
+			best = fighter.id;
+			bestScore = score;
+			bestWinner = winner;
+		}
+	}
+	return best;
+}
+
 int tw::battle::periodicDamage(const BattleState & state, const GameData & data, const Fighter & bearer, int value, int casterPower)
 {
 	int maxResistance = data.rules.maxResistance;
