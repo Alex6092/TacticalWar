@@ -36,7 +36,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents)
 {
 	GameData data;
 	std::string error;
@@ -72,6 +72,9 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	// Sorts emportés : tirés à part, pour que les classes et les combats d'une graine restent comparables.
 	std::mt19937 spellRng(seed ^ 0x5eedu);
 	std::map<std::string, Tally> bySpell;
+	// Talents : tirés à part, comme les sorts.
+	std::mt19937 talentRng(seed ^ 0x7a1e47u);
+	std::map<std::string, Tally> byTalent;
 	std::map<int, Tally> byClass;
 	std::map<std::string, Tally> byComposition;
 	std::map<int, Tally> byMapTeam1;
@@ -103,7 +106,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		for (int i = 0; i < 4; i++)
 			classes[i] = data.classes[rng() % data.classes.size()].id;
 		for (int i = 0; i < 4; i++)
-			engine.addFighter(i < 2 ? 1 : 2, classes[i], "IA " + std::to_string(i + 1), randomSpellChoice(*data.findClass(classes[i]), spellRng));
+			engine.addFighter(i < 2 ? 1 : 2, classes[i], "IA " + std::to_string(i + 1), randomSpellChoice(*data.findClass(classes[i]), spellRng),
+				randomTalentChoice(data, talents, talentRng));
 
 		// Placement au hasard sur les cases de départ (le placement automatique prend les cases
 		// dans l'ordre de la carte, ce qui peut grouper une équipe et disperser l'autre).
@@ -183,9 +187,16 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 				tally.wins++;
 		}
 
-		// Sorts emportés par chaque combattant.
+		// Sorts et talents emportés par chaque combattant.
 		for (const Fighter & fighter : state.fighters)
 		{
+			for (const std::string & id : fighter.talents)
+			{
+				Tally & tally = byTalent[data.findTalent(id)->name];
+				tally.games++;
+				if (fighter.team == winner)
+					tally.wins++;
+			}
 			for (const SpellDef * spell : fighterSpells(data, fighter))
 			{
 				Tally & tally = bySpell[className(fighter.classId) + " : " + spell->name];
@@ -236,6 +247,16 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	{
 		std::cout << "  " << std::left << std::setw(34) << entry.first << std::right
 			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " fois)\n";
+	}
+
+	if (!byTalent.empty())
+	{
+		std::cout << "\nTalents (" << talents << " par combattant, au hasard) : taux de victoire quand le talent est pris :\n";
+		for (const auto & entry : byTalent)
+		{
+			std::cout << "  " << std::left << std::setw(20) << entry.first << std::right
+				<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " fois)\n";
+		}
 	}
 
 	std::vector<std::pair<std::string, Tally>> compositions(byComposition.begin(), byComposition.end());

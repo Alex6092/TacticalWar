@@ -37,7 +37,12 @@ public:
 
 	// Choix des classes et des sorts (une seule fois par joueur). Un choix de sorts non valable
 	// donne les sorts par défaut de la classe.
-	bool chooseClass(tw::Player * player, int classId, const std::vector<int> & spells = std::vector<int>());
+	bool chooseClass(tw::Player * player, int classId, const std::vector<int> & spells = std::vector<int>(),
+		const std::vector<std::string> & talents = std::vector<std::string>());
+	// Talents de tournoi à choisir par chaque équipe (0 hors tournoi). Les emplacements laissés vides
+	// sont remplis au hasard au début du combat.
+	void setTalentSlots(int team1, int team2) { talentSlotsByTeam[1] = team1; talentSlotsByTeam[2] = team2; }
+	int talentSlots(tw::Player * player) const;
 	int chosenClass(tw::Player * player) const;
 	bool allClassesChosen() const;
 	std::int64_t getClassSelectionDeadline() const { return classSelectionDeadline; }
@@ -76,6 +81,8 @@ private:
 	std::vector<tw::Player*> participants;
 	std::map<tw::Player*, int> classes;
 	std::map<tw::Player*, std::vector<int>> spellChoices;
+	std::map<tw::Player*, std::vector<std::string>> talentChoices;
+	int talentSlotsByTeam[3] = { 0, 0, 0 };
 	std::int64_t classSelectionDeadline;
 	std::unique_ptr<tw::battle::BattleEngine> engine;
 	std::uint32_t seed;

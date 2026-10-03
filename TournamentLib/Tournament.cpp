@@ -65,6 +65,23 @@ const char * tw::tournament::toString(ResultReason reason)
 	return "";
 }
 
+int tw::tournament::matchesPlayed(const Tournament & tournament, int teamId)
+{
+	int played = 0;
+	for (const auto & entry : tournament.matches)
+	{
+		const TMatch & match = entry.second;
+		if (match.status == MatchStatus::DONE && (match.teamA == teamId || match.teamB == teamId))
+			played++;
+	}
+	return played;
+}
+
+int tw::tournament::talentSlots(const Tournament & tournament, int teamId)
+{
+	return std::max(0, std::min(tournament.settings.maxTalents, matchesPlayed(tournament, teamId)));
+}
+
 std::string tw::tournament::matchLabel(const Tournament & tournament, const TMatch & match)
 {
 	const std::string & bracket = match.bracket;

@@ -80,7 +80,8 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "pointsForWin", settings.pointsForWin },
 		{ "pointsForLoss", settings.pointsForLoss },
 		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
-		{ "zonePoints", settings.zonePoints }
+		{ "zonePoints", settings.zonePoints },
+		{ "maxTalents", settings.maxTalents }
 	};
 }
 
@@ -98,6 +99,7 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.pointsForLoss = json.value("pointsForLoss", settings.pointsForLoss);
 	settings.zoneMode = json.value("mode", std::string("KO")) == "ZONE";
 	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
+	settings.maxTalents = std::max(0, std::min(5, json.value("maxTalents", settings.maxTalents)));
 	return settings;
 }
 

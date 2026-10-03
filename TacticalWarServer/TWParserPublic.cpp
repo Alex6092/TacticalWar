@@ -63,6 +63,12 @@ nlohmann::json TWParser::publicStateJson()
 			for (const tw::battle::Fighter & fighter : state.fighters)
 			{
 				const tw::battle::ClassDef * classDef = gameData.findClass(fighter.classId);
+				nlohmann::json talents = nlohmann::json::array();
+				for (const std::string & id : fighter.talents)
+				{
+					const tw::battle::TalentDef * talent = gameData.findTalent(id);
+					talents.push_back(talent != nullptr ? talent->name : id);
+				}
 				fighters.push_back({
 					{ "id", fighter.id },
 					{ "team", fighter.team },
@@ -73,7 +79,8 @@ nlohmann::json TWParser::publicStateJson()
 					{ "initialMaxHp", fighter.initialMaxHp() },
 					{ "shield", fighter.shield },
 					{ "alive", fighter.alive },
-					{ "connected", fighter.connected }
+					{ "connected", fighter.connected },
+					{ "talents", talents }
 				});
 			}
 			battle["fighters"] = fighters;

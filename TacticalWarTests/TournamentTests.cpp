@@ -536,3 +536,42 @@ TEST_CASE("The battle mode of a tournament goes through JSON")
 	REQUIRE(parseReason(toString(ResultReason::OBJECTIVE), reason));
 	CHECK((reason == ResultReason::OBJECTIVE));
 }
+
+TEST_CASE("Teams earn one talent per finished match, up to the tournament maximum")
+{
+	Tournament tournament;
+	auto addMatch = [&tournament](int id, int teamA, int teamB, MatchStatus status) {
+		TMatch match;
+		match.id = id;
+		match.teamA = teamA;
+		match.teamB = teamB;
+		match.status = status;
+		tournament.matches[id] = match;
+	};
+	addMatch(1, 1, 2, MatchStatus::DONE);
+	addMatch(2, 1, BYE_TEAM, MatchStatus::DONE);		// Exempt : compte comme un match joué
+	addMatch(3, 1, 3, MatchStatus::DONE);
+	addMatch(4, 1, 2, MatchStatus::IN_PROGRESS);
+	addMatch(5, 3, 2, MatchStatus::READY);
+
+	CHECK(matchesPlayed(tournament, 1) == 3);
+	CHECK(matchesPlayed(tournament, 2) == 1);
+	CHECK(matchesPlayed(tournament, 4) == 0);
+
+	tournament.settings.maxTalents = 2;
+	CHECK(talentSlots(tournament, 1) == 2);
+	CHECK(talentSlots(tournament, 2) == 1);
+	tournament.settings.maxTalents = 0;
+	CHECK(talentSlots(tournament, 1) == 0);
+
+	// Réglage enregistré avec le tournoi, borné entre 0 et 5 ; 3 par défaut (anciens tournois).
+	Settings settings;
+	CHECK(settings.maxTalents == 3);
+	settings.maxTalents = 1;
+	CHECK(settingsFromJson(toJson(settings)).maxTalents == 1);
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("maxTalents");
+	CHECK(settingsFromJson(legacy).maxTalents == 3);
+	legacy["maxTalents"] = 9;
+	CHECK(settingsFromJson(legacy).maxTalents == 5);
+}

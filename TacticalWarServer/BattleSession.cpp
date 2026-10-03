@@ -1,5 +1,7 @@
 ﻿#include "BattleSession.h"
 
+#include <algorithm>
+
 #include <EnvironmentMap.h>
 
 #include <random>
@@ -36,7 +38,14 @@ tw::Player * BattleSession::playerOfFighter(int fighterId) const
 	return fighterId >= 0 && fighterId < (int)participants.size() ? participants[fighterId] : NULL;
 }
 
-bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells)
+int BattleSession::talentSlots(tw::Player * player) const
+{
+	if (fighterIdOf(player) < 0)
+		return 0;
+	return talentSlotsByTeam[match->playerIsInTeam1(player) ? 1 : 2];
+}
+
+bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells, const std::vector<std::string> & talents)
 {
 	const tw::battle::ClassDef * classDef = data.findClass(classId);
 	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || classDef == nullptr)
@@ -44,6 +53,7 @@ bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vec
 
 	classes[player] = classId;
 	spellChoices[player] = tw::battle::validSpellChoice(*classDef, spells);
+	talentChoices[player] = tw::battle::validTalentChoice(data, talents, talentSlots(player));
 	return true;
 }
 
@@ -79,7 +89,16 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 
 		int team = match->playerIsInTeam1(player) ? 1 : 2;
 		auto name = names.find(player);
-		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells);
+		// Talents : ceux choisis, puis des talents au hasard pour les emplacements restés vides.
+		std::vector<std::string> talents = talentChoices[player];
+		for (const std::string & id : tw::battle::randomTalentChoice(data, (int)data.talents.size(), rng))
+		{
+			if ((int)talents.size() >= talentSlots(player))
+				break;
+			if (std::find(talents.begin(), talents.end(), id) == talents.end())
+				talents.push_back(id);
+		}
+		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells, talents);
 	}
 
 	if (zonePoints > 0)

@@ -166,14 +166,17 @@ void Bot::onLine(const std::string & line)
 	}
 	else if (op == "HC")
 	{
-		// Classe demandée (ou au hasard) et 4 de ses sorts au hasard.
+		// Classe demandée (ou au hasard), 4 de ses sorts et ses talents de tournoi au hasard.
+		nlohmann::json selection = nlohmann::json::parse(message.payload, nullptr, false);
+		int talentSlots = selection.is_object() ? selection.value("talents", 0) : 0;
+		std::vector<std::string> talents = randomTalentChoice(data, talentSlots, rng);
 		int classId = options.classId;
 		if (classId == 0 && !data.classes.empty())
 			classId = data.classes[rng() % data.classes.size()].id;
 		std::vector<int> spells;
 		if (const ClassDef * classDef = data.findClass(classId))
 			spells = randomSpellChoice(*classDef, rng);
-		send("PC" + nlohmann::json({ { "class", classId }, { "spells", spells } }).dump());
+		send("PC" + nlohmann::json({ { "class", classId }, { "spells", spells }, { "talents", talents } }).dump());
 		if (options.verbose)
 			log("Choix de la classe " + std::to_string(classId));
 	}

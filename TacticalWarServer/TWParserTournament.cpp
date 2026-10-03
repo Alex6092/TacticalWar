@@ -366,6 +366,7 @@ void TWParser::dispatchTournamentMatches()
 		BattleSession * session = sessionOfMatch(m);
 		session->setTournamentMatch(request.tournamentId, request.matchId);
 		session->setZonePoints(tournament.settings.zoneMode ? tournament.settings.zonePoints : 0);
+		session->setTalentSlots(tw::tournament::talentSlots(tournament, request.teamA), tw::tournament::talentSlots(tournament, request.teamB));
 		tournaments.markLaunched(request, session->getId());
 
 		std::cout << "Lancement : " << name << " (" << teamName(request.teamA) << " contre " << teamName(request.teamB) << ")" << std::endl;

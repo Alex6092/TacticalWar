@@ -52,6 +52,13 @@ void TWParser::sendGameData(ClientState * client)
 	send(client, gameDataMessage);
 }
 
+std::string TWParser::classSelectionMessage(tw::Player * player)
+{
+	BattleSession * session = sessionOfPlayer(player);
+	int talents = session != NULL ? session->talentSlots(player) : 0;
+	return encode("HC", { { "talents", talents } });
+}
+
 void TWParser::handlePickClass(ClientState * client, tw::Player * player, const std::string & body)
 {
 	BattleSession * session = sessionOfPlayer(player);
@@ -61,6 +68,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 	// PC{"class": id, "spells": [indices]} ; ancien format PC<classId> : sorts par défaut.
 	int classId = 0;
 	std::vector<int> spells;
+	std::vector<std::string> talents;
 	if (!body.empty() && body[0] == '{')
 	{
 		nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
@@ -75,6 +83,14 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 						spells.push_back(index.get<int>());
 				}
 			}
+			if (pick.contains("talents") && pick["talents"].is_array())
+			{
+				for (const nlohmann::json & talent : pick["talents"])
+				{
+					if (talent.is_string())
+						talents.push_back(talent.get<std::string>());
+				}
+			}
 		}
 	}
 	else
@@ -82,7 +98,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 		classId = std::atoi(body.c_str());
 	}
 
-	if (session->chooseClass(player, classId, spells))
+	if (session->chooseClass(player, classId, spells, talents))
 	{
 		send(client, "PO" + std::to_string(classId) + "\n");
 		if (session->allClassesChosen())

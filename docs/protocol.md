@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **4**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **5**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -31,7 +31,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
 | `HG` | C ↔ S | tous | C-&gt;S : login;password (vide = spectateur). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
-| `HC` | S → C | tous | Aller à la sélection de classe |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -98,7 +98,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe et ses sorts : PC{class, spells:[4 indices dans les sorts de la classe]} (PC&lt;classId&gt; : sorts par défaut) |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants]} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |
