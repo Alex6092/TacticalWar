@@ -24,6 +24,7 @@ namespace
 		case tw::battle::EndReason::ROUND_LIMIT: return ResultReason::ROUND_LIMIT;
 		case tw::battle::EndReason::FORFEIT: return ResultReason::FORFEIT;
 		case tw::battle::EndReason::ADMIN: return ResultReason::ADMIN;
+		case tw::battle::EndReason::OBJECTIVE: return ResultReason::OBJECTIVE;
 		default: return ResultReason::KO;
 		}
 	}
@@ -364,6 +365,7 @@ void TWParser::dispatchTournamentMatches()
 		createSession(m);
 		BattleSession * session = sessionOfMatch(m);
 		session->setTournamentMatch(request.tournamentId, request.matchId);
+		session->setZonePoints(tournament.settings.zoneMode ? tournament.settings.zonePoints : 0);
 		tournaments.markLaunched(request, session->getId());
 
 		std::cout << "Lancement : " << name << " (" << teamName(request.teamA) << " contre " << teamName(request.teamB) << ")" << std::endl;

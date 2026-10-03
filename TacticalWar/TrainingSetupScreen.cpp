@@ -69,6 +69,11 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	if (!map->setSelectedItemById(std::to_string(settings.mapId)))
 		map->setSelectedItemById("0");
 
+	mode = addRow(L"Mode");
+	mode->addItem(L"KO : éliminer l'équipe adverse", "ko");
+	mode->addItem(L"Zone à tenir (premier à " + std::to_wstring(TrainingSettings::ZONE_POINTS) + L" points)", "zone");
+	mode->setSelectedItemById(settings.zone ? "zone" : "ko");
+
 	difficulty = addRow(L"Difficulté");
 	difficulty->addItem(L"Facile (l'IA fait des erreurs)", "easy");
 	difficulty->addItem(L"Normal", "normal");
@@ -175,6 +180,7 @@ void TrainingSetupScreen::save()
 	settings.enemyClasses[1] = selectedId(enemyClasses[1]);
 	settings.mapId = selectedId(map);
 	settings.easy = difficulty->getSelectedItemId() == "easy";
+	settings.zone = mode->getSelectedItemId() == "zone";
 }
 
 void TrainingSetupScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)

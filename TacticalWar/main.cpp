@@ -31,6 +31,7 @@ int main(int argc, char** argv)
 		settings.playerClass = config.trainingClass;
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;
+		settings.zone = config.trainingZone;
 		if (config.trainingStart)
 			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));
 		else

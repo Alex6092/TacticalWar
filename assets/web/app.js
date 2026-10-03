@@ -21,7 +21,7 @@ function el(id) {
   return document.getElementById(id);
 }
 
-const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", ADMIN: "arbitrage", BYE: "exempt" };
+const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", ADMIN: "arbitrage", BYE: "exempt", OBJECTIVE: "zone" };
 const STATUS = { RUNNING: "En cours", FINISHED: "Terminé", DRAFT: "Préparation" };
 
 function teamName(tournament, id) {
@@ -285,7 +285,9 @@ function renderLive(tournament) {
       }).join("");
       body = `<div class="battle-teams">
         <div class="side-1"><div class="team-name">${esc(battle.teams[0])}</div>${side(1)}</div>
-        <div class="vs">VS</div>
+        <div class="vs">${battle.zone
+          ? `<span class="zone-score">${battle.zone.scores[0]} - ${battle.zone.scores[1]}</span><small class="zone-goal">zone, premier à ${battle.zone.points}</small>`
+          : "VS"}</div>
         <div class="side-2"><div class="team-name">${esc(battle.teams[1])}</div>${side(2)}</div>
       </div>`;
     }

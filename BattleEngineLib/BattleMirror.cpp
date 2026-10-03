@@ -20,6 +20,7 @@ namespace
 		if (text == "ROUND_LIMIT") return EndReason::ROUND_LIMIT;
 		if (text == "FORFEIT") return EndReason::FORFEIT;
 		if (text == "ADMIN") return EndReason::ADMIN;
+		if (text == "OBJECTIVE") return EndReason::OBJECTIVE;
 		return EndReason::NONE;
 	}
 
@@ -128,6 +129,19 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 
 	for (const json & glyph : snapshot.value("glyphs", json::array()))
 		fresh.glyphs.push_back(glyphFromJson(glyph));
+
+	const json & zone = snapshot.contains("zone") ? snapshot["zone"] : json();
+	if (zone.is_object())
+	{
+		fresh.zone.enabled = true;
+		for (const json & cell : zone.value("cells", json::array()))
+			fresh.zone.cells.push_back(cellFromJson(cell));
+		fresh.zone.pointsToWin = zone.value("points", 0);
+		std::vector<int> scores = zone.value("scores", std::vector<int>());
+		for (int team = 1; team <= 2 && team <= (int)scores.size(); team++)
+			fresh.zone.scores[team] = scores[team - 1];
+		fresh.zone.holder = zone.value("holder", 0);
+	}
 
 	if (snapshot.contains("startCells"))
 	{
@@ -275,6 +289,13 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 	else if (type == "connection" && fighter != nullptr)
 	{
 		fighter->connected = event.value("connected", true);
+	}
+	else if (type == "score")
+	{
+		std::vector<int> scores = event.value("scores", std::vector<int>());
+		for (int team = 1; team <= 2 && team <= (int)scores.size(); team++)
+			state.zone.scores[team] = scores[team - 1];
+		state.zone.holder = event.value("holder", 0);
 	}
 	else if (type == "end")
 	{

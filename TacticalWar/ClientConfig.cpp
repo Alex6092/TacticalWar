@@ -137,6 +137,11 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 			training = trainingStart = true;
 			trainingDuel = true;
 		}
+		else if (arg == "--training-zone")
+		{
+			training = trainingStart = true;
+			trainingZone = true;
+		}
 		else if (arg == "--training-autoplay")
 		{
 			training = trainingStart = true;

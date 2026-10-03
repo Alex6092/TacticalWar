@@ -83,6 +83,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	created->addFighter(2, pick(settings.enemyClasses[0]), settings.duo ? u8"Adversaire 1" : u8"Adversaire");
 	if (settings.duo)
 		created->addFighter(2, pick(settings.enemyClasses[1]), u8"Adversaire 2");
+	if (settings.zone)
+		created->enableZone(TrainingSettings::ZONE_POINTS);
 	created->startPlacement(nowMs);
 
 	// Les combattants de l'IA se placent au hasard sur les cases de départ de leur équipe, puis sont prêts.

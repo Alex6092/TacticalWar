@@ -39,6 +39,11 @@ namespace tw
 		// Émotes prédéfinies des joueurs pendant les combats (l'organisateur peut les couper).
 		bool emotesEnabled = true;
 
+		// Mode des combats hors tournoi : "KO" ou "ZONE" (zone à tenir, gagnée à zonePoints points).
+		// Les tournois ont leur propre réglage.
+		std::string battleMode = "KO";
+		int zonePoints = 5;
+
 		AdminConfig admin;
 
 		nlohmann::json toJson() const;

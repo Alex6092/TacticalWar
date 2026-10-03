@@ -48,6 +48,9 @@ public:
 
 	void markEnded() { phase = Phase::ENDED; }
 
+	// Zone à tenir : score à atteindre (0 : combat au KO). À régler avant le début du combat.
+	void setZonePoints(int points) { zonePoints = points; }
+
 	// Match de tournoi joué par cette session (0 : match amical).
 	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
 	int getTournamentId() const { return tournamentId; }
@@ -76,4 +79,5 @@ private:
 	std::uint32_t seed;
 	int tournamentId = 0;
 	int tournamentMatchId = 0;
+	int zonePoints = 0;
 };

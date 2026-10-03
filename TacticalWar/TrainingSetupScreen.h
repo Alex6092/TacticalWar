@@ -36,6 +36,7 @@ namespace tw
 		tgui::ComboBox::Ptr allyClass;
 		tgui::ComboBox::Ptr enemyClasses[2];
 		tgui::ComboBox::Ptr map;
+		tgui::ComboBox::Ptr mode;
 		tgui::ComboBox::Ptr difficulty;
 		tgui::Label::Ptr description;
 		Request request;

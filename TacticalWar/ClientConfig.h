@@ -30,7 +30,7 @@ public:
 	std::string fxSpell;
 	int fxMap = 4;
 	// Entraînement hors ligne : --training ouvre ses réglages ; --training-start (ou l'une des options
-	// --training-class <id>, --training-map <id>, --training-1v1, --training-autoplay) lance directement
+	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-autoplay) lance directement
 	// un combat. --training-autoplay : le personnage du joueur est aussi joué par l'IA et les combats
 	// s'enchaînent (démonstration sur l'écran projeté, captures).
 	bool training = false;
@@ -39,6 +39,7 @@ public:
 	int trainingMap = 0;
 	bool trainingDuel = false;
 	bool trainingAutoplay = false;
+	bool trainingZone = false;
 
 	static ClientConfig & get();
 

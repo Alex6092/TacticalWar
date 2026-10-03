@@ -47,6 +47,8 @@ namespace tw
 
 			// Cellules de départ de chaque équipe (1 et 2).
 			std::vector<Cell> startCells[3];
+			// Zone à tenir peinte dans l'éditeur (vide : zone calculée, voir objectiveZone).
+			std::vector<Cell> zoneCells;
 
 		private:
 			int width = 0;
@@ -137,7 +139,21 @@ namespace tw
 			KO,
 			ROUND_LIMIT,
 			FORFEIT,
-			ADMIN
+			ADMIN,
+			OBJECTIVE		// Zone à tenir : l'équipe a atteint le score demandé
+		};
+
+		// Mode "zone à tenir" : à la fin de chaque tour complet, une équipe marque un point si elle a
+		// au moins un combattant vivant dans la zone et l'autre aucun. Un KO fait toujours gagner.
+		struct ZoneState
+		{
+			bool enabled = false;
+			std::vector<Cell> cells;
+			int pointsToWin = 0;
+			int scores[3] = { 0, 0, 0 };	// Par équipe (1 et 2)
+			int holder = 0;					// Équipe qui a marqué au dernier décompte (0 : personne)
+
+			bool contains(const Cell & cell) const;
 		};
 
 		struct BattleState
@@ -152,6 +168,7 @@ namespace tw
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
 			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
+			ZoneState zone;
 			int nextUid = 1;
 
 			int activeFighterId() const;

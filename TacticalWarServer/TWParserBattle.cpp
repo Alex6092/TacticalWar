@@ -28,6 +28,8 @@ void TWParser::createSession(tw::Match * match)
 {
 	std::int64_t deadline = nowMs() + (std::int64_t)config.classSelectionSeconds * 1000;
 	BattleSession * session = new BattleSession(nextSessionId++, match, gameData, match->getEnvironment(), deadline);
+	// Matchs amicaux : mode de server.json (un match de tournoi prend ensuite le réglage du tournoi).
+	session->setZonePoints(config.battleMode == "ZONE" ? config.zonePoints : 0);
 	sessions[session->getId()] = session;
 	match->setBattlePayload(session);
 }
@@ -256,6 +258,8 @@ void TWParser::finishBattle(BattleSession * session)
 		reason = tw::tournament::ResultReason::FORFEIT;
 	else if (state.endReason == tw::battle::EndReason::ADMIN)
 		reason = tw::tournament::ResultReason::ADMIN;
+	else if (state.endReason == tw::battle::EndReason::OBJECTIVE)
+		reason = tw::tournament::ResultReason::OBJECTIVE;
 	// Bilan des joueurs : enregistré avec le résultat du tournoi, et affiché sur la page projetée.
 	std::vector<tw::tournament::PlayerRecord> players;
 	nlohmann::json mvp;

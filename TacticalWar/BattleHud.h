@@ -104,6 +104,7 @@ private:
 
 	bool spectator;
 	tgui::Label::Ptr bannerLabel;
+	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;
 	tgui::Label::Ptr cameraHelp;
 };

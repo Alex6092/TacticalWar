@@ -966,3 +966,156 @@ TEST_CASE("Each combo uses a mark set by a spell of another class")
 	CHECK_FALSE(data.loadFromJsonText(R"({ "classes": [ { "id": 1, "name": "T", "stats": { "MAX_HP": 10 }, "spells": [
 		{ "id": "s", "effects": [ { "type": "DAMAGE", "min": 5, "combo": { "state": "x" } } ] } ] } ] })", error));
 }
+
+namespace
+{
+	// Duel de Guerriers sur une carte ouverte 9x9, départs face à face, en mode zone à tenir.
+	struct ZoneDuel
+	{
+		BattleMap map;
+		std::unique_ptr<BattleEngine> engine;
+		std::int64_t now = 0;
+
+		explicit ZoneDuel(int points)
+			: map(9, 9)
+		{
+			map.startCells[1] = { { 1, 4 } };
+			map.startCells[2] = { { 7, 4 } };
+			engine.reset(new BattleEngine(gameData(), map, 1));
+			engine->addFighter(1, GUERRIER, "A");
+			engine->addFighter(2, GUERRIER, "B");
+			engine->enableZone(points);
+			engine->startPlacement(now);
+			REQUIRE(engine->setReady(0, true, now).ok);
+			REQUIRE(engine->setReady(1, true, now).ok);
+			REQUIRE((engine->getState().phase == BattlePhase::FIGHT));
+			engine->flushEvents();
+		}
+
+		const BattleState & state() const { return engine->getState(); }
+
+		void playUntilTurnOf(int id)
+		{
+			for (int guard = 0; state().activeFighterId() != id; guard++)
+			{
+				REQUIRE(guard < 10);
+				REQUIRE(engine->endTurn(state().activeFighterId(), now).ok);
+			}
+		}
+
+		// Passe les tours jusqu'au décompte de fin de tour complet ; retourne l'événement "score".
+		nlohmann::json finishRound()
+		{
+			int round = state().round;
+			for (int guard = 0; state().round == round && !engine->isOver(); guard++)
+			{
+				REQUIRE(guard < 10);
+				REQUIRE(engine->endTurn(state().activeFighterId(), now).ok);
+			}
+			nlohmann::json batch = engine->flushEvents();
+			for (const nlohmann::json & event : batch["ev"])
+			{
+				if (event["t"] == "score")
+					return event;
+			}
+			return nlohmann::json();
+		}
+	};
+}
+
+TEST_CASE("The zone to hold is central and equidistant from both teams, unless painted")
+{
+	BattleMap map(9, 9);
+	map.startCells[1] = { { 0, 4 } };
+	map.startCells[2] = { { 8, 4 } };
+	std::vector<Cell> zone = objectiveZone(map);
+	REQUIRE(zone.size() == 5);
+	CHECK(zone[0] == Cell{ 4, 4 });
+	int distances[3];
+	zoneDistances(map, zone, distances);
+	CHECK(distances[1] == 4);
+	CHECK(distances[2] == 4);
+
+	// Centre bloqué : une autre croix de cases praticables, toujours à égale distance.
+	map.setCell({ 4, 4 }, false, true);
+	zone = objectiveZone(map);
+	REQUIRE(zone.size() >= 5);
+	for (const Cell & cell : zone)
+		CHECK(map.isWalkable(cell));
+	zoneDistances(map, zone, distances);
+	CHECK(distances[1] == distances[2]);
+
+	// Zone peinte : ses cases praticables seulement.
+	map.zoneCells = { { 2, 2 }, { 2, 3 }, { 4, 4 } };
+	CHECK(objectiveZone(map) == std::vector<Cell>{ { 2, 2 }, { 2, 3 } });
+}
+
+TEST_CASE("Holding the zone alone scores a point each round until the target score")
+{
+	ZoneDuel duel(2);
+	const ZoneState & zone = duel.state().zone;
+	REQUIRE(zone.enabled);
+	REQUIRE(zone.cells.size() == 5);
+	REQUIRE(zone.contains({ 4, 4 }));
+	REQUIRE(zone.contains({ 4, 3 }));
+
+	duel.playUntilTurnOf(0);
+	REQUIRE(duel.engine->move(0, { { 2, 4 }, { 3, 4 }, { 4, 4 } }, duel.now).ok);
+	nlohmann::json score = duel.finishRound();
+	REQUIRE(score.is_object());
+	CHECK(score["holder"].get<int>() == 1);
+	CHECK(score["scores"] == nlohmann::json::array({ 1, 0 }));
+	CHECK(zone.scores[1] == 1);
+	CHECK_FALSE(duel.engine->isOver());
+
+	// Le miroir des clients reçoit la zone dans l'état complet, puis les points.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, duel.engine->snapshot(-1, duel.now));
+	CHECK(mirror.zone.enabled);
+	CHECK(mirror.zone.cells == zone.cells);
+	CHECK(mirror.zone.pointsToWin == 2);
+	CHECK(mirror.zone.scores[1] == 1);
+
+	score = duel.finishRound();
+	BattleMirror::applyEvent(mirror, score);
+	CHECK(mirror.zone.scores[1] == 2);
+	CHECK(duel.engine->isOver());
+	CHECK(duel.state().winnerTeam == 1);
+	CHECK((duel.state().endReason == EndReason::OBJECTIVE));
+}
+
+TEST_CASE("A contested zone scores nothing and a decision counts zone points first")
+{
+	ZoneDuel duel(5);
+	// Chacun entre dans la zone pendant le premier tour complet.
+	for (int i = 0; i < 2; i++)
+	{
+		int active = duel.state().activeFighterId();
+		std::vector<Cell> path = active == 0 ? std::vector<Cell>{ { 2, 4 }, { 3, 4 }, { 4, 4 } }
+			: std::vector<Cell>{ { 6, 4 }, { 6, 3 }, { 5, 3 }, { 4, 3 } };
+		REQUIRE(duel.engine->move(active, path, duel.now).ok);
+		REQUIRE(duel.engine->endTurn(active, duel.now).ok);
+	}
+	nlohmann::json batch = duel.engine->flushEvents();
+	nlohmann::json score;
+	for (const nlohmann::json & event : batch["ev"])
+	{
+		if (event["t"] == "score")
+			score = event;
+	}
+	REQUIRE(score.is_object());
+	CHECK(score["holder"].get<int>() == 0);
+	CHECK(score["contested"].get<bool>());
+	CHECK(duel.state().zone.scores[1] == 0);
+	CHECK(duel.state().zone.scores[2] == 0);
+
+	// Arrêt par l'organisateur : les points de zone priment sur les PV (égaux ici).
+	BattleState scored = duel.state();
+	scored.zone.scores[1] = 1;
+	scored.zone.scores[2] = 3;
+	BattleEngine judge(gameData(), duel.map, scored, 1);
+	judge.stopByDecision(duel.now);
+	CHECK(judge.getState().winnerTeam == 2);
+	CHECK((judge.getState().endReason == EndReason::ADMIN));
+}

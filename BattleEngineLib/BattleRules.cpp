@@ -381,6 +381,302 @@ std::vector<Cell> tw::battle::impactCells(const BattleMap & map, const Cell & ca
 	return cells;
 }
 
+namespace
+{
+	// Distance de marche (cases praticables, sans les combattants) depuis les cases "sources" ;
+	// -1 pour une case inaccessible, 0 partout s'il n'y a aucune source.
+	std::vector<int> walkDistances(const BattleMap & map, const std::vector<Cell> & sources)
+	{
+		int width = map.getWidth();
+		std::vector<int> distances(width * map.getHeight(), sources.empty() ? 0 : -1);
+		std::deque<Cell> queue;
+		for (const Cell & cell : sources)
+		{
+			if (map.contains(cell) && map.isWalkable(cell) && distances[cell.y * width + cell.x] < 0)
+			{
+				distances[cell.y * width + cell.x] = 0;
+				queue.push_back(cell);
+			}
+		}
+
+		const Cell steps[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+		while (!queue.empty())
+		{
+			Cell cell = queue.front();
+			queue.pop_front();
+			for (const Cell & step : steps)
+			{
+				Cell next = { cell.x + step.x, cell.y + step.y };
+				if (!map.contains(next) || !map.isWalkable(next) || distances[next.y * width + next.x] >= 0)
+					continue;
+				distances[next.y * width + next.x] = distances[cell.y * width + cell.x] + 1;
+				queue.push_back(next);
+			}
+		}
+		return distances;
+	}
+
+	// Symétries possibles d'une carte, autour du point (doubledX / 2, doubledY / 2) : rotation d'un
+	// demi-tour, miroirs vertical et horizontal, miroirs selon les deux diagonales.
+	const int SYMMETRY_COUNT = 5;
+
+	bool mirrorCell(int kind, int doubledX, int doubledY, const Cell & cell, Cell & twin)
+	{
+		switch (kind)
+		{
+		case 0: twin = { doubledX - cell.x, doubledY - cell.y }; return true;
+		case 1: twin = { doubledX - cell.x, cell.y }; return true;
+		case 2: twin = { cell.x, doubledY - cell.y }; return true;
+		case 3:
+			if ((doubledX - doubledY) % 2 != 0)
+				return false;
+			twin = { cell.y + (doubledX - doubledY) / 2, cell.x - (doubledX - doubledY) / 2 };
+			return true;
+		case 4:
+			if ((doubledX + doubledY) % 2 != 0)
+				return false;
+			twin = { (doubledX + doubledY) / 2 - cell.y, (doubledX + doubledY) / 2 - cell.x };
+			return true;
+		}
+		return false;
+	}
+
+	// Symétrie qui échange les cases de départ des deux équipes et conserve les cases praticables
+	// (-1 si aucune).
+	int findSymmetry(const BattleMap & map, int doubledX, int doubledY)
+	{
+		if (map.startCells[1].empty() || map.startCells[1].size() != map.startCells[2].size())
+			return -1;
+		for (int kind = 0; kind < SYMMETRY_COUNT; kind++)
+		{
+			bool symmetric = true;
+			for (const Cell & start : map.startCells[1])
+			{
+				Cell twin;
+				symmetric = symmetric && mirrorCell(kind, doubledX, doubledY, start, twin)
+					&& std::find(map.startCells[2].begin(), map.startCells[2].end(), twin) != map.startCells[2].end();
+			}
+			for (int y = 0; y < map.getHeight() && symmetric; y++)
+			{
+				for (int x = 0; x < map.getWidth() && symmetric; x++)
+				{
+					Cell twin;
+					if (!map.isWalkable({ x, y }))
+						continue;
+					symmetric = mirrorCell(kind, doubledX, doubledY, { x, y }, twin) && map.contains(twin) && map.isWalkable(twin);
+				}
+			}
+			if (symmetric)
+				return kind;
+		}
+		return -1;
+	}
+}
+
+std::vector<Cell> tw::battle::objectiveZone(const BattleMap & map)
+{
+	std::vector<Cell> painted;
+	for (const Cell & cell : map.zoneCells)
+	{
+		if (map.contains(cell) && map.isWalkable(cell) && std::find(painted.begin(), painted.end(), cell) == painted.end())
+			painted.push_back(cell);
+	}
+	if (!painted.empty())
+		return painted;
+
+	// Distance de marche de chaque équipe : depuis sa case de départ la plus proche (les joueurs
+	// choisissent leur case) et en moyenne sur toutes ses cases de départ.
+	int width = map.getWidth();
+	int size = width * map.getHeight();
+	std::vector<int> nearest[3];
+	std::vector<double> average[3];
+	for (int team = 1; team <= 2; team++)
+	{
+		nearest[team] = walkDistances(map, map.startCells[team]);
+		average[team].assign(size, 0.0);
+		std::vector<int> reached(size, 0);
+		for (const Cell & start : map.startCells[team])
+		{
+			std::vector<int> distances = walkDistances(map, { start });
+			for (int i = 0; i < size; i++)
+			{
+				if (distances[i] < 0)
+					continue;
+				average[team][i] += distances[i];
+				reached[i]++;
+			}
+		}
+		for (int i = 0; i < size; i++)
+			average[team][i] = reached[i] > 0 ? average[team][i] / reached[i] : 0.0;
+	}
+	// Centre : à mi-chemin des deux groupes de cases de départ (à défaut, celui de la carte).
+	double centerX = (map.getWidth() - 1) / 2.0;
+	double centerY = (map.getHeight() - 1) / 2.0;
+	if (!map.startCells[1].empty() && !map.startCells[2].empty())
+	{
+		double sumX = 0;
+		double sumY = 0;
+		for (int team = 1; team <= 2; team++)
+		{
+			double x = 0;
+			double y = 0;
+			for (const Cell & start : map.startCells[team])
+			{
+				x += start.x;
+				y += start.y;
+			}
+			sumX += x / map.startCells[team].size();
+			sumY += y / map.startCells[team].size();
+		}
+		centerX = sumX / 2;
+		centerY = sumY / 2;
+	}
+
+	// Coût d'une case : écarts de distance entre les équipes, puis éloignement du centre de la carte.
+	// Deux cases symétriques (carte symétrique) ont le même coût.
+	std::vector<double> cost(size, -1.0);
+	for (int y = 0; y < map.getHeight(); y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int index = y * width + x;
+			if (!map.isWalkable({ x, y }) || nearest[1][index] < 0 || nearest[2][index] < 0)
+				continue;
+			cost[index] = std::fabs(average[1][index] - average[2][index]) * 4.0 + absValue(nearest[1][index] - nearest[2][index]) * 2.0
+				+ std::fabs(x - centerX) + std::fabs(y - centerY);
+		}
+	}
+
+	// Carte symétrique (les cartes de tournoi le sont) : la zone l'est aussi, donc équitable. Elle part
+	// de la paire de cases symétriques voisines (ou de la case sur l'axe) la moins chère près du
+	// centre, puis s'étend par paires de cases voisines jusqu'à 5 cases au moins.
+	int doubledX = (int)std::lround(centerX * 2);
+	int doubledY = (int)std::lround(centerY * 2);
+	int symmetry = std::fabs(centerX * 2 - doubledX) < 1e-6 && std::fabs(centerY * 2 - doubledY) < 1e-6
+		? findSymmetry(map, doubledX, doubledY) : -1;
+	if (symmetry >= 0)
+	{
+		std::vector<Cell> zone;
+		std::vector<bool> taken(size, false);
+		while (zone.size() < 5)
+		{
+			bool found = false;
+			Cell best;
+			Cell bestTwin;
+			double bestCost = 0;
+			for (int y = 0; y < map.getHeight(); y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					int index = y * width + x;
+					Cell cell = { x, y };
+					Cell twin;
+					if (cost[index] < 0 || taken[index] || !mirrorCell(symmetry, doubledX, doubledY, cell, twin))
+						continue;
+					bool adjacent = false;
+					if (zone.empty())
+						adjacent = absValue(twin.x - x) <= 1 && absValue(twin.y - y) <= 1;
+					for (const Cell & other : zone)
+						adjacent = adjacent || (absValue(other.x - x) <= 1 && absValue(other.y - y) <= 1);
+					if (!adjacent)
+						continue;
+					double total = cost[index] + 2.0 * std::sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
+					if (!found || total < bestCost - 0.001)
+					{
+						found = true;
+						best = cell;
+						bestTwin = twin;
+						bestCost = total;
+					}
+				}
+			}
+			if (!found)
+				break;
+			zone.push_back(best);
+			taken[best.y * width + best.x] = true;
+			if (bestTwin != best)
+			{
+				zone.push_back(bestTwin);
+				taken[bestTwin.y * width + bestTwin.x] = true;
+			}
+		}
+		if (zone.size() >= 5)
+			return zone;
+	}
+
+	// Sinon, la zone part de la meilleure case et s'étend aux cases voisines (diagonales comprises) les
+	// moins chères, un peu pénalisées par leur éloignement du départ : 5 cases, ou 6 quand la
+	// suivante est à égalité avec la dernière (paire de cases symétriques).
+	const double TIE = 0.001;
+	std::vector<Cell> zone;
+	std::vector<bool> taken(size, false);
+	double lastCost = 0;
+	while (zone.size() < 6)
+	{
+		bool found = false;
+		Cell best;
+		double bestCost = 0;
+		for (int y = 0; y < map.getHeight(); y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				int index = y * width + x;
+				if (cost[index] < 0 || taken[index])
+					continue;
+				double total = cost[index];
+				if (!zone.empty())
+				{
+					bool adjacent = false;
+					for (const Cell & cell : zone)
+						adjacent = adjacent || (absValue(cell.x - x) <= 1 && absValue(cell.y - y) <= 1);
+					if (!adjacent)
+						continue;
+					total += std::max(absValue(zone[0].x - x), absValue(zone[0].y - y));
+				}
+				if (!found || total < bestCost - TIE)
+				{
+					found = true;
+					best = { x, y };
+					bestCost = total;
+				}
+			}
+		}
+		if (!found || (zone.size() == 5 && bestCost > lastCost + TIE))
+			break;
+		zone.push_back(best);
+		taken[best.y * width + best.x] = true;
+		lastCost = bestCost;
+	}
+	return zone;
+}
+
+void tw::battle::zoneDistances(const BattleMap & map, const std::vector<Cell> & zone, int distances[3])
+{
+	std::vector<int> fromZone = walkDistances(map, zone);
+	for (int team = 1; team <= 2; team++)
+	{
+		distances[team] = -1;
+		for (const Cell & start : map.startCells[team])
+		{
+			if (!map.contains(start))
+				continue;
+			int distance = fromZone[start.y * map.getWidth() + start.x];
+			if (distance >= 0 && (distances[team] < 0 || distance < distances[team]))
+				distances[team] = distance;
+		}
+	}
+}
+
+void tw::battle::zonePresence(const BattleState & state, bool present[3])
+{
+	present[0] = present[1] = present[2] = false;
+	for (const Fighter & fighter : state.fighters)
+	{
+		if (fighter.alive && (fighter.team == 1 || fighter.team == 2) && state.zone.contains(fighter.position))
+			present[fighter.team] = true;
+	}
+}
+
 std::vector<Cell> tw::battle::reachableCells(const BattleState & state, const BattleMap & map, const Fighter & fighter)
 {
 	std::vector<Cell> cells;

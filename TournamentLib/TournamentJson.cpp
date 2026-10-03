@@ -1,5 +1,7 @@
 #include "TournamentJson.h"
 
+#include <algorithm>
+
 using namespace tw::tournament;
 
 namespace
@@ -61,7 +63,8 @@ bool tw::tournament::parseFormat(const std::string & text, Format & format)
 
 bool tw::tournament::parseReason(const std::string & text, ResultReason & reason)
 {
-	return parseEnum(text, reason, { ResultReason::KO, ResultReason::ROUND_LIMIT, ResultReason::FORFEIT, ResultReason::ADMIN, ResultReason::BYE });
+	return parseEnum(text, reason, { ResultReason::KO, ResultReason::ROUND_LIMIT, ResultReason::FORFEIT, ResultReason::ADMIN, ResultReason::BYE,
+		ResultReason::OBJECTIVE });
 }
 
 nlohmann::json tw::tournament::toJson(const Settings & settings)
@@ -75,7 +78,9 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "swissRounds", settings.swissRounds },
 		{ "swissTopCut", settings.swissTopCut },
 		{ "pointsForWin", settings.pointsForWin },
-		{ "pointsForLoss", settings.pointsForLoss }
+		{ "pointsForLoss", settings.pointsForLoss },
+		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
+		{ "zonePoints", settings.zonePoints }
 	};
 }
 
@@ -91,6 +96,8 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.swissTopCut = json.value("swissTopCut", settings.swissTopCut);
 	settings.pointsForWin = json.value("pointsForWin", settings.pointsForWin);
 	settings.pointsForLoss = json.value("pointsForLoss", settings.pointsForLoss);
+	settings.zoneMode = json.value("mode", std::string("KO")) == "ZONE";
+	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
 	return settings;
 }
 

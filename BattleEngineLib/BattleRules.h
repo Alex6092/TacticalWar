@@ -42,6 +42,15 @@ namespace tw
 		// Cellules touchées par la zone d'effet (dans la carte).
 		std::vector<Cell> impactCells(const BattleMap & map, const Cell & caster, const Cell & target, const ZoneDef & zone);
 
+		// Zone à tenir de la carte : les cases peintes dans l'éditeur, sinon 5 ou 6 cases praticables
+		// voisines, à égale distance de marche des deux équipes, au plus près du centre.
+		std::vector<Cell> objectiveZone(const BattleMap & map);
+		// Distance de marche de chaque équipe à la zone (depuis sa case de départ la plus proche) :
+		// distances[1] et distances[2], -1 si la zone est inaccessible.
+		void zoneDistances(const BattleMap & map, const std::vector<Cell> & zone, int distances[3]);
+		// Équipes présentes dans la zone (combattants vivants) : present[1] et present[2].
+		void zonePresence(const BattleState & state, bool present[3]);
+
 		// Déplacement : cellules atteignables avec les PM actuels (sans tenir compte du tacle).
 		std::vector<Cell> reachableCells(const BattleState & state, const BattleMap & map, const Fighter & fighter);
 		// Plus court chemin (cellule de départ exclue), vide si inaccessible.
