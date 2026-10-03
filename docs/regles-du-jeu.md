@@ -49,6 +49,32 @@ possibles du joueur sont en vert.
   - Pas de texte libre ; une émote toutes les trois secondes au plus.
   - L'organisateur peut les couper : `"emotes": false` dans `server.json`.
 
+## Combinaisons entre classes
+
+Certains sorts **marquent** un ennemi, et un sort d'une autre classe lui inflige alors plus de dégâts :
+
+| Marque | Posée par | Durée | Combinaison |
+|---|---|---|---|
+| Gelé | Glyphe de givre (Mage), quand l'ennemi commence son tour dedans | jusqu'à la fin de son tour suivant | **Brise-glace** : Taillade ou Charge (Guerrier) +40 %, la cible dégèle |
+| Entravé | Flèche entravante (Archer) | 2 tours de la cible | **Cible immobile** : Éclair (Mage) +30 % |
+| Provoqué | Provocation (Guerrier) | 2 tours de la cible | **Dans le mille** : Tir précis (Archer) +30 % |
+| Brûlé | Boule de feu (Mage), ennemis seulement | 2 tours de la cible | **Jugement ardent** : Châtiment (Protecteur) +30 %, vol de vie compris |
+
+- Une cible marquée a un **réticule doré** au sol, et la marque figure dans ses effets. Les marques
+  durent assez longtemps pour que le coéquipier joue avant qu'elles s'effacent.
+- Pendant la visée, l'aperçu annonce la combinaison (« Combo Brise-glace +40 % ») et compte le bonus.
+- Au déclenchement : éclat doré, son, texte « Combo Brise-glace ! » et ligne de journal.
+- Seule Brise-glace consomme sa marque ; les autres restent jusqu'à la fin de leur durée.
+- Les marques sont des effets négatifs : la Purification d'un Protecteur les retire de ses alliés.
+- L'ordinateur (bots, entraînement) recherche aussi les combinaisons.
+
+Réglages dans `assets/data/gamedata.json` :
+- la marque est un effet `STATE` avec `"negative": true` ;
+- la combinaison est l'objet `"combo": { "state", "percent", "name", "consumes" }` d'un effet de dégâts.
+
+Le simulateur d'équilibrage (`TacticalWarBot.exe --simulate`) compte les déclenchements de chaque
+combinaison.
+
 ## Bilan de fin de combat
 
 À la fin du combat, chaque combattant a son bilan : dégâts infligés, soins, boucliers donnés et ennemis mis

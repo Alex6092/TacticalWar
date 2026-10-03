@@ -704,14 +704,31 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	if (type == "effect+" && fighter != NULL)
 	{
 		battle::ActiveEffect effect = battle::BattleMirror::effectFromJson(event["effect"]);
-		fx.effectAdded(fighterId, effect.uid, effect.spellId);
+		fx.effectAdded(fighterId, effect);
 		if (effect.spellId != "__passive")
 		{
-			sf::Color color = effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
+			// Marque de combinaison (état négatif) en doré, comme le réticule au sol.
+			bool mark = effect.type == battle::EffectType::STATE && !effect.positive;
+			sf::Color color = mark ? sf::Color(255, 205, 70) : effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
 			addFloatingText(fighterId, fromServerText(effect.name), color);
-			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name), color);
+			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name) + (mark ? L" (combo possible)" : L""), color);
 		}
 		return fast ? 0 : 0.2f;
+	}
+	if (type == "combo" && fighter != NULL)
+	{
+		// Combinaison : annoncée avant les dégâts augmentés (événement suivant).
+		sf::String name = fromServerText(event.value("name", std::string()));
+		int percent = event.value("percent", 0);
+		if (!fast)
+		{
+			fx.playEvent("combo", fighterId);
+			playSound("./assets/sound/ui/combo.ogg");
+		}
+		addFloatingText(fighterId, L"Combo " + name + L" !", sf::Color(255, 205, 70));
+		hud->log(L"Combo " + name + L" : " + fighterName(event.value("src", -1)) + L" inflige +" + num(percent) + L" % à "
+			+ fighterName(fighterId), sf::Color(255, 205, 70));
+		return fast ? 0 : 0.35f;
 	}
 	if (type == "effect-")
 	{

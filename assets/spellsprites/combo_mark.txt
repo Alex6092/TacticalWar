@@ -1,0 +1,118 @@
+
+combo_mark.png
+size: 384, 384
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+combo_mark
+  rotate: false
+  xy: 0, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 0
+combo_mark
+  rotate: false
+  xy: 128, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 1
+combo_mark
+  rotate: false
+  xy: 256, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 2
+combo_mark
+  rotate: false
+  xy: 0, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 3
+combo_mark
+  rotate: false
+  xy: 128, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 4
+combo_mark
+  rotate: false
+  xy: 256, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 5
+combo_mark
+  rotate: false
+  xy: 0, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 6
+combo_mark
+  rotate: false
+  xy: 128, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 7
+combo_mark
+  rotate: false
+  xy: 256, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 8
+combo_mark
+  rotate: false
+  xy: 0, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 9
+combo_mark
+  rotate: false
+  xy: 128, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 10
+combo_mark
+  rotate: false
+  xy: 256, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 11
+combo_mark
+  rotate: false
+  xy: 0, 256
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 12
+combo_mark
+  rotate: false
+  xy: 128, 256
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 13
+combo_mark
+  rotate: false
+  xy: 256, 256
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 14
+combo_mark
+  rotate: false
+  xy: 0, 320
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 15

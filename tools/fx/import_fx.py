@@ -8,9 +8,10 @@ Chaque animation est réduite à la taille utile pour le jeu (côté le plus lon
 limité à "maxFrameSize" pixels), puis réécrite avec un atlas au même format. Options par effet
 dans selection.json : "as" (nom de la planche produite), "grayscale" (niveaux de gris clairs, à
 teinter dans le catalogue d'effets), "step" (une image sur n, pour les animations très longues).
-La flèche des tirs de l'Archer, la bulle de bouclier, l'aura au sol des effets durables et le
-signal d'équipe (anneau et flèche), absents des animations d'origine, sont dessinés par le script
-(en blanc, teintés par le catalogue d'effets).
+La flèche des tirs de l'Archer, la bulle de bouclier, l'aura au sol des effets durables, le
+signal d'équipe (anneau et flèche) et les combinaisons (marque au sol, éclat au déclenchement),
+absents des animations d'origine, sont dessinés par le script (en blanc, teintés par le catalogue
+d'effets).
 """
 import argparse
 import json
@@ -199,6 +200,63 @@ def make_ping_arrow(output, frames=12, width=40, height=64):
     write_sheet('ping_arrow', result, output)
 
 
+def make_combo_mark(output, frames=16, width=128, height=64):
+    """Marque de combinaison au sol : réticule elliptique dont les quatre crans tournent (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames)
+        pulse = 0.5 + 0.5 * math.sin(2 * math.pi * t)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k / 2
+        rx, ry = width * k * 0.34, height * k * 0.34
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(255, 255, 255, int(150 + 80 * pulse)), width=2 * k)
+        # Quatre crans en triangle, pointés vers le centre, qui tournent d'un quart de tour par boucle.
+        for notch in range(4):
+            angle = 2 * math.pi * (notch / 4.0 + t / 4.0)
+            ox, oy = math.cos(angle), math.sin(angle)
+            tip = (cx + ox * rx * 0.72, cy + oy * ry * 0.72)
+            base = 1.18
+            side = 0.16
+            left = (cx + (ox * base - oy * side) * rx, cy + (oy * base + ox * side) * ry)
+            right = (cx + (ox * base + oy * side) * rx, cy + (oy * base - ox * side) * ry)
+            draw.polygon([tip, left, right], fill=(255, 255, 255, 235))
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('combo_mark', result, output)
+
+
+def make_combo_burst(output, frames=14, size=160):
+    """Déclenchement d'une combinaison : étoile de rayons et anneau qui s'élargissent et s'effacent (blanc, teinté)."""
+    k = 4
+    result = []
+    rays = 12
+    for i in range(frames):
+        t = i / float(frames - 1)
+        image = Image.new('RGBA', (size * k, size * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        c = size * k / 2
+        fade = (1 - t) ** 1.3
+        # Rayons alternés longs et courts, qui partent du centre.
+        for ray in range(rays):
+            angle = 2 * math.pi * ray / rays + 0.15
+            length = size * k * (0.18 + 0.30 * t) * (1.0 if ray % 2 == 0 else 0.65)
+            inner = size * k * 0.06 * (1 + 2 * t)
+            ox, oy = math.cos(angle), math.sin(angle)
+            px, py = -oy, ox
+            w = size * k * 0.018 * (1.2 - t * 0.5)
+            points = [(c + ox * inner + px * w, c + oy * inner + py * w), (c + ox * length, c + oy * length),
+                      (c + ox * inner - px * w, c + oy * inner - py * w)]
+            draw.polygon(points, fill=(255, 255, 255, int(255 * fade)))
+        r = size * k * (0.10 + 0.36 * t)
+        draw.ellipse((c - r, c - r, c + r, c + r), outline=(255, 255, 255, int(220 * fade)), width=int(3 * k * (1 - t * 0.6)) + 1)
+        core = size * k * 0.07 * (1 - t)
+        if core > 1:
+            draw.ellipse((c - core, c - core, c + core, c + core), fill=(255, 255, 255, int(255 * fade)))
+        result.append(image.resize((size, size), Image.LANCZOS))
+    write_sheet('combo_burst', result, output)
+
+
 def make_preview(names, output, path):
     """Planche : image du milieu de chaque animation, avec son nom."""
     thumbs = []
@@ -247,8 +305,10 @@ def main():
     make_aura(OUTPUT)
     make_ping_ring(OUTPUT)
     make_ping_arrow(OUTPUT)
-    names += ['arrow', 'bubble', 'aura', 'ping_ring', 'ping_arrow']
-    print('arrow, bubble, aura, ping  dessinées')
+    make_combo_mark(OUTPUT)
+    make_combo_burst(OUTPUT)
+    names += ['arrow', 'bubble', 'aura', 'ping_ring', 'ping_arrow', 'combo_mark', 'combo_burst']
+    print('arrow, bubble, aura, ping, combo  dessinées')
 
     if args.preview:
         path = os.path.join(HERE, 'preview.png')

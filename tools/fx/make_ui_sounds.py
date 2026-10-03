@@ -5,7 +5,8 @@ Usage (depuis la racine du dépôt) :
     py tools/fx/make_ui_sounds.py
 
 - ping.ogg  : signal d'un coéquipier, deux notes brèves ;
-- emote.ogg : bulle d'émote, petit « pop ».
+- emote.ogg : bulle d'émote, petit « pop » ;
+- combo.ogg : combinaison déclenchée, arpège montant et brillant.
 """
 import os
 import sys
@@ -51,6 +52,15 @@ def main():
 
     pop = sweep(520, 980, 0.09, 30)
     save('emote', np.concatenate([pop, np.zeros(int(RATE * 0.03))]), peak_db=-9.0)
+
+    # Arpège do-mi-sol-do, chaque note tenue sous la suivante, avec une octave pour le brillant.
+    notes = [523.25, 659.25, 783.99, 1046.5]
+    step = int(RATE * 0.055)
+    combo = np.zeros(step * len(notes) + int(RATE * 0.45))
+    for index, frequency in enumerate(notes):
+        note = tone(frequency, 0.45, 9) + 0.35 * tone(frequency * 2, 0.45, 14)
+        combo[index * step:index * step + len(note)] += note
+    save('combo', combo, peak_db=-7.0)
 
 
 if __name__ == '__main__':

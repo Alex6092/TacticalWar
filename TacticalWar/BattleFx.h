@@ -46,7 +46,8 @@ public:
 		int casterId, const tw::battle::Cell & casterCell, const tw::battle::Cell & target, bool fast);
 
 	// Effets durables : un visuel en boucle par combattant et par sort, tant qu'un effet du sort reste.
-	void effectAdded(int fighterId, int effectUid, const std::string & spellId);
+	// Les états négatifs (marques de combinaison) ont leur propre visuel au sol, "combo_mark".
+	void effectAdded(int fighterId, const tw::battle::ActiveEffect & effect);
 	void effectRemoved(int effectUid);
 	// Dégât ou soin périodique d'un sort.
 	void periodic(int fighterId, const std::string & spellId);
