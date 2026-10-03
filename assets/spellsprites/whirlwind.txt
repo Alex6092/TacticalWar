@@ -1,0 +1,104 @@
+
+whirlwind.png
+size: 768, 512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+whirlwind
+  rotate: false
+  xy: 0, 0
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 0
+whirlwind
+  rotate: false
+  xy: 192, 0
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 1
+whirlwind
+  rotate: false
+  xy: 384, 0
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 2
+whirlwind
+  rotate: false
+  xy: 576, 0
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 3
+whirlwind
+  rotate: false
+  xy: 0, 128
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 4
+whirlwind
+  rotate: false
+  xy: 192, 128
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 5
+whirlwind
+  rotate: false
+  xy: 384, 128
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 6
+whirlwind
+  rotate: false
+  xy: 576, 128
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 7
+whirlwind
+  rotate: false
+  xy: 0, 256
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 8
+whirlwind
+  rotate: false
+  xy: 192, 256
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 9
+whirlwind
+  rotate: false
+  xy: 384, 256
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 10
+whirlwind
+  rotate: false
+  xy: 576, 256
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 11
+whirlwind
+  rotate: false
+  xy: 0, 384
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 12
+whirlwind
+  rotate: false
+  xy: 192, 384
+  size: 192, 128
+  orig: 192, 128
+  offset: 0, 0
+  index: 13

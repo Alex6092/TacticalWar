@@ -43,7 +43,9 @@ namespace tw
 			void setRollMode(RollMode mode) { rollMode = mode; }
 
 			// Ajoute un combattant avant le placement. Retourne son identifiant (ou -1).
-			int addFighter(int team, int classId, const std::string & name);
+			// spells : sorts emportés (indices dans les sorts de la classe) ; un choix non valable
+			// (voir validSpellChoice) donne les premiers sorts de la classe.
+			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>());
 
 			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
 			void enableZone(int pointsToWin);

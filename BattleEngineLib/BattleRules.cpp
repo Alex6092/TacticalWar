@@ -147,12 +147,65 @@ bool tw::battle::hasLineOfSight(const BattleState & state, const BattleMap & map
 	return true;
 }
 
-const SpellDef * tw::battle::spellOf(const GameData & data, const Fighter & fighter, int spellIndex)
+std::vector<int> tw::battle::defaultSpells(const ClassDef & classDef)
+{
+	std::vector<int> spells;
+	for (int i = 0; i < (int)classDef.spells.size() && i < SPELL_SLOTS; i++)
+		spells.push_back(i);
+	return spells;
+}
+
+std::vector<int> tw::battle::validSpellChoice(const ClassDef & classDef, const std::vector<int> & requested)
+{
+	std::vector<int> fallback = defaultSpells(classDef);
+	if (requested.size() != fallback.size())
+		return fallback;
+	for (std::size_t i = 0; i < requested.size(); i++)
+	{
+		if (requested[i] < 0 || requested[i] >= (int)classDef.spells.size()
+			|| std::find(requested.begin(), requested.begin() + i, requested[i]) != requested.begin() + i)
+			return fallback;
+	}
+	return requested;
+}
+
+std::vector<int> tw::battle::randomSpellChoice(const ClassDef & classDef, std::mt19937 & rng)
+{
+	std::vector<int> all;
+	for (int i = 0; i < (int)classDef.spells.size(); i++)
+		all.push_back(i);
+	std::shuffle(all.begin(), all.end(), rng);
+	if ((int)all.size() > SPELL_SLOTS)
+		all.resize(SPELL_SLOTS);
+	std::sort(all.begin(), all.end());
+	return all;
+}
+
+const SpellDef * tw::battle::spellOf(const GameData & data, const Fighter & fighter, int slot)
 {
 	const ClassDef * classDef = data.findClass(fighter.classId);
-	if (classDef == nullptr || spellIndex < 0 || spellIndex >= (int)classDef->spells.size())
+	if (classDef == nullptr || slot < 0)
 		return nullptr;
-	return &classDef->spells[spellIndex];
+	int index = slot;
+	if (!fighter.spells.empty())
+		index = slot < (int)fighter.spells.size() ? fighter.spells[slot] : -1;
+	else if (slot >= SPELL_SLOTS)
+		index = -1;
+	if (index < 0 || index >= (int)classDef->spells.size())
+		return nullptr;
+	return &classDef->spells[index];
+}
+
+std::vector<const SpellDef *> tw::battle::fighterSpells(const GameData & data, const Fighter & fighter)
+{
+	std::vector<const SpellDef *> spells;
+	for (int slot = 0; slot < SPELL_SLOTS; slot++)
+	{
+		const SpellDef * spell = spellOf(data, fighter, slot);
+		if (spell != nullptr)
+			spells.push_back(spell);
+	}
+	return spells;
 }
 
 int tw::battle::effectiveMaxRange(const BattleState & state, const GameData & data, const Fighter & fighter, const SpellDef & spell)

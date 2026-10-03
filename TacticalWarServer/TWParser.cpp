@@ -351,7 +351,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		{
 			tw::Player * p = getPlayerFromClientState(client);
 			if (p != NULL)
-				handlePickClass(client, p, std::atoi(toParse.substr(2).c_str()));
+				handlePickClass(client, p, toParse.substr(2));
 		}
 	}
 }

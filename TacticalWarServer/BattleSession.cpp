@@ -36,12 +36,14 @@ tw::Player * BattleSession::playerOfFighter(int fighterId) const
 	return fighterId >= 0 && fighterId < (int)participants.size() ? participants[fighterId] : NULL;
 }
 
-bool BattleSession::chooseClass(tw::Player * player, int classId)
+bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells)
 {
-	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || data.findClass(classId) == nullptr)
+	const tw::battle::ClassDef * classDef = data.findClass(classId);
+	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || classDef == nullptr)
 		return false;
 
 	classes[player] = classId;
+	spellChoices[player] = tw::battle::validSpellChoice(*classDef, spells);
 	return true;
 }
 
@@ -67,13 +69,17 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 	for (int i = 0; i < (int)participants.size(); i++)
 	{
 		tw::Player * player = participants[i];
+		// Classe (et sorts) non choisis à temps : classe au hasard, sorts par défaut.
 		int classId = chosenClass(player);
+		std::vector<int> spells;
 		if (classId == 0)
 			classId = data.classes[rng() % data.classes.size()].id;
+		else
+			spells = spellChoices[player];
 
 		int team = match->playerIsInTeam1(player) ? 1 : 2;
 		auto name = names.find(player);
-		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo());
+		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells);
 	}
 
 	if (zonePoints > 0)

@@ -63,7 +63,8 @@ Le client joue aussi directement :
 - `combo_mark` : en boucle sous un combattant qui porte une marque de combinaison (état négatif :
   gelé, entravé, provoqué, brûlé), à la place du visuel `status` du sort qui l'a posée.
 
-Ces planches sont dessinées par `tools/fx/import_fx.py`.
+Ces planches sont dessinées par `tools/fx/import_fx.py`, comme celles de quatre sorts au choix : `whirlwind`
+(Tourbillon), `arrow_rain` (Pluie de flèches), `trap` (Piège) et `ice_prison` (Prison de glace).
 
 ## Galerie de réglage
 

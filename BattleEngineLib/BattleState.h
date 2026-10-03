@@ -103,6 +103,9 @@ namespace tw
 			bool ready = false;
 			bool connected = true;
 
+			// Sorts emportés : indices dans les sorts de la classe, dans l'ordre de la barre de sorts
+			// (emplacements 0 à 3). Vide (ancien instantané) : les sorts de la classe dans l'ordre.
+			std::vector<int> spells;
 			std::map<std::string, int> cooldowns;			// sort -> tours restants
 			std::map<std::string, int> castsThisTurn;
 			std::map<std::string, std::map<int, int>> castsOnTarget;	// sort -> combattant -> lancers ce tour

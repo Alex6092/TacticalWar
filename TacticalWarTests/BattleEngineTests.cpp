@@ -1,5 +1,6 @@
 ﻿#include <doctest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <functional>
@@ -66,7 +67,9 @@ namespace
 		std::unique_ptr<BattleEngine> engine;
 		std::int64_t now = 0;
 
-		Arena(const std::vector<std::pair<int, Cell>> & team1, const std::vector<std::pair<int, Cell>> & team2, BattleMap baseMap = openMap(), std::uint32_t seed = 1)
+		// spells : sorts emportés par chaque combattant, dans l'ordre de création (par défaut, ceux de la classe).
+		Arena(const std::vector<std::pair<int, Cell>> & team1, const std::vector<std::pair<int, Cell>> & team2, BattleMap baseMap = openMap(), std::uint32_t seed = 1,
+			const std::vector<std::vector<int>> & spells = std::vector<std::vector<int>>())
 			: map(baseMap)
 		{
 			for (const auto & entry : team1)
@@ -75,10 +78,11 @@ namespace
 				map.startCells[2].push_back(entry.second);
 
 			engine.reset(new BattleEngine(gameData(), map, seed));
+			auto spellsOf = [&spells](std::size_t index) { return index < spells.size() ? spells[index] : std::vector<int>(); };
 			for (const auto & entry : team1)
-				engine->addFighter(1, entry.first, "A" + std::to_string(entry.first));
+				engine->addFighter(1, entry.first, "A" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
 			for (const auto & entry : team2)
-				engine->addFighter(2, entry.first, "B" + std::to_string(entry.first));
+				engine->addFighter(2, entry.first, "B" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
 
 			engine->startPlacement(now);
 			for (const Fighter & fighter : engine->getState().fighters)
@@ -89,6 +93,18 @@ namespace
 
 		const BattleState & state() const { return engine->getState(); }
 		const Fighter & fighter(int id) const { return *state().findFighter(id); }
+		// Emplacement de la barre où le combattant a rangé ce sort.
+		int slotOf(int id, const std::string & spellId) const
+		{
+			for (int slot = 0; slot < SPELL_SLOTS; slot++)
+			{
+				const SpellDef * spell = spellOf(gameData(), fighter(id), slot);
+				if (spell != nullptr && spell->id == spellId)
+					return slot;
+			}
+			FAIL("sort non emporté " << spellId);
+			return -1;
+		}
 		int active() const { return state().activeFighterId(); }
 
 		// Passe les tours jusqu'à celui du combattant demandé.
@@ -115,7 +131,7 @@ namespace
 	};
 }
 
-TEST_CASE("Game data defines the four classes with four spells each")
+TEST_CASE("Game data defines the four classes with six spells each")
 {
 	const GameData & data = gameData();
 	REQUIRE(data.classes.size() == 4);
@@ -123,7 +139,7 @@ TEST_CASE("Game data defines the four classes with four spells each")
 	{
 		const ClassDef * classDef = data.findClass(classId);
 		REQUIRE(classDef != nullptr);
-		CHECK(classDef->spells.size() == 4);
+		CHECK(classDef->spells.size() == 6);
 		CHECK(classDef->baseStats.get(Stat::AP) == 6);
 		CHECK((classDef->passive.type != PassiveType::NONE));
 	}
@@ -1118,4 +1134,146 @@ TEST_CASE("A contested zone scores nothing and a decision counts zone points fir
 	judge.stopByDecision(duel.now);
 	CHECK(judge.getState().winnerTeam == 2);
 	CHECK((judge.getState().endReason == EndReason::ADMIN));
+}
+
+TEST_CASE("Each fighter carries four spells chosen among the six of its class")
+{
+	const ClassDef & guerrier = *gameData().findClass(GUERRIER);
+	CHECK(defaultSpells(guerrier) == std::vector<int>{ 0, 1, 2, 3 });
+	CHECK(validSpellChoice(guerrier, { 5, 4, 0, 1 }) == std::vector<int>{ 5, 4, 0, 1 });
+	for (const std::vector<int> & invalid : std::vector<std::vector<int>>{ { 0, 0, 1, 2 }, { 0, 1, 2 }, { 0, 1, 2, 6 }, { -1, 1, 2, 3 }, { 0, 1, 2, 3, 4 } })
+		CHECK(validSpellChoice(guerrier, invalid) == defaultSpells(guerrier));
+
+	std::mt19937 rng(3);
+	for (int i = 0; i < 20; i++)
+	{
+		std::vector<int> random = randomSpellChoice(guerrier, rng);
+		CHECK(validSpellChoice(guerrier, random) == random);
+		CHECK(std::is_sorted(random.begin(), random.end()));
+	}
+
+	// Le Guerrier emporte Tourbillon (emplacement 0) et Cri de guerre ; le choix de l'Archer n'est pas valable.
+	Arena arena({ { GUERRIER, { 5, 5 } } }, { { ARCHER, { 5, 6 } } }, openMap(), 1, { { 4, 5, 0, 1 }, { 9, 9, 9, 9 } });
+	CHECK(arena.fighter(0).spells == std::vector<int>{ 4, 5, 0, 1 });
+	CHECK(arena.fighter(1).spells == std::vector<int>{ 0, 1, 2, 3 });
+	REQUIRE(spellOf(gameData(), arena.fighter(0), 0) != nullptr);
+	CHECK(spellOf(gameData(), arena.fighter(0), 0)->id == "tourbillon");
+	CHECK(spellOf(gameData(), arena.fighter(0), 4) == nullptr);
+	CHECK(fighterSpells(gameData(), arena.fighter(0)).size() == 4);
+
+	// Les clients reçoivent le choix ; un ancien état (sans "spells") garde les 4 premiers sorts de la classe.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(-1, arena.now));
+	CHECK(mirror.findFighter(0)->spells == std::vector<int>{ 4, 5, 0, 1 });
+	Fighter legacy = arena.fighter(0);
+	legacy.spells.clear();
+	CHECK(spellOf(gameData(), legacy, 0)->id == "taillade");
+	CHECK(spellOf(gameData(), legacy, 4) == nullptr);
+
+	// L'emplacement 0 lance bien Tourbillon.
+	arena.playUntilTurnOf(0);
+	int hp = arena.fighter(1).hp;
+	REQUIRE(arena.engine->cast(0, 0, { 5, 5 }, arena.now).ok);
+	CHECK(arena.fighter(1).hp < hp);
+}
+
+TEST_CASE("Tourbillon hits adjacent enemies only and Cri de guerre boosts nearby allies")
+{
+	Arena arena({ { GUERRIER, { 5, 5 } }, { MAGE, { 4, 5 } }, { ARCHER, { 8, 5 } } },
+		{ { PROTECTEUR, { 6, 5 } }, { ARCHER, { 5, 4 } }, { MAGE, { 5, 7 } } }, openMap(), 1, { { 4, 5, 0, 1 } });
+	arena.playUntilTurnOf(0);
+	int ally = arena.fighter(1).hp;
+	int adjacent1 = arena.fighter(3).hp;
+	int adjacent2 = arena.fighter(4).hp;
+	int far = arena.fighter(5).hp;
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "tourbillon"), { 5, 5 }, arena.now).ok);
+	CHECK(arena.fighter(3).hp < adjacent1);
+	CHECK(arena.fighter(4).hp < adjacent2);
+	CHECK(arena.fighter(5).hp == far);
+	CHECK(arena.fighter(1).hp == ally);
+
+	int power = effectiveStat(arena.state(), gameData(), arena.fighter(1), Stat::POWER);
+	int archerPower = effectiveStat(arena.state(), gameData(), arena.fighter(2), Stat::POWER);
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "cri_de_guerre"), { 5, 5 }, arena.now).ok);
+	CHECK(effectiveStat(arena.state(), gameData(), arena.fighter(1), Stat::POWER) == power + 20);
+	// L'Archer allié est à 3 cases : hors de portée du cri.
+	CHECK(effectiveStat(arena.state(), gameData(), arena.fighter(2), Stat::POWER) == archerPower);
+}
+
+TEST_CASE("Pluie de fleches hits an area and the trap immobilises and entangles")
+{
+	Arena arena({ { ARCHER, { 1, 5 } } }, { { GUERRIER, { 7, 5 } }, { MAGE, { 7, 6 } }, { PROTECTEUR, { 9, 9 } } }, openMap(), 1, { { 4, 5, 0, 1 } });
+	arena.playUntilTurnOf(0);
+	int a = arena.fighter(1).hp;
+	int b = arena.fighter(2).hp;
+	int c = arena.fighter(3).hp;
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "pluie_de_fleches"), { 7, 5 }, arena.now).ok);
+	CHECK(arena.fighter(1).hp < a);
+	CHECK(arena.fighter(2).hp < b);
+	CHECK(arena.fighter(3).hp == c);
+
+	Arena trap({ { ARCHER, { 1, 5 } } }, { { GUERRIER, { 5, 5 } } }, openMap(), 1, { { 5, 0, 1, 2 } });
+	trap.playUntilTurnOf(0);
+	CHECK_FALSE(trap.engine->cast(0, trap.slotOf(0, "piege"), { 5, 5 }, trap.now).ok);	// Case occupée
+	REQUIRE(trap.engine->cast(0, trap.slotOf(0, "piege"), { 4, 5 }, trap.now).ok);
+
+	// Le Guerrier finit son tour sur le piège : il se déclenche au début de son tour suivant.
+	trap.playUntilTurnOf(1);
+	REQUIRE(trap.engine->move(1, { { 4, 5 } }, trap.now).ok);
+	REQUIRE(trap.engine->endTurn(1, trap.now).ok);
+	int hp = trap.fighter(1).hp;
+	trap.playUntilTurnOf(1);
+	CHECK(trap.fighter(1).hp < hp);
+	CHECK(trap.fighter(1).mp == 0);
+	CHECK(trap.fighter(1).hasState("entrave"));
+}
+
+TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")
+{
+	// Vague vers la droite depuis (2, 5) : cases (3, 5), (4, 5) et (5, 5).
+	Arena arena({ { MAGE, { 2, 5 } }, { GUERRIER, { 4, 5 } } }, { { ARCHER, { 3, 5 } }, { PROTECTEUR, { 5, 5 } }, { ARCHER, { 4, 7 } } },
+		openMap(), 1, { { 4, 5, 0, 1 } });
+	arena.playUntilTurnOf(0);
+	int ally = arena.fighter(1).hp;
+	int first = arena.fighter(2).hp;
+	int last = arena.fighter(3).hp;
+	int aside = arena.fighter(4).hp;
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "vague_de_flammes"), { 3, 5 }, arena.now).ok);
+	CHECK(arena.fighter(1).hp == ally);
+	CHECK(arena.fighter(2).hp < first);
+	CHECK(arena.fighter(3).hp < last);
+	CHECK(arena.fighter(4).hp == aside);
+	CHECK(arena.fighter(2).hasState("brule"));
+	CHECK(arena.fighter(3).hasState("brule"));
+	CHECK_FALSE(arena.fighter(1).hasState("brule"));
+
+	Arena prison({ { MAGE, { 2, 5 } } }, { { GUERRIER, { 6, 5 } } }, openMap(), 1, { { 5, 0, 1, 2 } });
+	prison.playUntilTurnOf(0);
+	REQUIRE(prison.engine->cast(0, prison.slotOf(0, "prison_de_glace"), { 6, 5 }, prison.now).ok);
+	CHECK(prison.fighter(1).hasState("gele"));
+	prison.playUntilTurnOf(1);
+	CHECK(prison.fighter(1).mp == gameData().findClass(GUERRIER)->baseStats.get(Stat::MP) - 3);
+}
+
+TEST_CASE("Barriere blocks pushes and Lien de vie heals over the next turns")
+{
+	Arena arena({ { PROTECTEUR, { 2, 5 } } }, { { ARCHER, { 5, 5 } } }, openMap(), 1, { { 4, 5, 0, 1 } });
+	arena.playUntilTurnOf(0);
+	int resistance = effectiveStat(arena.state(), gameData(), arena.fighter(0), Stat::RESISTANCE);
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "barriere"), { 2, 5 }, arena.now).ok);
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "lien_de_vie"), { 2, 5 }, arena.now).ok);
+	CHECK(arena.fighter(0).hasState("unmovable"));
+	CHECK(effectiveStat(arena.state(), gameData(), arena.fighter(0), Stat::RESISTANCE) == resistance + 25);
+
+	// Inamovible : la Flèche de recul blesse sans repousser.
+	arena.playUntilTurnOf(1);
+	REQUIRE(arena.engine->cast(1, spellIndex(ARCHER, "fleche_recul"), { 2, 5 }, arena.now).ok);
+	CHECK(arena.fighter(0).position == Cell{ 2, 5 });
+	int hp = arena.fighter(0).hp;
+	CHECK(hp < arena.fighter(0).maxHp);
+
+	// Lien de vie : soin au début de son tour suivant.
+	arena.playUntilTurnOf(0);
+	CHECK(arena.fighter(0).hp > hp);
 }

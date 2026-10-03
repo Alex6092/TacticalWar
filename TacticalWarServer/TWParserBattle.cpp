@@ -52,13 +52,37 @@ void TWParser::sendGameData(ClientState * client)
 	send(client, gameDataMessage);
 }
 
-void TWParser::handlePickClass(ClientState * client, tw::Player * player, int classId)
+void TWParser::handlePickClass(ClientState * client, tw::Player * player, const std::string & body)
 {
 	BattleSession * session = sessionOfPlayer(player);
 	if (session == NULL || !player->getHasJoinBattle())
 		return;
 
-	if (session->chooseClass(player, classId))
+	// PC{"class": id, "spells": [indices]} ; ancien format PC<classId> : sorts par défaut.
+	int classId = 0;
+	std::vector<int> spells;
+	if (!body.empty() && body[0] == '{')
+	{
+		nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
+		if (pick.is_object())
+		{
+			classId = pick.value("class", 0);
+			if (pick.contains("spells") && pick["spells"].is_array())
+			{
+				for (const nlohmann::json & index : pick["spells"])
+				{
+					if (index.is_number_integer())
+						spells.push_back(index.get<int>());
+				}
+			}
+		}
+	}
+	else
+	{
+		classId = std::atoi(body.c_str());
+	}
+
+	if (session->chooseClass(player, classId, spells))
 	{
 		send(client, "PO" + std::to_string(classId) + "\n");
 		if (session->allClassesChosen())
