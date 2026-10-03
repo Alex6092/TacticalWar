@@ -92,7 +92,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	form->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
 	group->add(form);
 
-	form->add(createLabel(L"Nom du tournoi"), "nameLabel");
+	form->add(createLabel(L"Nom"), "nameLabel");
 	name = tgui::EditBox::create();
 	name->setInheritedFont(font);
 	name->setTextSize(TEXT_SIZE);
@@ -139,11 +139,20 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	zonePointsLabel = createLabel(L"Points");
 	zonePoints = createNumberBox("5");
 	// Talents de tournoi : un par match joué, au plus ce nombre (0 : désactivés).
-	talentsLabel = createLabel(L"Talents par joueur (max, 0 = aucun)");
+	talentsLabel = createLabel(L"Talents (max, 0 = aucun)");
 	maxTalents = createNumberBox("3");
+	// Bannissement : chaque équipe interdit une classe à l'autre avant le match.
+	bansLabel = createLabel(L"Bannissement");
+	bans = tgui::ComboBox::create();
+	bans->setInheritedFont(font);
+	bans->setTextSize(TEXT_SIZE);
+	bans->addItem(L"Aucun", "NONE");
+	bans->addItem(L"Phase finale", "FINALS");
+	bans->addItem(L"Tous les matchs", "ALL");
+	bans->setSelectedItemById("NONE");
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans })
 		form->add(widget);
 
 	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -300,12 +309,14 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float width = (float)windowSize.x;
 	float height = (float)windowSize.y;
 
+	// Fenêtre basse : liste des tournois réduite, pour laisser la place au formulaire.
+	float listHeight = height >= 1000 ? 150.f : 84.f;
 	tournamentList->setPosition(margin, top);
-	tournamentList->setSize(380, 150);
-	newButton->setPosition(margin, top + 156);
+	tournamentList->setSize(380, listHeight);
+	newButton->setPosition(margin, top + listHeight + 6);
 	newButton->setSize(380, 32);
 
-	float formTop = top + 200;
+	float formTop = top + listHeight + 50;
 	form->setPosition(margin, formTop);
 	form->setSize(380, height - formTop - margin);
 
@@ -313,14 +324,15 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float w = 360;
 	float half = (w - 10) / 2;
 	float y = 8;
-	form->get<tgui::Label>("nameLabel")->setPosition(x, y);
-	name->setPosition(x, y + 18);
-	name->setSize(w, 26);
-	y += 50;
-	form->get<tgui::Label>("formatLabel")->setPosition(x, y);
-	format->setPosition(x, y + 18);
-	format->setSize(w, 26);
-	y += 52;
+	// Nom et format : libellé à gauche du champ.
+	form->get<tgui::Label>("nameLabel")->setPosition(x, y + 4);
+	name->setPosition(x + 80, y);
+	name->setSize(w - 80, 26);
+	y += 34;
+	form->get<tgui::Label>("formatLabel")->setPosition(x, y + 4);
+	format->setPosition(x + 80, y);
+	format->setSize(w - 80, 26);
+	y += 38;
 
 	poolCountLabel->setPosition(x, y);
 	poolCount->setPosition(x, y + 18);
@@ -351,6 +363,10 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	talentsLabel->setPosition(x, y + 4);
 	maxTalents->setPosition(x + 318, y);
 	maxTalents->setSize(42, 26);
+	y += 34;
+	bansLabel->setPosition(x, y + 4);
+	bans->setPosition(x + 160, y);
+	bans->setSize(w - 160, 26);
 	y += 34;
 
 	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
@@ -520,6 +536,8 @@ void TournamentAdminPanel::refreshForm()
 		mode->setSelectedItemById(settings.value("mode", std::string("KO")) == "ZONE" ? "ZONE" : "KO");
 		zonePoints->setText(num(settings.value("zonePoints", 5)));
 		maxTalents->setText(num(settings.value("maxTalents", 3)));
+		std::string banMode = settings.value("bans", std::string("NONE"));
+		bans->setSelectedItemById(banMode == "FINALS" || banMode == "ALL" ? banMode : "NONE");
 	}
 	refreshFormatOptions();
 
@@ -567,6 +585,7 @@ void TournamentAdminPanel::refreshForm()
 	mode->setEnabled(draft);
 	zonePoints->setEnabled(draft);
 	maxTalents->setEnabled(draft);
+	bans->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -668,7 +687,8 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "swissTopCut", number(topCut) },
 		{ "mode", mode->getSelectedItemId().toAnsiString() },
 		{ "zonePoints", number(zonePoints) },
-		{ "maxTalents", number(maxTalents) }
+		{ "maxTalents", number(maxTalents) },
+		{ "bans", bans->getSelectedItemId().toAnsiString() }
 	};
 }
 

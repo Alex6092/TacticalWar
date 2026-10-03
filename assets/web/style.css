@@ -127,6 +127,7 @@ html, body {
 .side-2 .bar .hp { background: linear-gradient(90deg, #d23a33, #ff8079); }
 .bar .shield { background: #6eb4ff; }
 .shield-num { color: #8cc4ff; font-weight: 700; }
+.battle .forbidden { font-size: 0.75rem; color: #ff9b85; margin-top: 0.35rem; text-align: center; }
 .badge-count { color: var(--gold); font-weight: 700; }
 .mvp-badges { font-size: 0.75rem; color: var(--gold); margin-top: 0.15rem; }
 .fighter .talents { font-size: 0.7rem; color: var(--gold); opacity: 0.85; margin-top: 0.1rem; }

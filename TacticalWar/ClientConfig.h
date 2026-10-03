@@ -54,8 +54,11 @@ public:
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
 	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
-	// (--class-screen N), pour les captures. -1 : désactivé.
+	// (--class-screen N), pour les captures. -1 : désactivé. Bannissement en cours pendant S secondes
+	// (--class-screen-ban S), ou terminé avec la classe interdite (--class-screen-forbidden <id>).
 	int classScreenTalents = -1;
+	int classScreenBan = 0;
+	int classScreenForbidden = 0;
 	int trainingTalents = 0;
 
 	static ClientConfig & get();

@@ -272,7 +272,7 @@ function renderLive(tournament) {
     const label = tournament && battle.match ? tournament.labels[String(battle.match)] : battle.name;
     let body;
     if (!battle.fighters) {
-      body = `<p class="phase-note">Choix des classes...</p>`;
+      body = `<p class="phase-note">${battle.phase === "BAN" ? "Bannissement des classes..." : "Choix des classes..."}</p>`;
     } else {
       const side = (team) => battle.fighters.filter((f) => f.team === team).map((f) => {
         const max = Math.max(1, f.initialMaxHp);
@@ -293,7 +293,11 @@ function renderLive(tournament) {
       </div>`;
     }
     const phase = battle.phase === "PLACEMENT" ? "Placement" : battle.phase === "FIGHT" ? `Tour ${battle.round}` : "";
-    return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}</div>`;
+    // Classes interdites à chaque équipe par le bannissement.
+    const forbidden = battle.forbidden
+      ? `<div class="forbidden">Interdit : ${[0, 1].map((i) => `${esc(battle.teams[i])} <strong>${esc(battle.forbidden[i] || "rien")}</strong>`).join(" · ")}</div>`
+      : "";
+    return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}${forbidden}</div>`;
   }).join("");
 }
 

@@ -20,6 +20,7 @@ namespace
 
 	sf::String phaseLabel(const std::string & phase)
 	{
+		if (phase == "BAN") return L"Bannissement";
 		if (phase == "CLASS_SELECTION") return L"Choix des classes";
 		if (phase == "PLACEMENT") return L"Placement";
 		if (phase == "FIGHT") return L"Combat";

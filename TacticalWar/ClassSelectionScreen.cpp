@@ -1,6 +1,7 @@
 ﻿#include "ClassSelectionScreen.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <BattleRules.h>
 #include <CharacterFactory.h>
@@ -123,15 +124,35 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	gui->add(spellPicker->getWidget());
 
 	nlohmann::json message = nlohmann::json::parse(selection, nullptr, false);
+	if (!message.is_object())
+		message = nlohmann::json::object();
 	talentPicker.reset(new tw::TalentPicker(gui, font));
-	talentPicker->setSlots(message.is_object() ? message.value("talents", 0) : 0);
+	talentPicker->setSlots(message.value("talents", 0));
 	talentPicker->setChosen(ClientConfig::get().talentChoice);
 	talentPicker->onChange = [this]() { refreshLock(); };
 	gui->add(talentPicker->getButton());
 
 	lockButton = createButton(font, L"Verrouiller mon choix", 20);
-	lockButton->connect("pressed", [this]() { readyToLock = true; });
+	lockButton->connect("pressed", [this]() {
+		if (banMode)
+			banRequested = true;
+		else
+			readyToLock = true;
+	});
 	gui->add(lockButton);
+
+	// Bannissement : consigne et compte à rebours, puis classes interdites.
+	banRemaining = (float)message.value("ban", 0);
+	banMode = banRemaining > 0;
+	banLabel = tgui::Label::create();
+	banLabel->setInheritedFont(textFont);
+	banLabel->setTextSize(20);
+	banLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Center);
+	banLabel->getRenderer()->setTextColor(sf::Color(255, 225, 120));
+	banLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	banLabel->getRenderer()->setTextOutlineThickness(2);
+	banLabel->setVisible(banMode);
+	gui->add(banLabel);
 
 	showClass(0);
 }
@@ -157,7 +178,6 @@ void ClassSelectionScreen::showClass(int index)
 
 	// Textes et chiffres : données de jeu envoyées par le serveur (assets/data/gamedata.json).
 	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(model->getClassId());
-	className->setText(classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(model->getClassId()));
 
 	sf::Texture texture;
 	if (classDef != NULL && texture.loadFromFile(classDef->preview))
@@ -198,17 +218,66 @@ void ClassSelectionScreen::showClass(int index)
 	characterView->setOrientation((tw::Orientation)(orientation % 4));
 	characterPicture->setCharacterView(characterView);
 
+	refreshBan();
 	refreshLock();
 	if (windowSize.x > 0)
 		layout(windowSize);
 }
 
+sf::String ClassSelectionScreen::classLabel(int classId) const
+{
+	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(classId);
+	return classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(classId);
+}
+
 void ClassSelectionScreen::refreshLock()
 {
+	if (banMode)
+	{
+		// Le premier bannissement de l'équipe compte : celui du coéquipier aussi.
+		lockButton->setEnabled(!banSent && bannedClass == 0);
+		lockButton->setText(bannedClass != 0 ? L"Bannissement fait" : banSent ? L"Bannissement envoyé" : L"Bannir cette classe");
+		return;
+	}
+	bool forbidden = forbiddenClass != 0 && currentClassId() == forbiddenClass;
 	bool complete = spellPicker->isComplete() && talentPicker->isComplete();
-	lockButton->setEnabled(!locked && complete);
-	lockButton->setText(locked ? L"Choix verrouillé" : complete ? L"Verrouiller mon choix"
+	lockButton->setEnabled(!locked && complete && !forbidden);
+	lockButton->setText(locked ? L"Choix verrouillé" : forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
 		: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez vos talents");
+}
+
+void ClassSelectionScreen::refreshBan()
+{
+	// Classe affichée interdite par l'adversaire : grisée et signalée.
+	int classId = currentClassId();
+	bool forbidden = !banMode && forbiddenClass != 0 && classId == forbiddenClass;
+	className->setText(classLabel(classId) + (forbidden ? sf::String(L" - interdite") : sf::String()));
+	className->getRenderer()->setTextColor(forbidden ? sf::Color(255, 110, 90) : sf::Color(255, 215, 0));
+	preview->getRenderer()->setOpacity(forbidden ? 0.3f : 1.f);
+	classIcon->getRenderer()->setOpacity(forbidden ? 0.3f : 1.f);
+	characterPicture->setVisible(!forbidden);
+
+	sf::String subtitleText = banMode ? L"Bannissement" : L"Sélection de la classe";
+	if (subtitle.getString() != subtitleText)
+	{
+		subtitle.setString(subtitleText);
+		if (windowSize.x > 0)
+			layout(windowSize);
+	}
+
+	if (banMode)
+	{
+		sf::String seconds = L" (" + num(std::max(0, (int)std::ceil(banRemaining))) + L" s)";
+		banLabel->setText(bannedClass != 0
+			? L"Votre équipe interdit : " + classLabel(bannedClass) + L". En attente de l'adversaire..." + seconds
+			: L"Choisissez une classe que l'équipe adverse ne pourra pas jouer" + seconds);
+	}
+	else if (banDone)
+	{
+		banLabel->setText((forbiddenClass != 0 ? L"Interdite par l'adversaire : " + classLabel(forbiddenClass) : sf::String(L"L'adversaire n'a interdit aucune classe"))
+			+ (bannedClass != 0 ? L"     -     Votre équipe a interdit : " + classLabel(bannedClass) : sf::String()));
+	}
+	banLabel->setVisible(banMode || banDone);
 }
 
 void ClassSelectionScreen::layout(const sf::Vector2u & size)
@@ -223,10 +292,14 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	float top = titleSize + 64.f;
 	float margin = width * 0.03f;
 	float lockY = height - 76;
+	// Bas des blocs : au-dessus de la consigne de bannissement, si elle est affichée.
+	float bottom = banLabel->isVisible() ? lockY - 40 : lockY;
+	banLabel->setSize(width - 2 * margin, 32);
+	banLabel->setPosition(margin, lockY - 38);
 
 	// Gauche : sorts (lignes ajustées à la hauteur disponible), puis talents.
 	float leftWidth = width * 0.36f;
-	float rowHeight = std::max(56.f, std::min(82.f, (lockY - 60 - top - 30) / 6));
+	float rowHeight = std::max(56.f, std::min(82.f, (bottom - 60 - top - 30) / 6));
 	spellPicker->setGeometry(leftWidth, rowHeight);
 	spellPicker->getWidget()->setPosition(margin, top);
 	spellsPanel->setPosition(margin - 10, top - 8);
@@ -238,7 +311,7 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	// Centre : carte de la classe, à la taille disponible.
 	float centerX = margin + leftWidth + width * 0.03f;
 	float centerWidth = width * 0.24f;
-	float scale = std::min(1.f, std::min(centerWidth / CARD_WIDTH, (lockY - top - 230) / CARD_HEIGHT));
+	float scale = std::min(1.f, std::min(centerWidth / CARD_WIDTH, (bottom - top - 230) / CARD_HEIGHT));
 	float cardWidth = CARD_WIDTH * scale;
 	float cardHeight = CARD_HEIGHT * scale;
 	float cardX = centerX + (centerWidth - cardWidth) / 2;
@@ -261,7 +334,7 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	statsPanel->setPosition(rightX, top);
 	statsPanel->setSize(rightWidth, 200);
 	descriptionPanel->setPosition(rightX, top + 214);
-	descriptionPanel->setSize(rightWidth, std::max(120.f, lockY - 16 - (top + 214)));
+	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - (top + 214)));
 	descriptionLabel->setMaximumTextWidth(rightWidth - 28);
 
 	lockButton->setSize(400, 54);
@@ -305,6 +378,24 @@ void ClassSelectionScreen::update(float deltatime)
 	}
 	if (characterView != NULL)
 		characterView->update(deltatime);
+
+	if (banMode)
+	{
+		banRemaining = std::max(0.f, banRemaining - deltatime);
+		int seconds = (int)std::ceil(banRemaining);
+		if (seconds != banSecondsShown)
+		{
+			banSecondsShown = seconds;
+			refreshBan();
+		}
+	}
+	if (banRequested)
+	{
+		banRequested = false;
+		banSent = true;
+		LinkToServer::getInstance()->Send("PB" + nlohmann::json({ { "class", currentClassId() } }).dump());
+		refreshLock();
+	}
 
 	if (readyToLock)
 	{
@@ -359,6 +450,28 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		previousButton->setVisible(false);
 		nextButton->setVisible(false);
 		refreshLock();
+	}
+	else if (m.substring(0, 2) == "BB")
+	{
+		// Bannissement de notre équipe enregistré, puis fin de la phase avec la classe interdite.
+		nlohmann::json ban = nlohmann::json::parse(msg.substr(2), nullptr, false);
+		if (ban.is_object())
+		{
+			bannedClass = ban.value("banned", 0);
+			if (ban.value("done", false))
+			{
+				banMode = false;
+				banDone = true;
+				forbiddenClass = ban.value("forbidden", 0);
+			}
+			// La classe affichée est interdite : on montre la suivante.
+			if (banDone && !locked && forbiddenClass != 0 && currentClassId() == forbiddenClass)
+				showClass(indexClass + 1);
+			refreshBan();
+			refreshLock();
+			if (windowSize.x > 0)
+				layout(windowSize);
+		}
 	}
 	else if (m.substring(0, 2) == "HG")
 	{

@@ -27,7 +27,15 @@ int main(int argc, char** argv)
 	}
 	else if (config.classScreenTalents >= 0)
 	{
-		tw::ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(&gui, "{\"talents\": " + std::to_string(config.classScreenTalents) + "}"));
+		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
+		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
+		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
+		// Fin de bannissement simulée : la classe donnée est interdite, la suivante bannie par notre équipe.
+		if (config.classScreenForbidden > 0)
+		{
+			screen->onMessageReceived("BB{\"banned\": " + std::to_string(config.classScreenForbidden % 4 + 1) + ", \"done\": true, \"forbidden\": "
+				+ std::to_string(config.classScreenForbidden) + "}");
+		}
 	}
 	else if (config.training)
 	{

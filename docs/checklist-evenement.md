@@ -37,6 +37,8 @@
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
    Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
+   Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
+   finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 

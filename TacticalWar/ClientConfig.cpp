@@ -180,6 +180,14 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenTalents = std::atoi(argv[++i]);
 		}
+		else if (arg == "--class-screen-ban" && hasValue)
+		{
+			classScreenBan = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-forbidden" && hasValue)
+		{
+			classScreenForbidden = std::atoi(argv[++i]);
+		}
 		else if (arg == "--training-zone")
 		{
 			training = trainingStart = true;

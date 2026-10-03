@@ -464,6 +464,18 @@ void BattleScreen::applySnapshot(const json & snapshot)
 	const json & teams = snapshot.value("teams", json::array());
 	for (std::size_t i = 0; i < 2 && i < teams.size(); i++)
 		teamNames[i] = fromServerText(teams[i].get<std::string>());
+	// Bannissement avant le combat : classe interdite à chaque équipe (0 : aucune).
+	const json & forbidden = snapshot.value("forbidden", json::array());
+	if (forbidden.size() == 2 && !forbiddenLogged)
+	{
+		forbiddenLogged = true;
+		for (int team = 1; team <= 2; team++)
+		{
+			const battle::ClassDef * classDef = ClientGameData::get().data().findClass(forbidden[team - 1].get<int>());
+			hud->log(L"Classe interdite à " + teamLabel(team) + L" : " + (classDef != nullptr ? fromServerText(classDef->name) : sf::String(L"aucune")),
+				sf::Color(255, 205, 90));
+		}
+	}
 	if (mode != Mode::PLAYER)
 	{
 		sf::String title = fromServerText(snapshot.value("title", std::string()));

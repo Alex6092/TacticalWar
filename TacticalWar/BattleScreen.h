@@ -110,6 +110,7 @@ namespace tw
 		Camera camera;
 		Mode mode;
 		sf::String teamNames[2];
+		bool forbiddenLogged = false;
 		float autoCloseRemaining;
 		bool cameraFitted;
 		std::unique_ptr<BattleHud> hud;

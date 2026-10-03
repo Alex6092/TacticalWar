@@ -121,6 +121,34 @@ Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour 
 Le serveur annonce le nombre de talents dans `HC{"talents": 2}`, et le joueur répond
 `PC{"class": 4, "spells": [0, 1, 4, 5], "talents": ["garde", "force"]}`.
 
+## Bannissement de classe
+
+Au choix de l'organisateur, un match de tournoi peut commencer par un **bannissement** : chaque équipe
+interdit une classe à l'équipe adverse, qui choisit ensuite parmi les 3 autres.
+
+- **Phase de bannissement** (20 s) : l'écran de choix de classe affiche « Bannissement », une consigne
+  avec le compte à rebours, et le bouton « Bannir cette classe » pour la classe affichée.
+  - Le premier joueur de l'équipe qui bannit décide pour l'équipe : son coéquipier voit « Votre équipe
+    interdit : Mage. En attente de l'adversaire... ».
+  - Une équipe qui ne bannit pas à temps n'interdit rien. Les deux équipes peuvent interdire la même
+    classe.
+- **Choix des classes** : le délai habituel repart à la fin du bannissement. La consigne rappelle la
+  classe interdite par l'adversaire ; cette classe est grisée et marquée « interdite », et ne peut pas
+  être verrouillée. Un joueur qui ne choisit pas à temps reçoit une classe autorisée au hasard.
+- Le journal du combat (joueurs, spectateurs, rediffusions) et la page projetée indiquent la classe
+  interdite à chaque équipe.
+
+**Réglages** :
+- tournoi : « Bannissement » dans l'onglet Tournoi de l'administration : aucun (par défaut), phase finale
+  (tableaux à élimination, finales et petite finale, pas les poules ni les rondes suisses) ou tous les
+  matchs ;
+- durée de la phase : `"banSeconds"` dans `server.json` (20 par défaut) ;
+- matchs hors tournoi : pas de bannissement.
+
+Messages : `HC{"talents": 1, "ban": 20}` ouvre l'écran en mode bannissement, le joueur envoie
+`PB{"class": 1}`, et le serveur répond `BB{"banned", "done", "forbidden"}` à son équipe, puis à tous
+à la fin de la phase.
+
 ## Combinaisons entre classes
 
 Certains sorts **marquent** un ennemi, et un sort d'une autre classe lui inflige alors plus de dégâts :

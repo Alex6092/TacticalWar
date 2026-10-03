@@ -18,10 +18,13 @@ class PictureCharacterView;
 // - au centre : la carte de la classe, son personnage animé et les flèches pour changer de classe ;
 // - à droite : les caractéristiques, la description et le passif ;
 // - en bas : le bouton de verrouillage, actif quand les sorts et les talents sont complets.
+// Certains matchs de tournoi commencent par un bannissement : le même écran sert à choisir la classe
+// interdite à l'adversaire (bandeau au-dessus du bouton, qui devient « Bannir cette classe »).
 class ClassSelectionScreen : public tw::Screen, ServerMessageListener
 {
 public:
-	// selection : contenu du message HC du serveur ({"talents": nombre de talents à choisir}).
+	// selection : contenu du message HC du serveur ({"talents": nombre de talents à choisir,
+	// "ban": secondes de bannissement restantes}).
 	ClassSelectionScreen(tgui::Gui * gui, const std::string & selection = std::string());
 	~ClassSelectionScreen();
 
@@ -36,6 +39,8 @@ private:
 	void showClass(int index);
 	void layout(const sf::Vector2u & size);
 	void refreshLock();
+	void refreshBan();
+	sf::String classLabel(int classId) const;
 	int currentClassId() const;
 
 	tgui::Gui * gui;
@@ -66,7 +71,18 @@ private:
 	tgui::Label::Ptr statsLabel;
 	tgui::Panel::Ptr descriptionPanel;
 	tgui::Label::Ptr descriptionLabel;
+	tgui::Label::Ptr banLabel;
 
 	bool readyToLock;
 	bool locked;
+
+	// Bannissement : phase en cours, puis classes interdites (0 : aucune).
+	bool banMode = false;
+	bool banDone = false;
+	bool banRequested = false;
+	bool banSent = false;
+	float banRemaining = 0;
+	int banSecondsShown = -1;
+	int bannedClass = 0;		// Interdite par notre équipe à l'adversaire
+	int forbiddenClass = 0;		// Interdite à notre équipe par l'adversaire
 };
