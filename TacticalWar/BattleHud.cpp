@@ -406,7 +406,7 @@ sf::String BattleHud::fighterSummary(const BattleState & state, const GameData &
 
 	text += L"\nPV " + num(fighter.hp) + L"/" + num(fighter.maxHp);
 	if (fighter.shield > 0)
-		text += L"  +" + num(fighter.shield) + L" bouclier";
+		text += L"\nBouclier " + num(fighter.shield) + L" : absorbe les dégâts en premier";
 	text += L"\nPA " + num(fighter.ap) + L"   PM " + num(fighter.mp);
 	text += L"\nPuissance " + num(effectiveStat(state, data, fighter, Stat::POWER))
 		+ L"%   Résistance " + num(effectiveStat(state, data, fighter, Stat::RESISTANCE)) + L"%";
@@ -441,13 +441,21 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		row.panel = tgui::Panel::create();
 		row.name = createLabel(15, sf::Color::White);
 		row.life = createLabel(14, sf::Color(255, 120, 120));
+		row.shield = createLabel(14, sf::Color(130, 195, 255));
+		row.stats = createLabel(14, sf::Color(225, 225, 225));
 		row.details = createLabel(13, sf::Color(210, 210, 210));
 		row.name->setPosition(10, 4);
 		row.life->setPosition(10, 26);
 		row.details->setPosition(10, 46);
-		row.panel->add(row.name);
-		row.panel->add(row.life);
-		row.panel->add(row.details);
+		row.barBack = tgui::Panel::create();
+		row.barBack->getRenderer()->setBackgroundColor(sf::Color(15, 15, 20, 200));
+		row.barLife = tgui::Panel::create();
+		row.barLife->getRenderer()->setBackgroundColor(sf::Color(225, 70, 60));
+		row.barShield = tgui::Panel::create();
+		row.barShield->getRenderer()->setBackgroundColor(sf::Color(110, 180, 255));
+		for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ row.name, row.life, row.shield, row.stats, row.details,
+			row.barBack, row.barLife, row.barShield })
+			row.panel->add(widget);
 		timelinePanel->add(row.panel);
 		rows.push_back(row);
 	}
@@ -480,12 +488,30 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 			name += L"  PRÊT";
 		row.name->setText(name);
 
-		sf::String life = fighter->alive ? L"PV " + num(fighter->hp) + L"/" + num(fighter->maxHp) : sf::String(L"Mort");
-		if (fighter->alive && fighter->shield > 0)
-			life += L"  (+" + num(fighter->shield) + L")";
-		if (fighter->alive)
-			life += L"   PA " + num(fighter->ap) + L"  PM " + num(fighter->mp);
-		row.life->setText(life);
+		// PV en rouge, bouclier en bleu ("+20"), puis PA et PM.
+		row.life->setText(fighter->alive ? L"PV " + num(fighter->hp) + L"/" + num(fighter->maxHp) : sf::String(L"Mort"));
+		bool shielded = fighter->alive && fighter->shield > 0;
+		row.shield->setVisible(shielded);
+		row.shield->setText(shielded ? L"+" + num(fighter->shield) : sf::String());
+		row.shield->setPosition(10 + row.life->getSize().x + 4, 26);
+		row.stats->setVisible(fighter->alive);
+		row.stats->setText(L"PA " + num(fighter->ap) + L"  PM " + num(fighter->mp));
+		row.stats->setPosition((shielded ? row.shield->getPosition().x + row.shield->getSize().x : 10 + row.life->getSize().x) + 14, 26);
+
+		// Barre de vie au bas de la ligne : le bouclier prolonge les PV (il est consommé en premier).
+		// PV + bouclier au-delà du maximum : la barre représente ce total, pour que le bouclier reste visible.
+		float barWidth = TIMELINE_WIDTH - 12 - 20;
+		float total = (float)std::max(1, std::max(fighter->maxHp, fighter->hp + (shielded ? fighter->shield : 0)));
+		float lifeWidth = fighter->alive ? barWidth * fighter->hp / total : 0.f;
+		float shieldWidth = shielded ? barWidth * fighter->shield / total : 0.f;
+		row.barBack->setPosition(10, ROW_HEIGHT - 9);
+		row.barBack->setSize(barWidth, 5);
+		row.barLife->setPosition(10, ROW_HEIGHT - 9);
+		row.barLife->setSize(lifeWidth, 5);
+		row.barLife->setVisible(lifeWidth > 0);
+		row.barShield->setPosition(10 + lifeWidth, ROW_HEIGHT - 9);
+		row.barShield->setSize(shieldWidth, 5);
+		row.barShield->setVisible(shieldWidth > 0);
 
 		sf::String effects;
 		for (const ActiveEffect & effect : fighter->effects)

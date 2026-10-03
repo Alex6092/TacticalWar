@@ -60,7 +60,13 @@ private:
 		tgui::Panel::Ptr panel;
 		tgui::Label::Ptr name;
 		tgui::Label::Ptr life;
+		tgui::Label::Ptr shield;	// "+20" en bleu après les PV
+		tgui::Label::Ptr stats;		// PA et PM
 		tgui::Label::Ptr details;
+		// Barre de vie : PV en rouge, bouclier en bleu à la suite.
+		tgui::Panel::Ptr barBack;
+		tgui::Panel::Ptr barLife;
+		tgui::Panel::Ptr barShield;
 	};
 
 	struct SpellButton

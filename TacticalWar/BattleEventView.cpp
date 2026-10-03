@@ -69,6 +69,12 @@ float BattleEventView::play(const json & event, bool fast)
 	return handler != handlers.end() ? (this->*(handler->second))(context) : 0.f;
 }
 
+void BattleEventView::syncShield(const Context & c)
+{
+	if (c.view != NULL && c.fighter != NULL)
+		c.view->setCurrentShield(c.fighter->alive ? c.fighter->shield : 0);
+}
+
 //----------------------------------------------------------
 // Placement et tours
 //----------------------------------------------------------
@@ -262,6 +268,7 @@ float BattleEventView::onDamage(const Context & c)
 	c.view->setDisplayMaxLife(c.fighter->maxHp);
 	// Un mort reste affiché le temps de son animation.
 	c.view->setCurrentLife(std::max(c.fighter->hp, c.fighter->alive ? 0 : 1));
+	syncShield(c);
 	if (amount <= 0)
 		return 0;
 	if (c.fighter->alive)
@@ -271,21 +278,19 @@ float BattleEventView::onDamage(const Context & c)
 	else if (!c.fast && kind == "collision")
 		screen.fx.playEvent("collision", c.fighterId);
 
+	// Le bouclier absorbe en premier : sa part en bleu, puis les PV perdus en rouge.
 	int lost = amount - absorbed;
 	sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
+	if (absorbed > 0)
+	{
+		screen.addFloatingText(c.fighterId, L"Bouclier -" + num(absorbed), sf::Color(120, 185, 255));
+		screen.hud->log(screen.fighterName(c.fighterId) + L" : le bouclier absorbe " + num(absorbed) + L" dégâts" + source
+			+ (c.fighter->shield > 0 ? L" (reste " + num(c.fighter->shield) + L")" : sf::String(L" (bouclier brisé)")), sf::Color(150, 200, 255));
+	}
 	if (lost > 0)
 	{
-		sf::String text = L"-" + num(lost);
-		if (absorbed > 0)
-			text += L" (bouclier -" + num(absorbed) + L")";
-		screen.addFloatingText(c.fighterId, text, sf::Color(255, 80, 70));
+		screen.addFloatingText(c.fighterId, L"-" + num(lost), sf::Color(255, 80, 70));
 		screen.hud->log(screen.fighterName(c.fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
-	}
-	else
-	{
-		// Coup entièrement absorbé par le bouclier.
-		screen.addFloatingText(c.fighterId, L"Bouclier -" + num(absorbed), sf::Color(200, 220, 255));
-		screen.hud->log(screen.fighterName(c.fighterId) + L" : le bouclier absorbe " + num(absorbed) + L" dégâts" + source, sf::Color(200, 220, 255));
 	}
 	MusicManager::getInstance()->playTakeDamageSound();
 	return c.fast ? 0 : 0.35f;
@@ -335,6 +340,7 @@ float BattleEventView::onDeath(const Context & c)
 		return 0;
 	screen.actionAnimations.erase(c.fighterId);
 	c.view->startDieAction(BattleScreen::ACTION_ANIMATION_SECONDS);
+	c.view->setCurrentShield(0);
 	screen.fx.fighterRemoved(c.fighterId);
 	if (!c.fast)
 		screen.fx.playEvent("death", c.fighterId);
@@ -354,7 +360,15 @@ float BattleEventView::onEffectAdded(const Context & c)
 
 	battle::ActiveEffect effect = battle::BattleMirror::effectFromJson(c.event["effect"]);
 	screen.fx.effectAdded(c.fighterId, effect);
-	if (effect.spellId != "__passive")
+	syncShield(c);
+	if (effect.type == battle::EffectType::SHIELD)
+	{
+		// Bouclier reçu : sa valeur, et le total protégé.
+		screen.addFloatingText(c.fighterId, L"Bouclier +" + num(effect.value), sf::Color(120, 185, 255));
+		screen.hud->log(screen.fighterName(c.fighterId) + L" : " + fromServerText(effect.name) + L", bouclier +" + num(effect.value)
+			+ L" (total " + num(c.fighter->shield) + L")", sf::Color(150, 200, 255));
+	}
+	else if (effect.spellId != "__passive")
 	{
 		// Marque de combinaison (état négatif) en doré, comme le réticule au sol.
 		bool mark = effect.type == battle::EffectType::STATE && !effect.positive;
@@ -368,6 +382,7 @@ float BattleEventView::onEffectAdded(const Context & c)
 float BattleEventView::onEffectRemoved(const Context & c)
 {
 	screen.fx.effectRemoved(c.event.value("uid", -1));
+	syncShield(c);
 	return 0;
 }
 
@@ -380,6 +395,7 @@ float BattleEventView::onStats(const Context & c)
 	c.view->setDisplayMaxLife(c.fighter->maxHp);
 	if (c.fighter->alive)
 		c.view->setCurrentLife(c.fighter->hp);
+	syncShield(c);
 	return 0;
 }
 

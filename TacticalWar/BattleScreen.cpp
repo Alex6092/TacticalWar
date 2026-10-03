@@ -336,8 +336,13 @@ void BattleScreen::drawAimPreview(sf::RenderWindow * window)
 			lines.push_back({ L"KO !", sf::Color(255, 215, 60) });
 		else if (preview.koPossible)
 			lines.push_back({ L"KO possible", sf::Color(255, 175, 60) });
-		if (preview.maxDamage > 0)
-			lines.push_back({ L"-" + spanText(preview.minDamage, preview.maxDamage), sf::Color(255, 95, 80) });
+		// Dégâts : PV perdus en rouge, part absorbée par le bouclier en bleu.
+		int minLost = preview.minDamage - preview.minAbsorbed;
+		int maxLost = preview.maxDamage - preview.maxAbsorbed;
+		if (std::max(minLost, maxLost) > 0)
+			lines.push_back({ L"-" + spanText(minLost, maxLost) + (preview.maxAbsorbed > 0 ? L" PV" : L""), sf::Color(255, 95, 80) });
+		if (preview.maxAbsorbed > 0)
+			lines.push_back({ L"Bouclier -" + spanText(preview.minAbsorbed, preview.maxAbsorbed), sf::Color(120, 185, 255) });
 		if (preview.maxHeal > 0)
 			lines.push_back({ L"+" + spanText(preview.minHeal, preview.maxHeal), sf::Color(110, 255, 110) });
 		if (preview.maxShield > 0)
@@ -511,6 +516,7 @@ void BattleScreen::syncView(const battle::Fighter & fighter)
 	view->setCurrentY(fighter.position.y);
 	view->setDisplayMaxLife(fighter.maxHp);
 	view->setCurrentLife(fighter.alive ? fighter.hp : 0);
+	view->setCurrentShield(fighter.alive ? fighter.shield : 0);
 	view->setCurrentPA(fighter.ap);
 	view->setCurrentPM(fighter.mp);
 	view->setReadyStatus(fighter.ready);

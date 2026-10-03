@@ -27,6 +27,20 @@ faibles puis les plus forts : le résultat réel est toujours dans la fourchette
 
 Échap annule la visée.
 
+## Boucliers
+
+Un bouclier absorbe les dégâts **avant** les points de vie. Il est affiché partout où l'on regarde :
+- **au-dessus du personnage** : un écusson bleu avec sa valeur, posé sur le cœur des PV ;
+- **dans la frise des tours** : « PV 93/98 +20 » (le bouclier en bleu), et une barre de vie rouge prolongée
+  en bleu par le bouclier ;
+- **dans le panneau de détails** : « Bouclier 20 : absorbe les dégâts en premier » ;
+- **pendant la visée** : l'aperçu sépare les PV perdus (« -6 à -9 PV ») de la part absorbée (« Bouclier -10 ») ;
+- **à chaque coup** : un texte bleu « Bouclier -10 », puis un texte rouge pour les PV perdus ; le journal dit ce
+  qu'il reste du bouclier ou qu'il est brisé ;
+- **sur la page projetée** : « +20 » en bleu à côté des PV.
+
+L'écusson est dessiné par `tools/ui/make_overlay_icons.py` (`assets/ui/characterdata/shield_bg.png`).
+
 ## Anticiper les déplacements
 
 Survoler un combattant montre où il pourra aller à son prochain tour, sans compter le tacle :

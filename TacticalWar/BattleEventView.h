@@ -35,6 +35,9 @@ namespace tw
 		};
 		typedef float (BattleEventView::*Handler)(const Context &);
 
+		// Écusson de bouclier au-dessus du combattant : valeur de l'état affiché.
+		void syncShield(const Context & c);
+
 		float onPlacement(const Context & c);
 		float onPlace(const Context & c);
 		float onFight(const Context & c);

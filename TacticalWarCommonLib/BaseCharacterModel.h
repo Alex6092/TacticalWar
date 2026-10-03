@@ -67,6 +67,8 @@ namespace tw
 		int currentPM;
 		int currentPA;
 		int displayMaxLife;
+		// Bouclier en cours (absorbe les dégâts avant les PV), affiché dans un écusson.
+		int currentShield;
 
 		void setNextPositionFromPath()
 		{
@@ -122,6 +124,7 @@ namespace tw
 			this->currentPA = 0;
 			this->currentPM = 0;
 			this->displayMaxLife = -1;
+			this->currentShield = 0;
 
 			setNoTargetPosition();
 		}
@@ -168,6 +171,16 @@ namespace tw
 		int getDisplayMaxLife()
 		{
 			return displayMaxLife > 0 ? displayMaxLife : std::max(1, currentLife);
+		}
+
+		void setCurrentShield(int shield)
+		{
+			currentShield = shield > 0 ? shield : 0;
+		}
+
+		int getCurrentShield()
+		{
+			return currentShield;
 		}
 
 		int getCurrentPM()

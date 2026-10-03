@@ -279,7 +279,7 @@ function renderLive(tournament) {
         const hp = Math.max(0, f.hp) / max * 100;
         const shield = Math.min(100 - hp, f.shield / max * 100);
         return `<div class="fighter ${f.alive ? "" : "dead"} ${f.id === battle.active ? "active" : ""}">
-          <div class="fighter-name"><span>${esc(f.name)} <small>${esc(f.className)}</small></span><span>${f.alive ? f.hp : "KO"}</span></div>
+          <div class="fighter-name"><span>${esc(f.name)} <small>${esc(f.className)}</small></span><span>${f.alive ? f.hp : "KO"}${f.alive && f.shield > 0 ? ` <span class="shield-num">+${f.shield}</span>` : ""}</span></div>
           <div class="bar"><span class="hp" style="width:${hp}%"></span><span class="shield" style="left:${hp}%;width:${shield}%"></span></div>
         </div>`;
       }).join("");

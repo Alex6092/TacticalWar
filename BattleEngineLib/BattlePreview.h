@@ -17,6 +17,8 @@ namespace tw
 			int fighterId = -1;
 			int minDamage = 0;			// Dégâts subis, bouclier compris
 			int maxDamage = 0;
+			int minAbsorbed = 0;		// Part des dégâts absorbée par le bouclier de la cible
+			int maxAbsorbed = 0;
 			int minHeal = 0;			// PV récupérés
 			int maxHeal = 0;
 			int minShield = 0;			// Bouclier reçu

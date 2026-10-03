@@ -1277,3 +1277,34 @@ TEST_CASE("Barriere blocks pushes and Lien de vie heals over the next turns")
 	arena.playUntilTurnOf(0);
 	CHECK(arena.fighter(0).hp > hp);
 }
+
+TEST_CASE("Spell preview separates what the shield absorbs from the HP lost")
+{
+	Arena arena({ { GUERRIER, { 5, 5 } } }, { { ARCHER, { 5, 6 } } });
+	arena.playUntilTurnOf(0);
+	int taillade = spellIndex(GUERRIER, "taillade");
+
+	BattleState shielded = arena.state();
+	ActiveEffect shield;
+	shield.uid = shielded.nextUid++;
+	shield.type = EffectType::SHIELD;
+	shield.value = 10;
+	shield.remainingTurns = 2;
+	shield.positive = true;
+	Fighter & target = *shielded.findFighter(1);
+	target.effects.push_back(shield);
+	target.shield = 10;
+
+	std::vector<TargetPreview> previews = previewSpell(shielded, arena.map, gameData(), 0, taillade, { 5, 6 });
+	REQUIRE(previews.size() == 1);
+	CHECK(previews[0].minAbsorbed == 10);
+	CHECK(previews[0].maxAbsorbed == 10);
+	CHECK(previews[0].minDamage > 10);
+
+	// Sans bouclier : mêmes dégâts, rien d'absorbé.
+	std::vector<TargetPreview> bare = previewSpell(arena.state(), arena.map, gameData(), 0, taillade, { 5, 6 });
+	REQUIRE(bare.size() == 1);
+	CHECK(bare[0].maxAbsorbed == 0);
+	CHECK(bare[0].minDamage == previews[0].minDamage);
+	CHECK(bare[0].maxDamage == previews[0].maxDamage);
+}

@@ -17,6 +17,7 @@ namespace
 	{
 		bool cast = false;
 		std::map<int, int> damage;
+		std::map<int, int> absorbed;
 		std::map<int, int> heal;
 		std::map<int, int> shield;
 		std::set<int> dead;
@@ -83,6 +84,7 @@ namespace
 			if (type == "damage")
 			{
 				outcome.damage[fighterId] += event.value("amount", 0);
+				outcome.absorbed[fighterId] += event.value("absorbed", 0);
 				if (event.value("kind", std::string()) == "collision")
 					addNote(outcome, fighterId, "Collision");
 			}
@@ -209,6 +211,8 @@ std::vector<TargetPreview> tw::battle::previewSpell(const BattleState & state, c
 		preview.fighterId = id;
 		preview.minDamage = std::min(valueOf(low.damage, id), valueOf(high.damage, id));
 		preview.maxDamage = std::max(valueOf(low.damage, id), valueOf(high.damage, id));
+		preview.minAbsorbed = std::min(valueOf(low.absorbed, id), valueOf(high.absorbed, id));
+		preview.maxAbsorbed = std::max(valueOf(low.absorbed, id), valueOf(high.absorbed, id));
 		preview.minHeal = std::min(valueOf(low.heal, id), valueOf(high.heal, id));
 		preview.maxHeal = std::max(valueOf(low.heal, id), valueOf(high.heal, id));
 		preview.minShield = std::min(valueOf(low.shield, id), valueOf(high.shield, id));
