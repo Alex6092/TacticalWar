@@ -81,6 +81,7 @@ namespace
 		case battle::EndReason::ROUND_LIMIT: return L"Limite de tours atteinte : décision aux points de vie.";
 		case battle::EndReason::FORFEIT: return L"Victoire par forfait.";
 		case battle::EndReason::ADMIN: return L"Combat arrêté par l'organisateur : décision aux points de vie.";
+		case battle::EndReason::OBJECTIVE: return L"L'équipe a tenu la zone jusqu'au score demandé.";
 		default: return L"";
 		}
 	}
@@ -491,6 +492,7 @@ void BattleScreen::applySnapshot(const json & snapshot)
 		colorator->setStartCells(map.startCells[1], map.startCells[2]);
 	else
 		colorator->setStartCells({}, {});
+	colorator->setZone(truth.zone.cells);
 
 	if (truth.phase == battle::BattlePhase::ENDED)
 		showEnd();
@@ -715,6 +717,27 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		}
 		return fast ? 0 : 0.2f;
 	}
+	if (type == "score")
+	{
+		// Zone à tenir : point marqué à la fin d'un tour complet.
+		int holder = event.value("holder", 0);
+		sf::String score = num(shown.zone.scores[1]) + L" - " + num(shown.zone.scores[2]);
+		const battle::Fighter * me = shown.findFighter(you);
+		if (holder != 0)
+		{
+			sf::Color color = me == NULL ? sf::Color(255, 210, 80) : me->team == holder ? sf::Color(120, 255, 120) : sf::Color(255, 150, 90);
+			sf::String message = me == NULL ? teamLabel(holder) + L" marque un point !"
+				: me->team == holder ? sf::String(L"Votre équipe marque un point !") : sf::String(L"L'adversaire marque un point !");
+			hud->showMessage(message, color, 1.4f);
+			hud->log(L"Zone : " + teamLabel(holder) + L" tient la zone (+1), " + score, color);
+			if (!fast)
+				playSound("./assets/sound/ui/ping.ogg");
+			return fast ? 0 : 0.6f;
+		}
+		if (event.value("contested", false))
+			hud->log(L"Zone disputée : personne ne marque (" + score + L")", sf::Color(200, 200, 200));
+		return 0;
+	}
 	if (type == "combo" && fighter != NULL)
 	{
 		// Combinaison : annoncée avant les dégâts augmentés (événement suivant).
@@ -905,7 +928,14 @@ void BattleScreen::showEnd()
 		}
 	}
 
-	sf::String details = winners + (winnerCount > 1 ? L" remportent" : L" remporte") + L" le combat.\n" + reasonLabel(shown.endReason)
+	sf::String reason = reasonLabel(shown.endReason);
+	if (shown.zone.enabled && (shown.endReason == battle::EndReason::ROUND_LIMIT || shown.endReason == battle::EndReason::ADMIN))
+		reason = L"Décision aux points de la zone, puis aux points de vie.";
+	if (shown.zone.enabled && me != NULL)
+		reason += L"\nZone : votre équipe " + num(shown.zone.scores[me->team]) + L" - " + num(shown.zone.scores[3 - me->team]) + L" adversaires";
+	else if (shown.zone.enabled)
+		reason += L"\nZone : " + teamLabel(1) + L" " + num(shown.zone.scores[1]) + L" - " + num(shown.zone.scores[2]) + L" " + teamLabel(2);
+	sf::String details = winners + (winnerCount > 1 ? L" remportent" : L" remporte") + L" le combat.\n" + reason
 		+ L"\nTours joués : " + num(shown.round);
 
 	// Bilan de chaque combattant, l'équipe gagnante d'abord.

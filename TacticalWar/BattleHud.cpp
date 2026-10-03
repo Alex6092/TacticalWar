@@ -115,6 +115,13 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	timerLabel->getRenderer()->setTextOutlineThickness(2);
 	gui->add(timerLabel);
 
+	// Score de la zone à tenir, sous le minuteur.
+	zoneLabel = createLabel(18, sf::Color(255, 210, 80));
+	zoneLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	zoneLabel->getRenderer()->setTextOutlineThickness(2);
+	zoneLabel->setVisible(false);
+	gui->add(zoneLabel);
+
 	messageLabel = createLabel(30, sf::Color(255, 220, 80));
 	messageLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	messageLabel->getRenderer()->setTextOutlineThickness(2);
@@ -289,6 +296,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 
 	timelinePanel->setPosition(width - TIMELINE_WIDTH - 15, 15);
 	timerLabel->setPosition((width - timerLabel->getSize().x) / 2, 12);
+	zoneLabel->setPosition((width - zoneLabel->getSize().x) / 2, spectator ? 76.f : 46.f);
 	messageLabel->setPosition((width - messageLabel->getSize().x) / 2, height / 2 - 140);
 	hintLabel->setPosition((width - hintLabel->getSize().x) / 2, height - SPELL_SIZE - 60);
 
@@ -508,6 +516,24 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		layout(windowSize);
 	}
 
+	// Zone à tenir : score de chaque équipe (la sienne d'abord pour un joueur).
+	sf::String zoneText;
+	if (state.zone.enabled)
+	{
+		const Fighter * me = state.findFighter(you);
+		sf::String goal = L"  (premier à " + num(state.zone.pointsToWin) + L")";
+		if (me != nullptr)
+			zoneText = L"Zone à tenir : votre équipe " + num(state.zone.scores[me->team]) + L" - " + num(state.zone.scores[3 - me->team]) + L" adversaires" + goal;
+		else
+			zoneText = L"Zone à tenir : bleus " + num(state.zone.scores[1]) + L" - " + num(state.zone.scores[2]) + L" rouges" + goal;
+	}
+	zoneLabel->setVisible(!zoneText.isEmpty());
+	if (zoneLabel->getText() != zoneText)
+	{
+		zoneLabel->setText(zoneText);
+		layout(windowSize);
+	}
+
 	// Détails du combattant survolé (par défaut : le sien, ou le combattant actif pour un spectateur).
 	int detailsId = hoveredFighter >= 0 ? hoveredFighter : (you >= 0 ? you : active);
 	const Fighter * shown = state.findFighter(detailsId);
@@ -582,7 +608,7 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 void BattleHud::showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows)
 {
 	endPanel->removeAllWidgets();
-	endPanelSize = sf::Vector2f(660, rows.empty() ? 220.f : 236.f + rows.size() * 28.f + 60.f);
+	endPanelSize.x = rows.empty() ? 660.f : 760.f;
 
 	tgui::Label::Ptr titleLabel = createLabel(34, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 	titleLabel->setText(title);
@@ -590,14 +616,17 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	endPanel->add(titleLabel);
 
 	tgui::Label::Ptr detailsText = createLabel(18, sf::Color::White);
+	detailsText->setMaximumTextWidth(endPanelSize.x - 40);
 	detailsText->setText(details);
 	detailsText->setPosition(20, 76);
 	endPanel->add(detailsText);
 
 	// Bilan : une ligne par combattant (couleur de son équipe), le MVP en doré.
-	const float columns[5] = { 20, 300, 395, 480, 600 };
+	// Colonne des noms assez large pour "Prénom (Classe)   MVP".
+	const float columns[5] = { 20, 400, 495, 580, 700 };
 	const sf::String headers[5] = { L"Combattant", L"Dégâts", L"Soins", L"Boucliers", L"KO" };
-	float tableTop = 160;
+	// Sous le texte (3 ou 4 lignes selon le mode de combat).
+	float tableTop = std::max(160.f, 76.f + detailsText->getSize().y + 12.f);
 	if (!rows.empty())
 	{
 		for (int column = 0; column < 5; column++)
@@ -621,7 +650,8 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 			}
 		}
 	}
-	float buttonTop = rows.empty() ? 160.f : tableTop + 28 + rows.size() * 28.f + 20;
+	float buttonTop = rows.empty() ? tableTop : tableTop + 28 + rows.size() * 28.f + 20;
+	endPanelSize.y = buttonTop + 44 + 16;
 
 	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : onReplay ? L"Retour" : L"Fermer");
 	endButton->setInheritedFont(font);

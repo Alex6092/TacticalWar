@@ -21,6 +21,9 @@ namespace tw
 		int mapId = 0;
 		// Facile : l'IA fait parfois une erreur volontaire.
 		bool easy = true;
+		// Mode "zone à tenir" (premier à ZONE_POINTS points), sinon au KO.
+		bool zone = false;
+		static const int ZONE_POINTS = 5;
 		// Le personnage du joueur est aussi joué par l'IA, et les combats s'enchaînent (démonstration
 		// sur un écran projeté, captures automatiques).
 		bool autoplay = false;

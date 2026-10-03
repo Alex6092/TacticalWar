@@ -75,6 +75,37 @@ Réglages dans `assets/data/gamedata.json` :
 Le simulateur d'équilibrage (`TacticalWarBot.exe --simulate`) compte les déclenchements de chaque
 combinaison.
 
+## Mode « zone à tenir »
+
+Un autre mode de victoire, au choix de l'organisateur, en plus du KO.
+
+- **La zone** : 5 ou 6 cases dorées au centre de la carte.
+- **Les points** : à la fin de chaque tour complet (quand tout le monde a joué), une équipe marque 1 point
+  si au moins un de ses combattants vivants est dans la zone et aucun adversaire.
+  - Zone disputée (les deux équipes dedans) ou vide : personne ne marque.
+- **La victoire** : la première équipe au score demandé (5 par défaut) gagne. Mettre toute l'équipe adverse
+  hors combat fait toujours gagner.
+- **La décision** : à la limite de tours ou sur arrêt de l'organisateur, on compte d'abord les points de
+  zone, puis les points de vie.
+- **L'affichage** :
+  - le score est en haut de l'écran (« votre équipe 2 - 1 adversaires ») ;
+  - un message et une ligne de journal annoncent chaque point ;
+  - la page projetée montre le score dans les cartes des combats en direct.
+
+**Où est la zone ?**
+- **Zone peinte** : outils « Zone à tenir » et « Effacer la zone » de l'éditeur de cartes. La validation
+  signale une zone plus proche d'une équipe que de l'autre.
+- **Zone calculée** : sans zone peinte, elle est calculée au centre, à égale distance de marche des deux
+  équipes. Sur une carte symétrique (cas des cartes du tournoi), la zone est elle-même symétrique. Les
+  7 cartes fournies fonctionnent donc sans modification.
+
+**Réglages** :
+- tournoi : « Combats » (KO ou Zone à tenir) et « Points », dans l'onglet Tournoi de l'administration ;
+- matchs hors tournoi : `"battleMode": "ZONE"` et `"zonePoints"` dans `server.json` ;
+- entraînement : réglage « Mode » (ou `--training-zone`) ;
+- simulateur : `TacticalWarBot.exe --simulate 2000 --mode zone [--points 5]`. Le rapport donne la zone de
+  chaque carte et les distances de marche des deux équipes.
+
 ## Bilan de fin de combat
 
 À la fin du combat, chaque combattant a son bilan : dégâts infligés, soins, boucliers donnés et ennemis mis
@@ -95,7 +126,7 @@ Le bouton **« Entraînement »** de l'écran de connexion lance un combat contr
 identifiants : idéal pour découvrir les classes avant le jour J, ou pour patienter entre deux matchs.
 
 - **Réglages** : 2 contre 2 (avec un allié joué par l'ordinateur) ou 1 contre 1, la classe de chacun (ou au
-  hasard), la carte (au hasard parmi celles du tournoi) et la difficulté.
+  hasard), la carte (au hasard parmi celles du tournoi), le mode (KO ou zone à tenir) et la difficulté.
   - **Facile** : l'ordinateur choisit parfois un sort ou un déplacement au hasard au lieu du meilleur.
   - **Normal** : l'ordinateur joue comme les bots de test du tournoi.
 - **Mêmes règles qu'en tournoi** : placement puis « Prêt », minuteur de tour, aides à la visée, bilan de fin.
@@ -105,6 +136,6 @@ identifiants : idéal pour découvrir les classes avant le jour J, ou pour patie
 En ligne de commande :
 - `TacticalWar.exe --training` ouvre directement les réglages ;
 - `--training-start` lance un combat avec les réglages par défaut, à préciser avec `--training-class <id>`,
-  `--training-map <id>` ou `--training-1v1` ;
+  `--training-map <id>`, `--training-1v1` ou `--training-zone` ;
 - `--training-autoplay` fait jouer aussi le personnage du joueur par l'ordinateur, et enchaîne les combats :
   une démonstration pour un écran d'accueil.

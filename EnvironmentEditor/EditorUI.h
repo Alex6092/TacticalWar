@@ -98,6 +98,8 @@ namespace EnvironmentEditor {
 		RadioButton ^ team1Tool;
 		RadioButton ^ team2Tool;
 		RadioButton ^ eraseStartTool;
+		RadioButton ^ zoneTool;
+		RadioButton ^ eraseZoneTool;
 		Button ^ undoButton;
 		Button ^ redoButton;
 
@@ -317,28 +319,32 @@ namespace EnvironmentEditor {
 			GroupBox ^ toolGroup = gcnew GroupBox();
 			toolGroup->Text = L"Outils";
 			toolGroup->Location = Point(8, 234);
-			toolGroup->Size = System::Drawing::Size(305, 140);
+			toolGroup->Size = System::Drawing::Size(305, 164);
 			paintTool = createTool(L"Pinceau", 10, 22);
 			fillTool = createTool(L"Remplissage", 10, 46);
 			rectangleTool = createTool(L"Rectangle", 10, 70);
 			team1Tool = createTool(L"Départ équipe 1", 150, 22);
 			team2Tool = createTool(L"Départ équipe 2", 150, 46);
 			eraseStartTool = createTool(L"Effacer un départ", 150, 70);
-			undoButton = createButton(L"Annuler (Ctrl+Z)", 10, 100, 140, gcnew EventHandler(this, &EditorUI::onUndo));
-			redoButton = createButton(L"Rétablir (Ctrl+Y)", 156, 100, 140, gcnew EventHandler(this, &EditorUI::onRedo));
+			zoneTool = createTool(L"Zone à tenir", 10, 94);
+			eraseZoneTool = createTool(L"Effacer la zone", 150, 94);
+			undoButton = createButton(L"Annuler (Ctrl+Z)", 10, 124, 140, gcnew EventHandler(this, &EditorUI::onUndo));
+			redoButton = createButton(L"Rétablir (Ctrl+Y)", 156, 124, 140, gcnew EventHandler(this, &EditorUI::onRedo));
 			toolGroup->Controls->Add(paintTool);
 			toolGroup->Controls->Add(fillTool);
 			toolGroup->Controls->Add(rectangleTool);
 			toolGroup->Controls->Add(team1Tool);
 			toolGroup->Controls->Add(team2Tool);
 			toolGroup->Controls->Add(eraseStartTool);
+			toolGroup->Controls->Add(zoneTool);
+			toolGroup->Controls->Add(eraseZoneTool);
 			toolGroup->Controls->Add(undoButton);
 			toolGroup->Controls->Add(redoButton);
 
 			GroupBox ^ tileGroup = gcnew GroupBox();
 			tileGroup->Text = L"Tuiles";
-			tileGroup->Location = Point(8, 380);
-			tileGroup->Size = System::Drawing::Size(305, 330);
+			tileGroup->Location = Point(8, 404);
+			tileGroup->Size = System::Drawing::Size(305, 306);
 			thumbnails = gcnew ImageList(this->components);
 			thumbnails->ImageSize = System::Drawing::Size(64, 64);
 			thumbnails->ColorDepth = ColorDepth::Depth32Bit;
@@ -348,9 +354,9 @@ namespace EnvironmentEditor {
 			palette->MultiSelect = false;
 			palette->HideSelection = false;
 			palette->Location = Point(10, 22);
-			palette->Size = System::Drawing::Size(286, 266);
+			palette->Size = System::Drawing::Size(286, 242);
 			palette->SelectedIndexChanged += gcnew EventHandler(this, &EditorUI::onTileSelected);
-			reloadTilesButton = createButton(L"Recharger les tuiles", 10, 294, 286, gcnew EventHandler(this, &EditorUI::onReloadTiles));
+			reloadTilesButton = createButton(L"Recharger les tuiles", 10, 270, 286, gcnew EventHandler(this, &EditorUI::onReloadTiles));
 			tileGroup->Controls->Add(palette);
 			tileGroup->Controls->Add(reloadTilesButton);
 
@@ -493,6 +499,8 @@ namespace EnvironmentEditor {
 			else if (team1Tool->Checked) controller->setTool(tw::editor::Tool::START_TEAM1);
 			else if (team2Tool->Checked) controller->setTool(tw::editor::Tool::START_TEAM2);
 			else if (eraseStartTool->Checked) controller->setTool(tw::editor::Tool::ERASE_START);
+			else if (zoneTool->Checked) controller->setTool(tw::editor::Tool::ZONE);
+			else if (eraseZoneTool->Checked) controller->setTool(tw::editor::Tool::ERASE_ZONE);
 		}
 
 		//----------------------------------------------------------
@@ -833,6 +841,8 @@ namespace EnvironmentEditor {
 				String ^ hover = String::Format(L"Case ({0}, {1}) : {2}", hoverX, hoverY, tile != NULL ? fromUtf8(tile->name) : fromUtf8(cell->getDisplayTile()));
 				if (cell->getTeamStartPointNumber() > 0)
 					hover = String::Concat(hover, String::Format(L", départ de l'équipe {0}", cell->getTeamStartPointNumber()));
+				if (cell->getIsZone())
+					hover = String::Concat(hover, L", zone à tenir");
 				status = String::Concat(hover, L"     |     ", lastMessage);
 			}
 			if (!String::Equals(statusLabel->Text, status))

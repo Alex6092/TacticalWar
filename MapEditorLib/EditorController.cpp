@@ -1,6 +1,7 @@
 ﻿#include "EditorController.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <deque>
 #include <filesystem>
 #include <Environment.h>
@@ -51,6 +52,7 @@ CellState EditorController::stateOf(int x, int y) const
 	{
 		state.tile = cell->getDisplayTile();
 		state.start = cell->getTeamStartPointNumber();
+		state.zone = cell->getIsZone();
 	}
 	return state;
 }
@@ -62,6 +64,7 @@ void EditorController::applyState(int x, int y, const CellState & state)
 		return;
 	environment->setTile(x, y, state.tile);
 	cell->setTeamStartPoint(state.start);
+	cell->setIsZone(state.zone);
 }
 
 void EditorController::change(int x, int y, const CellState & after)
@@ -138,6 +141,11 @@ void EditorController::applyTool(int x, int y)
 		break;
 	case Tool::ERASE_START:
 		state.start = 0;
+		change(x, y, state);
+		break;
+	case Tool::ZONE:
+	case Tool::ERASE_ZONE:
+		state.zone = tool == Tool::ZONE;
 		change(x, y, state);
 		break;
 	default:
@@ -451,6 +459,80 @@ std::vector<ValidationMessage> EditorController::validate() const
 				+ std::to_string(firstX) + ", " + std::to_string(firstY) + ").";
 			message.x = firstX;
 			message.y = firstY;
+			messages.push_back(message);
+		}
+	}
+
+	// Zone à tenir peinte (sinon calculée au centre en jeu) : praticable, et aussi proche des deux équipes.
+	std::vector<std::pair<int, int>> zone;
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			if (!environment->getMapData(x, y)->getIsZone())
+				continue;
+			if (walkable(x, y))
+			{
+				zone.push_back({ x, y });
+				continue;
+			}
+			ValidationMessage message;
+			message.text = "Case de la zone à tenir non praticable (" + std::to_string(x) + ", " + std::to_string(y) + ") : elle ne compte pas.";
+			message.x = x;
+			message.y = y;
+			messages.push_back(message);
+		}
+	}
+	if (!zone.empty() && !starts[1].empty() && !starts[2].empty())
+	{
+		// Distance de marche de la zone à la case de départ la plus proche de chaque équipe.
+		std::vector<int> distance(width * height, -1);
+		std::deque<std::pair<int, int>> queue;
+		for (const auto & cell : zone)
+		{
+			distance[cell.first * height + cell.second] = 0;
+			queue.push_back(cell);
+		}
+		while (!queue.empty())
+		{
+			std::pair<int, int> cell = queue.front();
+			queue.pop_front();
+			for (const int * offset : NEIGHBOURS)
+			{
+				int nx = cell.first + offset[0];
+				int ny = cell.second + offset[1];
+				if (nx < 0 || ny < 0 || nx >= width || ny >= height || distance[nx * height + ny] >= 0 || !walkable(nx, ny))
+					continue;
+				distance[nx * height + ny] = distance[cell.first * height + cell.second] + 1;
+				queue.push_back({ nx, ny });
+			}
+		}
+		int nearest[3] = { -1, -1, -1 };
+		for (int team = 1; team <= 2; team++)
+		{
+			for (const auto & start : starts[team])
+			{
+				int d = distance[start.first * height + start.second];
+				if (d >= 0 && (nearest[team] < 0 || d < nearest[team]))
+					nearest[team] = d;
+			}
+		}
+		if (nearest[1] < 0 || nearest[2] < 0)
+		{
+			ValidationMessage message;
+			message.text = "La zone à tenir est inaccessible depuis les départs d'une équipe.";
+			message.x = zone[0].first;
+			message.y = zone[0].second;
+			messages.push_back(message);
+		}
+		else if (std::abs(nearest[1] - nearest[2]) > 1)
+		{
+			int closer = nearest[1] < nearest[2] ? 1 : 2;
+			ValidationMessage message;
+			message.text = "La zone à tenir est plus proche de l'équipe " + std::to_string(closer) + " ("
+				+ std::to_string(nearest[closer]) + " pas contre " + std::to_string(nearest[3 - closer]) + ").";
+			message.x = zone[0].first;
+			message.y = zone[0].second;
 			messages.push_back(message);
 		}
 	}

@@ -34,7 +34,8 @@
    - temps forts : chaque combat est enregistré (`data\replays\`) et peut être revu depuis l'écran
      spectateur, onglet « Rediffusions » (client connecté sans identifiants).
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
-   Les matchs se lancent automatiquement dès que les deux équipes sont libres.
+   Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
+   au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 

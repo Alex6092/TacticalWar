@@ -4,7 +4,7 @@
 #include <CellColorator.h>
 #include <EditorController.h>
 
-// Couleurs des cases dans l'éditeur : départs des équipes, aperçu du rectangle,
+// Couleurs des cases dans l'éditeur : départs des équipes, zone à tenir, aperçu du rectangle,
 // case survolée et case signalée par la validation.
 class EnvironmentEditorColorator : public tw::CellColorator
 {
@@ -50,6 +50,8 @@ public:
 			color = sf::Color(50, 200, 255);
 		else if (cell->getTeamStartPointNumber() == 2)
 			color = sf::Color(255, 50, 50);
+		else if (cell->getIsZone())
+			color = sf::Color(255, 200, 40);
 
 		if (x == hoverX && y == hoverY)
 			color = sf::Color(color.r * 3 / 4, color.g * 3 / 4, color.b * 3 / 4);

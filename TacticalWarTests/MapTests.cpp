@@ -322,3 +322,48 @@ TEST_CASE("Éditeur : validation de la carte")
 	CHECK(messages[0].x == 5);
 	CHECK(messages[0].y == 4);
 }
+
+TEST_CASE("Zone à tenir : peinte dans l'éditeur, enregistrée et vérifiée")
+{
+	useTestTiles();
+	EditorController editor;
+	editor.newMap(6, 5, 1, "grass");
+	editor.getEnvironment()->setName("Test");
+	placeStarts(editor);
+
+	// Zone au milieu : aussi proche des deux équipes, pas de message.
+	editor.setTool(Tool::ZONE);
+	editor.pointerDown(2, 0);
+	editor.pointerMove(3, 0);
+	editor.pointerUp();
+	CHECK(editor.getEnvironment()->getMapData(2, 0)->getIsZone());
+	CHECK(editor.validate().empty());
+
+	// Annulable comme les autres outils.
+	REQUIRE(editor.undo());
+	CHECK_FALSE(editor.getEnvironment()->getMapData(2, 0)->getIsZone());
+	REQUIRE(editor.redo());
+
+	// Enregistrée dans le fichier de la carte (absente quand rien n'est peint).
+	std::string text = EnvironmentManager::toJson(editor.getEnvironment());
+	CHECK(text.find("\"zone\"") != std::string::npos);
+	std::unique_ptr<Environment> loaded(EnvironmentManager::fromJson(text));
+	REQUIRE(loaded != nullptr);
+	CHECK(loaded->getMapData(2, 0)->getIsZone());
+	CHECK(loaded->getMapData(3, 0)->getIsZone());
+	CHECK_FALSE(loaded->getMapData(4, 0)->getIsZone());
+
+	// Zone collée aux départs de l'équipe 2 : avertissement, non bloquant.
+	editor.setTool(Tool::ERASE_ZONE);
+	editor.pointerDown(2, 0);
+	editor.pointerMove(3, 0);
+	editor.pointerUp();
+	CHECK(EnvironmentManager::toJson(editor.getEnvironment()).find("\"zone\"") == std::string::npos);
+	editor.setTool(Tool::ZONE);
+	editor.pointerDown(4, 0);
+	editor.pointerUp();
+	std::vector<ValidationMessage> messages = editor.validate();
+	REQUIRE(messages.size() == 1);
+	CHECK_FALSE(messages[0].blocking);
+	CHECK(messages[0].text.find("2") != std::string::npos);
+}
