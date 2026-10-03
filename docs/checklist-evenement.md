@@ -36,6 +36,7 @@
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
+   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 

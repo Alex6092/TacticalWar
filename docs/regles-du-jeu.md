@@ -82,6 +82,45 @@ pour chaque classe est retenu (`client.json`) et proposé la fois suivante. Sans
 - Le message `PC` envoie la classe et les sorts : `PC{"class": 4, "spells": [0, 1, 4, 5]}`. Un choix non
   valable donne les sorts par défaut.
 
+## Talents de tournoi
+
+Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour toutes les classes :
+**un talent par match joué** par son équipe (victoire, défaite ou exempt), jusqu'à 3 (réglable).
+
+- Au premier match, personne n'a de talent ; au deuxième, chacun en a 1 ; au troisième, 2.
+- Deux équipes qui se rencontrent ont presque toujours autant de matchs joués, donc autant de talents :
+  pas d'effet boule de neige.
+- Les talents se **choisissent librement avant chaque match**, comme les sorts : bouton « Talents (0/2) »
+  sous la liste des sorts de l'écran de choix de classe. « Verrouiller mon choix » attend que les sorts
+  et les talents soient choisis. Le dernier choix est retenu (`client.json`) et proposé la fois suivante.
+- Un joueur qui ne choisit pas à temps reçoit des talents au hasard.
+- Les talents de chaque combattant sont visibles de tous : panneau de détails du combat (clic sur un
+  personnage) et cartes des combats en direct de la page projetée.
+
+| Talent | Effet |
+|---|---|
+| Robustesse | +15 PV max |
+| Force | +10 % de puissance |
+| Carapace | +8 % de résistance |
+| Célérité | +20 d'initiative et +2 de fuite |
+| Ancrage | +3 de tacle |
+| Allonge | +1 de portée (sorts à portée modifiable) |
+| Ferveur | +15 % de soins |
+| Garde | bouclier de 15 au début du combat, pendant 2 tours |
+| Élan | +1 PM pendant son premier tour |
+| Vigueur | +4 PV au début de chacun de ses 4 premiers tours |
+
+**Réglages** :
+- tournoi : « Talents par joueur » dans l'onglet Tournoi de l'administration (0 : pas de talents) ;
+- matchs hors tournoi : pas de talents ;
+- entraînement : réglage « Talents de tournoi » (0 à 3, ou `--training-talents N`). L'ordinateur reçoit
+  autant de talents, tirés au hasard ;
+- données : section `"talents"` de `assets/data/gamedata.json` (`stats` : bonus permanents, `effects` :
+  effets posés au début du combat).
+
+Le serveur annonce le nombre de talents dans `HC{"talents": 2}`, et le joueur répond
+`PC{"class": 4, "spells": [0, 1, 4, 5], "talents": ["garde", "force"]}`.
+
 ## Combinaisons entre classes
 
 Certains sorts **marquent** un ennemi, et un sort d'une autre classe lui inflige alors plus de dégâts :

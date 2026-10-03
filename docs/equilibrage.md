@@ -96,3 +96,19 @@ taux de victoire quand chaque sort est emporté. Mesures sur 3000 combats (grain
 - Les nouveaux sorts sont entre 43 et 53 % : Cri de guerre à 43 %, Prison de glace à 45 %, Barrière à 51 %.
 - L'IA tire peu parti des renforcements et des marques de combinaison : les essais avec de vrais joueurs
   décideront des retouches.
+
+## Talents de tournoi (octobre 2026)
+
+Avec `--talents N`, chaque combattant reçoit N talents au hasard, et le rapport donne le taux de victoire
+quand chaque talent est pris. Mesures sur 3000 combats (graine 7, 2 talents, au KO) :
+
+| Classe | Taux de victoire |
+|---|---|
+| Guerrier | 46,4 % |
+| Archer | 49,5 % |
+| Mage | 48,6 % |
+| Protecteur | 55,6 % |
+
+- Les talents restent entre 46,8 % (Ancrage) et 52,8 % (Carapace) : aucun n'écrase les autres.
+- Ancrage dépend du placement au contact, que l'IA cherche peu : il devrait mieux réussir entre joueurs.
+- Les classes bougent peu par rapport aux mesures sans talents (Protecteur 53,8 → 55,6 %).
