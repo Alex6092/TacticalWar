@@ -19,6 +19,11 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, std::ui
 {
 }
 
+BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const BattleState & state, std::uint32_t seed)
+	: data(data), map(map), state(state), rng(seed), seed(seed), seq(0), pendingEvents(json::array())
+{
+}
+
 int BattleEngine::addFighter(int team, int classId, const std::string & name)
 {
 	const ClassDef * classDef = data.findClass(classId);
@@ -528,6 +533,10 @@ int BattleEngine::roll(int min, int max)
 {
 	if (max <= min)
 		return min;
+	if (rollMode == RollMode::MIN)
+		return min;
+	if (rollMode == RollMode::MAX)
+		return max;
 	return std::uniform_int_distribution<int>(min, max)(rng);
 }
 

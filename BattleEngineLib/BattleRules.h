@@ -15,6 +15,10 @@ namespace tw
 		// Caractéristique effective : base + effets + auras des alliés.
 		int effectiveStat(const BattleState & state, const GameData & data, const Fighter & fighter, Stat stat);
 
+		// Dégâts d'un tick de poison ou de brûlure : jet "value", puissance du lanceur au moment du
+		// lancer, résistance actuelle du porteur (bornée).
+		int periodicDamage(const BattleState & state, const GameData & data, const Fighter & bearer, int value, int casterPower);
+
 		// Ligne de vue entre deux cellules (extrémités exclues). Les obstacles et les
 		// combattants vivants bloquent la vue.
 		bool hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to);

@@ -18,6 +18,7 @@
 #include <MoveActionAnimationEventListener.h>
 #include <SpellView.h>
 #include "BattleFx.h"
+#include <BattlePreview.h>
 #include <BattleState.h>
 
 namespace tw
@@ -70,6 +71,9 @@ namespace tw
 		float playVisual(const nlohmann::json & event, bool fast);
 		void processVisuals(float deltatime);
 		void refreshPreview();
+		// Aperçu du sort visé sur "cell" (recalculé quand la case, le sort ou l'état changent).
+		void updateAimPreview(const battle::Fighter & me, const battle::Cell & cell);
+		void drawAimPreview(sf::RenderWindow * window);
 		bool isInteractive() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
@@ -115,6 +119,10 @@ namespace tw
 
 		std::map<int, BaseCharacterModel*> views;
 		std::vector<FloatingText> floatingTexts;
+		std::vector<battle::TargetPreview> aimPreviews;
+		battle::Cell aimPreviewCell = { -1, -1 };
+		int aimPreviewSpell = -1;
+		std::uint64_t aimPreviewSeq = 0;
 		BattleFx fx;
 		std::string periodicSpell(const battle::Fighter & target, int sourceId, battle::EffectType type) const;
 		std::map<std::string, sf::SoundBuffer> soundBuffers;
