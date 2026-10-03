@@ -199,6 +199,40 @@
       "texture": "assets/tiles/generated/bush_autumn.png",
       "anchor": [66.0, 68.9],
       "generated": true
+    },
+    {
+      "id": "embers",
+      "name": "Braises",
+      "category": "ground",
+      "group": "Cases spéciales",
+      "turnStart": {
+        "damage": 8
+      },
+      "texture": "assets/tiles/generated/embers.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "spring",
+      "name": "Source",
+      "category": "ground",
+      "group": "Cases spéciales",
+      "turnStart": {
+        "heal": 6
+      },
+      "texture": "assets/tiles/generated/spring.png",
+      "anchor": [66.0, 45.0],
+      "generated": true
+    },
+    {
+      "id": "tall_grass",
+      "name": "Hautes herbes",
+      "category": "ground",
+      "group": "Cases spéciales",
+      "blocksLineOfSight": true,
+      "texture": "assets/tiles/generated/tall_grass.png",
+      "anchor": [66.0, 79.0],
+      "generated": true
     }
   ]
 }

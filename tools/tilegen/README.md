@@ -30,13 +30,15 @@ Chaque tuile part d'une **base** (peinture d'origine) et applique des **opérati
 | `flagstones` | Dalles : joints sur la face supérieure | `count`, `joint`, `darkness`, `variation` |
 | `overlay` | Ajoute un élément d'une autre base, réduit | `from`, `mask`, `scale`, `at` (positions par rapport au centre de la case, en pixels du jeu), `tint` (recoloration de l'élément) |
 | `mirror` | Symétrie horizontale | |
+| `pool` | Taches peintes à plat sur la face supérieure (flaque, braises) | `at` (centres), `radius`, `sizeVariation`, `wobble` (bord irrégulier), `color`, `edge` et `rim` (liseré), `shine` (reflet au centre), `glow` (halo), `sparkles` et `sparkleColor` (éclats) |
+| `blades` | Brins d'herbe dessinés un à un (hautes herbes) | `count`, `height` ([min, max] en pixels du jeu), `lean`, `width`, `spread` (part du losange couverte), `base` et `tip` (couleurs du pied et de la pointe) |
 
 Zones (`mask`) : `top` (surface du bloc), `sides` (flancs de terre), `object` (rocher),
 `leaves` (feuillage), `trunk` (tronc), `water` (eau), `all`. Elles sont calculées sur les couleurs
 d'origine de la base, à partir de la teinte des pixels et de leur position par rapport au centre
 de la case.
 
-Les champs `name`, `category`, `group`, `shader`, `walkable` et `blocksLineOfSight` d'une recette
+Les champs `name`, `category`, `group`, `shader`, `walkable`, `blocksLineOfSight` et `turnStart` d'une recette
 ne sont écrits dans `tileset.json` que s'ils n'y sont pas déjà : une retouche faite à la main
 dans le jeu de tuiles est conservée. La texture et l'ancre sont toujours mises à jour.
 
@@ -50,4 +52,13 @@ dans le jeu de tuiles est conservée. La texture et l'ancre sont toujours mises 
 | `empty` | non | non | vide (rien n'est dessiné) |
 
 Une tuile peut changer ces règles (`walkable`, `blocksLineOfSight`) : le buisson est un obstacle
-qui ne bloque pas la vue.
+qui ne bloque pas la vue. Praticable et bloque la vue sont indépendants : les hautes herbes
+(`tall_grass`) sont praticables et bloquent la vue.
+
+`turnStart` donne un effet au début du tour du combattant qui se trouve sur la case :
+`{ "damage": 8 }` pour les braises (`embers`), `{ "heal": 6 }` pour la source (`spring`). Ces tuiles
+sont dans le groupe « Cases spéciales » de la palette de l'éditeur.
+
+Dans le code, ces règles sont la structure `TileRules` (`TacticalWarCommonLib/TileRegistry.h`),
+portée par la tuile et par chaque case de la carte ; les cartes envoyées aux clients les
+transmettent (`"rules"` : `walkable`, `obstacle` pour la vue, `damage`, `heal`).

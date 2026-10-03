@@ -22,7 +22,7 @@ import re
 import sys
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -267,6 +267,84 @@ def op_flagstones(layer, op, rng):
     layer.rgba[..., :3] = np.clip(rgb * (1 - darkness[..., None]), 0, 1)
 
 
+def op_pool(layer, op, rng):
+    """Taches peintes à plat sur la face supérieure (ellipses isométriques) : flaque d'eau, foyer de
+    braises. Bord irrégulier, liseré, reflet au centre, halo et éclats lumineux facultatifs."""
+    top = layer.masks()['top']
+    height, width = top.shape
+    ys, xs = np.mgrid[0:height, 0:width].astype(np.float32)
+    k = layer.factor
+    color = np.array(op.get('color', [70, 200, 220]), dtype=np.float32) / 255
+    edge = np.array(op.get('edge', op.get('color', [70, 200, 220])), dtype=np.float32) / 255
+    wobble = value_noise((height, width), 5 * k, rng) - 0.5
+    rgb = layer.rgba[..., :3]
+    for at in op.get('at', [[0, 0]]):
+        radius = op.get('radius', 16) * k * (1 + (rng.random() - 0.5) * op.get('sizeVariation', 0))
+        cx = layer.anchor[0] + at[0] * k
+        cy = layer.anchor[1] + at[1] * k
+        # Distance elliptique : l'ellipse est aplatie de moitié (vue isométrique).
+        d = np.sqrt(((xs - cx) / radius) ** 2 + ((ys - cy) / (radius * 0.5)) ** 2) + wobble * op.get('wobble', 0.3)
+        inside = np.clip((1 - d) / 0.1, 0, 1) * top
+        glow = np.clip(1 - (d - 1) / 0.8, 0, 1) * (d > 1) * top * op.get('glow', 0)
+        rim = np.clip(1 - np.abs(d - 0.88) / 0.12, 0, 1) * inside * op.get('rim', 0.6)
+        # Plus clair vers le centre (reflet, cœur incandescent).
+        fill = np.clip(color * (1 + op.get('shine', 0.3) * (1 - np.clip(d, 0, 1)))[..., None], 0, 1)
+        rgb = rgb * (1 - glow[..., None]) + np.clip(rgb + color * 0.6, 0, 1) * glow[..., None]
+        rgb = rgb * (1 - inside[..., None]) + fill * inside[..., None]
+        rgb = rgb * (1 - rim[..., None]) + edge * rim[..., None]
+
+        # Éclats lumineux (reflets de l'eau, étincelles des braises).
+        sparkle = np.array(op.get('sparkleColor', [255, 255, 255]), dtype=np.float32) / 255
+        for _ in range(op.get('sparkles', 0)):
+            sx = cx + (rng.random() - 0.5) * radius * 1.1
+            sy = cy + (rng.random() - 0.5) * radius * 0.55
+            dot = np.clip(1 - np.sqrt((xs - sx) ** 2 + ((ys - sy) * 1.6) ** 2) / (1.1 * k), 0, 1) * inside
+            rgb = rgb * (1 - dot[..., None]) + sparkle * dot[..., None]
+    layer.rgba[..., :3] = np.clip(rgb, 0, 1)
+
+
+def op_blades(layer, op, rng):
+    """Brins d'herbe dessinés un à un sur la face supérieure, de l'arrière vers l'avant : base
+    sombre, pointe claire, légère inclinaison (hautes herbes, roseaux)."""
+    k = layer.factor
+    max_height = op.get('height', [10, 22])[1] * k
+    pad = int(max_height + 4 * k)
+    layer.rgba = np.pad(layer.rgba, ((pad, 0), (0, 0), (0, 0)))
+    layer.anchor = (layer.anchor[0], layer.anchor[1] + pad)
+    layer.invalidate()
+    top = layer.masks()['top']
+
+    # Pieds des brins : tirés dans le losange de la face supérieure (un peu en retrait du bord).
+    spread = op.get('spread', 0.85)
+    feet = []
+    while len(feet) < op.get('count', 60):
+        u, v = rng.random() * 2 - 1, rng.random() * 2 - 1
+        if abs(u) + abs(v) > spread:
+            continue
+        feet.append((layer.anchor[0] + u * HALF_W * k, layer.anchor[1] + v * HALF_H * k))
+    feet.sort(key=lambda p: p[1])
+
+    image = to_image(layer.rgba)
+    draw = ImageDraw.Draw(image)
+    base = np.array(op.get('base', [52, 110, 36]), dtype=np.float32)
+    tip = np.array(op.get('tip', [190, 220, 90]), dtype=np.float32)
+    low, high = op.get('height', [10, 22])
+    for fx, fy in feet:
+        length = (low + rng.random() * (high - low)) * k
+        lean = (rng.random() - 0.5) * op.get('lean', 0.5) * length
+        shade = 0.85 + rng.random() * 0.3
+        segments = 6
+        for i in range(segments):
+            t0, t1 = i / segments, (i + 1) / segments
+            # Courbe : l'inclinaison s'accentue vers la pointe.
+            x0, y0 = fx + lean * t0 * t0, fy - length * t0
+            x1, y1 = fx + lean * t1 * t1, fy - length * t1
+            c = np.clip((base + (tip - base) * t1) * shade, 0, 255).astype(int)
+            width = max(1, int(round(op.get('width', 1.6) * k * (1 - 0.7 * t0))))
+            draw.line([(x0, y0), (x1, y1)], fill=(int(c[0]), int(c[1]), int(c[2]), 255), width=width)
+    layer.rgba = np.asarray(image).astype(np.float32) / 255.0
+
+
 def op_overlay(layer, op, rng, bases):
     """Ajoute un élément d'une autre base (ex : feuillage d'arbre réduit = buisson)."""
     source = bases[op['from']].copy()
@@ -317,6 +395,8 @@ OPERATIONS = {
     'highlight': op_highlight,
     'mirror': op_mirror,
     'flagstones': op_flagstones,
+    'pool': op_pool,
+    'blades': op_blades,
 }
 
 
@@ -345,7 +425,7 @@ def merge_tile(tileset, recipe, texture, anchor):
     if entry is None:
         entry = {'id': recipe['id']}
         tiles.append(entry)
-    for key in ('name', 'category', 'group', 'shader', 'walkable', 'blocksLineOfSight'):
+    for key in ('name', 'category', 'group', 'shader', 'walkable', 'blocksLineOfSight', 'turnStart'):
         if key in recipe and key not in entry:
             entry[key] = recipe[key]
     entry['texture'] = texture
