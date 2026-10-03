@@ -62,3 +62,23 @@ tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
 - **les derniers combats**, avec le vainqueur et le MVP ;
 - **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
   titres de MVP.
+
+## Entraînement hors ligne
+
+Le bouton **« Entraînement »** de l'écran de connexion lance un combat contre l'ordinateur, sans serveur ni
+identifiants : idéal pour découvrir les classes avant le jour J, ou pour patienter entre deux matchs.
+
+- **Réglages** : 2 contre 2 (avec un allié joué par l'ordinateur) ou 1 contre 1, la classe de chacun (ou au
+  hasard), la carte (au hasard parmi celles du tournoi) et la difficulté.
+  - **Facile** : l'ordinateur choisit parfois un sort ou un déplacement au hasard au lieu du meilleur.
+  - **Normal** : l'ordinateur joue comme les bots de test du tournoi.
+- **Mêmes règles qu'en tournoi** : placement puis « Prêt », minuteur de tour, aides à la visée, bilan de fin.
+- En fin de combat : **« Rejouer »** (mêmes réglages, nouveau tirage) ou **« Retour »** aux réglages.
+  « Quitter », en bas à droite, abandonne le combat en cours.
+
+En ligne de commande :
+- `TacticalWar.exe --training` ouvre directement les réglages ;
+- `--training-start` lance un combat avec les réglages par défaut, à préciser avec `--training-class <id>`,
+  `--training-map <id>` ou `--training-1v1` ;
+- `--training-autoplay` fait jouer aussi le personnage du joueur par l'ordinateur, et enchaîne les combats :
+  une démonstration pour un écran d'accueil.

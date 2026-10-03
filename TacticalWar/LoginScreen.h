@@ -11,6 +11,7 @@ namespace tw
 		sf::Font font;
 		sf::Text title;
 		bool readyForConnect;
+		bool trainingRequested;
 		float messageDuration;
 		tgui::Label::Ptr errorMsg;
 		tgui::Gui * gui;

@@ -6,8 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "BattleScreen.h"
-#include <BattleEngine.h>
+#include "LocalBattleScreen.h"
 
 namespace tw
 {
@@ -20,7 +19,7 @@ namespace tw
 	//   TacticalWar.exe --fx-gallery [--fx-spell <id du sort>] [--fx-map <id de la carte>]
 	// Gauche / droite : sort précédent / suivant, R : rejouer, F5 : relire les fichiers, Échap : quitter.
 	// Les sorts de la barre restent utilisables à la souris : la boucle s'arrête jusqu'au prochain R.
-	class FxGalleryScreen : public BattleScreen
+	class FxGalleryScreen : public LocalBattleScreen
 	{
 	public:
 		FxGalleryScreen(tgui::Gui * gui, const std::string & spellId, int environmentId);
@@ -31,8 +30,9 @@ namespace tw
 		virtual void onCellHover(int cellX, int cellY);
 
 	protected:
-		// Messages du joueur traités par le moteur local (actions, émotes, signaux).
-		virtual void sendToServer(const std::string & op, const nlohmann::json & body);
+		// Action à la souris : la démonstration automatique s'arrête (R pour la reprendre).
+		virtual void onPlayerAction();
+		virtual void onLocalEnd();
 
 	private:
 		// Personnages, dans l'ordre de création (identifiants du moteur).
@@ -81,9 +81,6 @@ namespace tw
 		void reload(bool announce);
 		void advance();
 		void aimAt(const battle::Cell & cell);
-		// Transmet les événements du moteur à l'écran de combat. Retourne true si le combat est fini.
-		bool deliver();
-		bool idle() const;
 		bool findLayout(const battle::ClassDef & classDef, const battle::SpellDef & spell, Layout & layout, std::string & error);
 		std::unique_ptr<battle::BattleEngine> createEngine(const battle::ClassDef & classDef, const battle::SpellDef & spell,
 			const Layout & layout, std::string & error);
@@ -94,8 +91,6 @@ namespace tw
 		// pour régler directement les fichiers suivis par git.
 		std::string root;
 		battle::BattleMap baseMap;
-		std::unique_ptr<battle::BattleEngine> engine;
-		std::int64_t nowMs;
 
 		std::vector<Entry> entries;
 		int current;

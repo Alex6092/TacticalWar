@@ -259,6 +259,13 @@ void BattleHud::setSpectator(const sf::String & banner)
 	layout(windowSize);
 }
 
+void BattleHud::showLeaveButton(const sf::String & text)
+{
+	leaveButton->setText(text);
+	leaveButton->setVisible(true);
+	layout(windowSize);
+}
+
 void BattleHud::setEndButtonText(const sf::String & text)
 {
 	if (endButton != nullptr && endButton->getText() != text)
@@ -317,8 +324,16 @@ void BattleHud::layout(const sf::Vector2u & size)
 	endPanel->setPosition((width - endPanelSize.x) / 2, (height - endPanelSize.y) / 2);
 
 	bannerLabel->setPosition((width - bannerLabel->getSize().x) / 2, 46);
-	leaveButton->setSize(180, 50);
-	leaveButton->setPosition((width - 180) / 2, height - 68);
+	if (spectator)
+	{
+		leaveButton->setSize(180, 50);
+		leaveButton->setPosition((width - 180) / 2, height - 68);
+	}
+	else
+	{
+		leaveButton->setSize(150, 36);
+		leaveButton->setPosition(width - 165, height - cameraHelp->getSize().y - 56);
+	}
 	cameraHelp->setPosition(width - cameraHelp->getSize().x - 15, height - cameraHelp->getSize().y - 10);
 }
 
@@ -608,7 +623,7 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	}
 	float buttonTop = rows.empty() ? 160.f : tableTop + 28 + rows.size() * 28.f + 20;
 
-	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : L"Fermer");
+	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : onReplay ? L"Retour" : L"Fermer");
 	endButton->setInheritedFont(font);
 	endButton->setTextSize(18);
 	endButton->setSize(spectator ? 240 : 160, 44);
@@ -618,6 +633,18 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 			onClose();
 	});
 	endPanel->add(endButton);
+	if (onReplay)
+	{
+		// Rejouer (à gauche) et Retour (à droite).
+		replayButton = tgui::Button::create(L"Rejouer");
+		replayButton->setInheritedFont(font);
+		replayButton->setTextSize(18);
+		replayButton->setSize(160, 44);
+		replayButton->setPosition(endPanelSize.x / 2 - 170, buttonTop);
+		replayButton->connect("pressed", [this]() { onReplay(); });
+		endPanel->add(replayButton);
+		endButton->setPosition(endPanelSize.x / 2 + 10, buttonTop);
+	}
 	leaveButton->setVisible(false);
 
 	endPanel->setVisible(true);

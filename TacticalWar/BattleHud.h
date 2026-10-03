@@ -17,6 +17,8 @@ public:
 	std::function<void()> onEndTurn;
 	std::function<void(bool)> onReady;
 	std::function<void()> onClose;
+	// Entraînement : bouton "Rejouer" à côté de "Retour" sur l'écran de fin.
+	std::function<void()> onReplay;
 	// Émote choisie dans la liste (identifiant de BattleEngineLib/Emotes.h).
 	std::function<void(int)> onEmote;
 
@@ -45,6 +47,8 @@ public:
 
 	// Mode spectateur : bandeau (équipes en présence) et bouton "Quitter" permanent.
 	void setSpectator(const sf::String & banner);
+	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
+	void showLeaveButton(const sf::String & text);
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
 	void setEndButtonText(const sf::String & text);
 
@@ -96,6 +100,7 @@ private:
 	tgui::Panel::Ptr endPanel;
 	sf::Vector2f endPanelSize = sf::Vector2f(520, 220);
 	tgui::Button::Ptr endButton;
+	tgui::Button::Ptr replayButton;
 
 	bool spectator;
 	tgui::Label::Ptr bannerLabel;

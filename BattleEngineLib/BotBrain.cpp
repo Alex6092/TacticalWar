@@ -138,8 +138,10 @@ namespace tw
 			}
 
 			// Lance le sort le plus utile, d'après la valeur estimée de ses effets sur les combattants touchés.
-			bool chooseCast(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng, BotAction & action)
+			bool chooseCast(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng,
+				bool mistake, BotAction & action)
 			{
+				std::vector<BotAction> useful;
 				const ClassDef * classDef = data.findClass(me.classId);
 				if (classDef == nullptr)
 					return false;
@@ -190,6 +192,14 @@ namespace tw
 
 						// Un peu de hasard pour varier les combats.
 						int score = value * 4 + (int)(rng() % 4);
+						if (value >= 2)
+						{
+							BotAction candidate;
+							candidate.kind = BotAction::Kind::CAST;
+							candidate.slot = slot;
+							candidate.target = cell;
+							useful.push_back(candidate);
+						}
 						if (value >= 2 && score > bestScore)
 						{
 							bestScore = score;
@@ -199,6 +209,9 @@ namespace tw
 						}
 					}
 				}
+				// Erreur volontaire (difficulté « Facile ») : un sort utile au hasard.
+				if (mistake && !useful.empty())
+					action = useful[rng() % useful.size()];
 				return action.kind == BotAction::Kind::CAST;
 			}
 
@@ -228,7 +241,8 @@ namespace tw
 			// Déplacement : vers une case d'où un ennemi est à portée. Les combattants à distance y
 			// gardent leurs distances (et évitent le contact, qui les expose au tacle) ; ceux de
 			// mêlée vont au contact. Si aucun ennemi n'est atteignable ce tour-ci, tous s'approchent.
-			bool chooseMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, BotAction & action)
+			bool chooseMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng,
+				bool mistake, BotAction & action)
 			{
 				if (me.mp <= 0)
 					return false;
@@ -266,6 +280,9 @@ namespace tw
 						best = cell;
 					}
 				}
+				// Erreur volontaire (difficulté « Facile ») : une case au hasard.
+				if (mistake)
+					best = candidates[rng() % candidates.size()];
 				if (best == me.position)
 					return false;
 
@@ -275,18 +292,21 @@ namespace tw
 			}
 		}
 
-		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng)
+		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng,
+			const BotOptions & options)
 		{
 			BotAction action;
 			const Fighter * me = state.findFighter(fighterId);
 			if (me == nullptr || !me->alive)
 				return action;
 
-			if (chooseCast(state, map, data, *me, rng, action))
+			// Pas de tirage sans erreurs prévues : le bot réseau et la simulation restent identiques.
+			bool mistake = options.mistakePercent > 0 && (int)(rng() % 100) < options.mistakePercent;
+			if (chooseCast(state, map, data, *me, rng, mistake, action))
 				return action;
 
 			action = BotAction();
-			if (chooseMove(state, map, data, *me, action))
+			if (chooseMove(state, map, data, *me, rng, mistake, action))
 				return action;
 
 			return BotAction();
