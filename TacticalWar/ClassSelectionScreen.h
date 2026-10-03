@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Screen.h"
 #include "ServerMessageListener.h"
@@ -50,6 +50,12 @@ private:
 	int sizeTextY = 25;
 
 	void setClassView();
+	// Sorts emportés : clic sur un sort pour l'ajouter ou le retirer (4 sur les 6 de la classe).
+	void toggleSpell(int index);
+	void refreshSpells();
+
+	std::vector<int> chosenSpells;
+	bool locked;
 
 	sf::Vector2u windowSize;
 	float ellapsedTime;

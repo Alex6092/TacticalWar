@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <vector>
+
 #include "Screen.h"
 
 namespace tw
@@ -23,6 +25,9 @@ namespace tw
 		static int selectedId(const tgui::ComboBox::Ptr & box);
 		void refresh();
 		void save();
+		// Sorts emportés par le joueur (classe choisie) : clic pour ajouter ou retirer.
+		void toggleSpell(int index);
+		void refreshSpells();
 
 		tgui::Gui * gui;
 		sf::Font font;
@@ -39,6 +44,12 @@ namespace tw
 		tgui::ComboBox::Ptr mode;
 		tgui::ComboBox::Ptr difficulty;
 		tgui::Label::Ptr description;
+		tgui::Picture::Ptr spellIcons[6];
+		tgui::Label::Ptr spellLabel;
+		tgui::Button::Ptr playButton;
+		std::vector<int> chosenSpells;
+		int spellClassId;
+		bool spellsChanged;
 		Request request;
 	};
 }

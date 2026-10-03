@@ -49,16 +49,35 @@ possibles du joueur sont en vert.
   - Pas de texte libre ; une émote toutes les trois secondes au plus.
   - L'organisateur peut les couper : `"emotes": false` dans `server.json`.
 
+## Sorts au choix
+
+Chaque classe a **6 sorts** ; chaque joueur en emporte **4** dans son combat, choisis sur l'écran de choix
+de classe : un clic sur un sort l'ajoute ou le retire, et le compteur indique « 4/4 ». Le dernier choix fait
+pour chaque classe est retenu (`client.json`) et proposé la fois suivante. Sans choix, ce sont les 4 premiers.
+
+| Classe | Sorts de base | Nouveaux sorts |
+|---|---|---|
+| Guerrier | Taillade, Charge, Rempart, Provocation | **Tourbillon** (ennemis au contact, Brise-glace), **Cri de guerre** (+20 % de puissance aux alliés proches) |
+| Archer | Tir précis, Flèche empoisonnée, Flèche de recul, Flèche entravante | **Pluie de flèches** (zone), **Piège** (immobilise et entrave) |
+| Mage | Éclair, Boule de feu, Glyphe de givre, Transposition | **Vague de flammes** (ligne de 3 cases, épargne les alliés, brûle), **Prison de glace** (-3 PM, gèle) |
+| Protecteur | Châtiment, Soin, Bouclier sacré, Purification | **Barrière** (+25 % de résistance, inamovible), **Lien de vie** (soin sur 3 tours) |
+
+- Les nouveaux sorts posent aussi des marques de combinaison (gelé, entravé, brûlé).
+- Entraînement : les sorts se choisissent sur l'écran des réglages, sous la description de la classe.
+- Les bots et l'ordinateur de l'entraînement emportent 4 sorts au hasard.
+- Le message `PC` envoie la classe et les sorts : `PC{"class": 4, "spells": [0, 1, 4, 5]}`. Un choix non
+  valable donne les sorts par défaut.
+
 ## Combinaisons entre classes
 
 Certains sorts **marquent** un ennemi, et un sort d'une autre classe lui inflige alors plus de dégâts :
 
 | Marque | Posée par | Durée | Combinaison |
 |---|---|---|---|
-| Gelé | Glyphe de givre (Mage), quand l'ennemi commence son tour dedans | jusqu'à la fin de son tour suivant | **Brise-glace** : Taillade ou Charge (Guerrier) +40 %, la cible dégèle |
-| Entravé | Flèche entravante (Archer) | 2 tours de la cible | **Cible immobile** : Éclair (Mage) +30 % |
+| Gelé | Glyphe de givre (Mage), quand l'ennemi commence son tour dedans ; Prison de glace (Mage) | jusqu'à la fin de son tour suivant ; 2 tours | **Brise-glace** : Taillade, Charge ou Tourbillon (Guerrier) +40 %, la cible dégèle |
+| Entravé | Flèche entravante (Archer) ; Piège (Archer) | 2 tours ; jusqu'à son tour suivant | **Cible immobile** : Éclair (Mage) +30 % |
 | Provoqué | Provocation (Guerrier) | 2 tours de la cible | **Dans le mille** : Tir précis (Archer) +30 % |
-| Brûlé | Boule de feu (Mage), ennemis seulement | 2 tours de la cible | **Jugement ardent** : Châtiment (Protecteur) +30 %, vol de vie compris |
+| Brûlé | Boule de feu ou Vague de flammes (Mage), ennemis seulement | 2 tours de la cible | **Jugement ardent** : Châtiment (Protecteur) +30 %, vol de vie compris |
 
 - Une cible marquée a un **réticule doré** au sol, et la marque figure dans ses effets. Les marques
   durent assez longtemps pour que le coéquipier joue avant qu'elles s'effacent.

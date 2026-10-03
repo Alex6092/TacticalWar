@@ -5,6 +5,7 @@
 
 #include <EnvironmentManager.h>
 
+#include "ClientConfig.h"
 #include "ClientGameData.h"
 #include "MusicManager.h"
 #include "ScreenManager.h"
@@ -75,14 +76,34 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 		return data.classes[rng() % data.classes.size()].id;
 	};
 
+	// Sorts : ceux choisis par le joueur pour sa classe (à défaut, les premiers), au hasard pour l'IA.
+	auto playerSpells = [&](int classId) {
+		const battle::ClassDef * classDef = data.findClass(classId);
+		if (classDef == nullptr)
+			return std::vector<int>();
+		return settings.autoplay ? battle::randomSpellChoice(*classDef, rng) : battle::validSpellChoice(*classDef, ClientConfig::get().spellChoice(classId));
+	};
+	auto aiSpells = [&](int classId) {
+		const battle::ClassDef * classDef = data.findClass(classId);
+		return classDef != nullptr ? battle::randomSpellChoice(*classDef, rng) : std::vector<int>();
+	};
+
 	// Équipe 1 : le joueur (combattant 0) et son allié ; équipe 2 : les adversaires.
 	std::unique_ptr<battle::BattleEngine> created(new battle::BattleEngine(data, map, rng()));
-	created->addFighter(1, pick(settings.playerClass), u8"Joueur");
+	int playerClass = pick(settings.playerClass);
+	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass));
 	if (settings.duo)
-		created->addFighter(1, pick(settings.allyClass), u8"Allié (IA)");
-	created->addFighter(2, pick(settings.enemyClasses[0]), settings.duo ? u8"Adversaire 1" : u8"Adversaire");
+	{
+		int allyClass = pick(settings.allyClass);
+		created->addFighter(1, allyClass, u8"Allié (IA)", aiSpells(allyClass));
+	}
+	int enemyClass = pick(settings.enemyClasses[0]);
+	created->addFighter(2, enemyClass, settings.duo ? u8"Adversaire 1" : u8"Adversaire", aiSpells(enemyClass));
 	if (settings.duo)
-		created->addFighter(2, pick(settings.enemyClasses[1]), u8"Adversaire 2");
+	{
+		int secondClass = pick(settings.enemyClasses[1]);
+		created->addFighter(2, secondClass, u8"Adversaire 2", aiSpells(secondClass));
+	}
 	if (settings.zone)
 		created->enableZone(TrainingSettings::ZONE_POINTS);
 	created->startPlacement(nowMs);

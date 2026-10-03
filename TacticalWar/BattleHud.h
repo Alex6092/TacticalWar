@@ -75,7 +75,8 @@ private:
 	};
 
 	tgui::Label::Ptr createLabel(unsigned int size, const sf::Color & color);
-	void setSpellBar(const tw::battle::ClassDef & classDef);
+	// Barre de sorts : les sorts emportés par le combattant.
+	void setSpellBar(const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
 
 	tgui::Gui * gui;
 	const sf::Font & font;
@@ -91,7 +92,8 @@ private:
 	tgui::Label::Ptr detailsLabel;
 	tgui::ChatBox::Ptr logBox;
 	std::vector<SpellButton> spells;
-	int spellBarClassId;
+	// Classe et sorts affichés dans la barre ("classe:indices").
+	std::string spellBarKey;
 	tgui::Button::Ptr endTurnButton;
 	tgui::Button::Ptr emoteButton;
 	tgui::Panel::Ptr emotePanel;
