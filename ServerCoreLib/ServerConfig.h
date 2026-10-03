@@ -36,6 +36,9 @@ namespace tw
 		int restSeconds = 20;
 		int forfeitSeconds = 90;
 
+		// Émotes prédéfinies des joueurs pendant les combats (l'organisateur peut les couper).
+		bool emotesEnabled = true;
+
 		AdminConfig admin;
 
 		nlohmann::json toJson() const;

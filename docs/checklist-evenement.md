@@ -42,5 +42,6 @@
 | Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
 | Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
+| Les émotes des joueurs gênent | Mettre `"emotes": false` dans `server.json`, puis relancer le serveur. |
 
 Sauvegarder le dossier `data\` du serveur après l'événement, puis supprimer les fiches d'identifiants.

@@ -15,6 +15,7 @@ nlohmann::json ServerConfig::toJson() const
 		{ "maxConcurrentMatches", maxConcurrentMatches },
 		{ "restSeconds", restSeconds },
 		{ "forfeitSeconds", forfeitSeconds },
+		{ "emotes", emotesEnabled },
 		{ "admin", {
 			{ "login", admin.login },
 			{ "passwordHash", admin.passwordHash },
@@ -35,6 +36,7 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.maxConcurrentMatches = json.value("maxConcurrentMatches", config.maxConcurrentMatches);
 	config.restSeconds = json.value("restSeconds", config.restSeconds);
 	config.forfeitSeconds = json.value("forfeitSeconds", config.forfeitSeconds);
+	config.emotesEnabled = json.value("emotes", config.emotesEnabled);
 
 	if (json.contains("admin") && json["admin"].is_object())
 	{
