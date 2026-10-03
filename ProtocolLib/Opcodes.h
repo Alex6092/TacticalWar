@@ -50,7 +50,7 @@ namespace tw
 
 			// Connexion / changement d'écran
 			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password (vide = spectateur). S->C : entrer en combat sur la carte <id>" },
-			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir}" },
+			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours)}" },
 			{ "HS", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller au mode spectateur" },
 			{ "HW", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à l'attente de match" },
 			{ "HK", Direction::SERVER_TO_CLIENT, Role::ANY, "Identifiants refusés" },
@@ -101,6 +101,8 @@ namespace tw
 			// Choix de classe
 			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants]} (PC<classId> : sorts par défaut)" },
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
+			{ "PB", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte)" },
+			{ "BB", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)}" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
 			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },
 			{ "MP", Direction::SERVER_TO_CLIENT, Role::ANY, "Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG" },

@@ -1,6 +1,8 @@
 ﻿#include "ServerConfig.h"
 #include "JsonFile.h"
 
+#include <algorithm>
+
 using namespace tw;
 
 nlohmann::json ServerConfig::toJson() const
@@ -12,6 +14,7 @@ nlohmann::json ServerConfig::toJson() const
 		{ "keepaliveIntervalSeconds", keepaliveIntervalSeconds },
 		{ "keepaliveTimeoutSeconds", keepaliveTimeoutSeconds },
 		{ "classSelectionSeconds", classSelectionSeconds },
+		{ "banSeconds", banSeconds },
 		{ "maxConcurrentMatches", maxConcurrentMatches },
 		{ "restSeconds", restSeconds },
 		{ "forfeitSeconds", forfeitSeconds },
@@ -35,6 +38,7 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.keepaliveIntervalSeconds = json.value("keepaliveIntervalSeconds", config.keepaliveIntervalSeconds);
 	config.keepaliveTimeoutSeconds = json.value("keepaliveTimeoutSeconds", config.keepaliveTimeoutSeconds);
 	config.classSelectionSeconds = json.value("classSelectionSeconds", config.classSelectionSeconds);
+	config.banSeconds = std::max(5, json.value("banSeconds", config.banSeconds));
 	config.maxConcurrentMatches = json.value("maxConcurrentMatches", config.maxConcurrentMatches);
 	config.restSeconds = json.value("restSeconds", config.restSeconds);
 	config.forfeitSeconds = json.value("forfeitSeconds", config.forfeitSeconds);

@@ -26,7 +26,7 @@ nlohmann::json TWParser::sessionListJson()
 			{ "session", session->getId() },
 			{ "name", match->getMatchName() },
 			{ "teams", nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) }) },
-			{ "phase", "CLASS_SELECTION" },
+			{ "phase", session->getPhase() == BattleSession::Phase::BAN ? "BAN" : "CLASS_SELECTION" },
 			{ "round", 0 },
 			{ "spectators", session->spectators.size() },
 			{ "tournament", session->getTournamentId() },

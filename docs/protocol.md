@@ -31,7 +31,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
 | `HG` | C ↔ S | tous | C-&gt;S : login;password (vide = spectateur). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
-| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir} |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours)} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -100,6 +100,8 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 |---|---|---|---|
 | `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants]} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
+| `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
+| `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |
 | `MP` | S → C | tous | Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG |

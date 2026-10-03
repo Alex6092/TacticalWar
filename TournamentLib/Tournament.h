@@ -22,6 +22,14 @@ namespace tw
 			SWISS					// Rondes suisses, avec phase finale optionnelle
 		};
 
+		// Bannissement de classe avant les matchs : chaque équipe interdit une classe à l'autre.
+		enum class BanMode
+		{
+			NONE,
+			FINALS,		// Phase finale : tableaux W, L, GF, GF2 et 3P (pas les poules ni les rondes suisses)
+			ALL
+		};
+
 		enum class StageType
 		{
 			ROUND_ROBIN_POOLS,
@@ -151,6 +159,8 @@ namespace tw
 			// Talents de tournoi : un par match joué (victoire, défaite ou exempt), au plus maxTalents,
 			// choisis avant chaque match (0 : pas de talents).
 			int maxTalents = 3;
+
+			BanMode bans = BanMode::NONE;
 		};
 
 		struct Stage
@@ -213,8 +223,11 @@ namespace tw
 		int matchesPlayed(const Tournament & tournament, int teamId);
 		// Talents de l'équipe pour son prochain match : un par match joué, au plus settings.maxTalents.
 		int talentSlots(const Tournament & tournament, int teamId);
+		// Le match commence par une phase de bannissement (réglage settings.bans).
+		bool hasBanPhase(const Tournament & tournament, const TMatch & match);
 
 		const char * toString(Format format);
+		const char * toString(BanMode mode);
 		const char * toString(StageType type);
 		const char * toString(TournamentStatus status);
 		const char * toString(MatchStatus status);

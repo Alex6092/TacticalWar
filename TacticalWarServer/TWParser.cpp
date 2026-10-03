@@ -239,6 +239,8 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 								{
 									// Envoi vers l'écran de choix de classe (avec la classe déjà verrouillée, s'il y en a une) :
 									send(client, classSelectionMessage(p));
+									if (session != NULL)
+										sendBanState(session, client, p);
 									if (session != NULL && session->chosenClass(p) != 0)
 										send(client, "PO" + std::to_string(session->chosenClass(p)) + "\n");
 								}
@@ -352,6 +354,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			tw::Player * p = getPlayerFromClientState(client);
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
+		}
+		// Bannissement d'une classe :
+		else if (StringUtils::startsWith(toParse, "PB"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handleBan(client, p, toParse.substr(2));
 		}
 	}
 }

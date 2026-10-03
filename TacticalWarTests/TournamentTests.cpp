@@ -579,3 +579,42 @@ TEST_CASE("Teams earn one talent per finished match, up to the tournament maximu
 	legacy["maxTalents"] = 9;
 	CHECK(settingsFromJson(legacy).maxTalents == 5);
 }
+
+TEST_CASE("The ban setting decides which matches start with a class ban")
+{
+	Tournament tournament;
+	TMatch pool;
+	pool.bracket = "P0";
+	TMatch swiss;
+	swiss.bracket = "S";
+	std::vector<TMatch> finals(5);
+	const char * brackets[5] = { "W", "L", "GF", "GF2", "3P" };
+	for (int i = 0; i < 5; i++)
+		finals[i].bracket = brackets[i];
+
+	// Par défaut, aucun bannissement.
+	CHECK((tournament.settings.bans == BanMode::NONE));
+	CHECK_FALSE(hasBanPhase(tournament, pool));
+	CHECK_FALSE(hasBanPhase(tournament, finals[0]));
+
+	// Phase finale : les tableaux, pas les poules ni les rondes suisses.
+	tournament.settings.bans = BanMode::FINALS;
+	CHECK_FALSE(hasBanPhase(tournament, pool));
+	CHECK_FALSE(hasBanPhase(tournament, swiss));
+	for (const TMatch & match : finals)
+		CHECK(hasBanPhase(tournament, match));
+
+	tournament.settings.bans = BanMode::ALL;
+	CHECK(hasBanPhase(tournament, pool));
+	CHECK(hasBanPhase(tournament, swiss));
+
+	// Réglage enregistré avec le tournoi ; anciens tournois et valeur inconnue : aucun.
+	Settings settings;
+	settings.bans = BanMode::FINALS;
+	CHECK((settingsFromJson(toJson(settings)).bans == BanMode::FINALS));
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("bans");
+	CHECK((settingsFromJson(legacy).bans == BanMode::NONE));
+	legacy["bans"] = "PARFOIS";
+	CHECK((settingsFromJson(legacy).bans == BanMode::NONE));
+}

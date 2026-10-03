@@ -12,13 +12,15 @@
 #include <Player.h>
 #include "net/NetServer.h"
 
-// Un combat entre deux équipes : choix des classes, puis combat géré par le BattleEngine.
+// Un combat entre deux équipes : bannissement (certains matchs de tournoi), choix des classes, puis
+// combat géré par le BattleEngine.
 // Les identifiants de combattants sont stables : 0 et 1 pour l'équipe 1, 2 et 3 pour l'équipe 2.
 class BattleSession
 {
 public:
 	enum class Phase
 	{
+		BAN,
 		CLASS_SELECTION,
 		BATTLE,
 		ENDED
@@ -33,10 +35,23 @@ public:
 
 	const std::vector<tw::Player*> & getParticipants() const { return participants; }
 	int fighterIdOf(tw::Player * player) const;
+	// Équipe du joueur dans ce combat : 1 ou 2 (0 : il n'y participe pas).
+	int teamOf(tw::Player * player) const;
 	tw::Player * playerOfFighter(int fighterId) const;
 
+	// Bannissement : chaque équipe interdit une classe à l'autre ; le premier choix d'un joueur de
+	// l'équipe compte. À la fin de la phase, le choix des classes commence.
+	void startBanPhase(std::int64_t deadline);
+	bool hasBanPhase() const { return banPhase; }
+	std::int64_t getBanDeadline() const { return banDeadline; }
+	bool ban(tw::Player * player, int classId);
+	int bannedBy(int team) const { return team == 1 || team == 2 ? bans[team] : 0; }	// 0 : aucune
+	int forbiddenClass(int team) const { return bannedBy(3 - team); }
+	bool allTeamsBanned() const { return bans[1] != 0 && bans[2] != 0; }
+	void endBanPhase(std::int64_t classSelectionDeadline);
+
 	// Choix des classes et des sorts (une seule fois par joueur). Un choix de sorts non valable
-	// donne les sorts par défaut de la classe.
+	// donne les sorts par défaut de la classe ; la classe interdite par l'adversaire est refusée.
 	bool chooseClass(tw::Player * player, int classId, const std::vector<int> & spells = std::vector<int>(),
 		const std::vector<std::string> & talents = std::vector<std::string>());
 	// Talents de tournoi à choisir par chaque équipe (0 hors tournoi). Les emplacements laissés vides
@@ -83,6 +98,9 @@ private:
 	std::map<tw::Player*, std::vector<int>> spellChoices;
 	std::map<tw::Player*, std::vector<std::string>> talentChoices;
 	int talentSlotsByTeam[3] = { 0, 0, 0 };
+	bool banPhase = false;
+	std::int64_t banDeadline = 0;
+	int bans[3] = { 0, 0, 0 };	// Classe interdite par chaque équipe (1 et 2) à l'autre
 	std::int64_t classSelectionDeadline;
 	std::unique_ptr<tw::battle::BattleEngine> engine;
 	std::uint32_t seed;

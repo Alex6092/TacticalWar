@@ -121,6 +121,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	BattleSession * sessionOfPlayer(tw::Player * player);
 	void sendGameData(ClientState * client);
 	void handlePickClass(ClientState * client, tw::Player * player, const std::string & body);
+	void handleBan(ClientState * client, tw::Player * player, const std::string & body);
+	// Bannissement : BB{banned: classe interdite par l'équipe du joueur, forbidden: classe qui lui est
+	// interdite, done: phase terminée}. Envoyé au retour d'un joueur si le match a un bannissement.
+	void sendBanState(BattleSession * session, ClientState * client, tw::Player * player);
+	void finishBanPhase(BattleSession * session);
 	// Passage au choix de classe : HC{"talents": nombre de talents de tournoi à choisir}.
 	std::string classSelectionMessage(tw::Player * player);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);

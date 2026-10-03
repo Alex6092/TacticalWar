@@ -49,8 +49,20 @@ nlohmann::json TWParser::publicStateJson()
 			{ "tournament", session->getTournamentId() },
 			{ "match", session->getTournamentMatchId() },
 			{ "teams", nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) }) },
-			{ "phase", session->getPhase() == BattleSession::Phase::CLASS_SELECTION ? "CLASS_SELECTION" : "BATTLE" }
+			{ "phase", session->getPhase() == BattleSession::Phase::BAN ? "BAN"
+				: session->getPhase() == BattleSession::Phase::CLASS_SELECTION ? "CLASS_SELECTION" : "BATTLE" }
 		};
+		// Classes interdites à chaque équipe, connues à la fin du bannissement.
+		if (session->hasBanPhase() && session->getPhase() != BattleSession::Phase::BAN)
+		{
+			nlohmann::json forbidden = nlohmann::json::array();
+			for (int team = 1; team <= 2; team++)
+			{
+				const tw::battle::ClassDef * classDef = gameData.findClass(session->forbiddenClass(team));
+				forbidden.push_back(classDef != nullptr ? classDef->name : std::string());
+			}
+			battle["forbidden"] = forbidden;
+		}
 
 		if (session->getPhase() == BattleSession::Phase::BATTLE)
 		{

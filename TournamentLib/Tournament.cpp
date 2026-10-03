@@ -16,6 +16,17 @@ const char * tw::tournament::toString(Format format)
 	return "";
 }
 
+const char * tw::tournament::toString(BanMode mode)
+{
+	switch (mode)
+	{
+	case BanMode::NONE: return "NONE";
+	case BanMode::FINALS: return "FINALS";
+	case BanMode::ALL: return "ALL";
+	}
+	return "";
+}
+
 const char * tw::tournament::toString(StageType type)
 {
 	switch (type)
@@ -80,6 +91,16 @@ int tw::tournament::matchesPlayed(const Tournament & tournament, int teamId)
 int tw::tournament::talentSlots(const Tournament & tournament, int teamId)
 {
 	return std::max(0, std::min(tournament.settings.maxTalents, matchesPlayed(tournament, teamId)));
+}
+
+bool tw::tournament::hasBanPhase(const Tournament & tournament, const TMatch & match)
+{
+	if (tournament.settings.bans == BanMode::ALL)
+		return true;
+	if (tournament.settings.bans == BanMode::NONE)
+		return false;
+	const std::string & bracket = match.bracket;
+	return bracket == "W" || bracket == "L" || bracket == "GF" || bracket == "GF2" || bracket == "3P";
 }
 
 std::string tw::tournament::matchLabel(const Tournament & tournament, const TMatch & match)
