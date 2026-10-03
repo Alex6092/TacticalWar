@@ -2,10 +2,12 @@
 
 #include <filesystem>
 #include <random>
+#include <set>
 
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
+#include <BotBrain.h>
 #include <Emotes.h>
 
 using namespace tw::battle;
@@ -769,4 +771,31 @@ TEST_CASE("The MVP has the best record score, the winning team breaking ties")
 	BattleState idle;
 	idle.fighters = { Fighter() };
 	CHECK(chooseMvp(idle) == -1);
+}
+
+TEST_CASE("Bot mistakes for easy training stay legal and vary the choices")
+{
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } });
+	arena.playUntilTurnOf(0);
+
+	BotOptions clumsy;
+	clumsy.mistakePercent = 100;
+	std::set<std::string> choices;
+	for (std::uint32_t seed = 1; seed <= 40; seed++)
+	{
+		std::mt19937 rng(seed);
+		BotAction action = chooseBotAction(arena.state(), arena.map, gameData(), 0, rng, clumsy);
+		if (action.kind == BotAction::Kind::END_TURN)
+			continue;
+
+		// Chaque erreur reste une action acceptée par le moteur.
+		BattleEngine copy(gameData(), arena.map, arena.state(), seed);
+		ActionResult result = action.kind == BotAction::Kind::CAST ? copy.cast(0, action.slot, action.target, arena.now)
+			: copy.move(0, action.path, arena.now);
+		CHECK_MESSAGE(result.ok, result.error);
+
+		Cell end = action.path.empty() ? action.target : action.path.back();
+		choices.insert(std::to_string((int)action.kind) + ":" + std::to_string(action.slot) + ":" + std::to_string(end.x) + "," + std::to_string(end.y));
+	}
+	CHECK(choices.size() >= 3);
 }
