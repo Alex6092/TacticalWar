@@ -323,5 +323,12 @@ FighterRecord BattleMirror::recordFromJson(const json & value)
 	record.shielded = value.value("shielded", 0);
 	record.kills = value.value("kills", 0);
 	record.casts = value.value("casts", 0);
+	record.combos = value.value("combos", 0);
+	record.zonePoints = value.value("zonePoints", 0);
+	for (const json & badge : value.value("badges", json::array()))
+	{
+		if (badge.is_string())
+			record.badges.push_back(badge.get<std::string>());
+	}
 	return record;
 }

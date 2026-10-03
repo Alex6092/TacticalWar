@@ -488,6 +488,7 @@ TEST_CASE("Match results keep the players' records through JSON")
 	archer.dealt = 120;
 	archer.kills = 2;
 	archer.mvp = true;
+	archer.badges = { "first_blood", "double_ko" };
 	PlayerRecord healer;
 	healer.name = "Tom";
 	healer.className = "Protecteur";
@@ -504,6 +505,9 @@ TEST_CASE("Match results keep the players' records through JSON")
 	CHECK(restored.players[0].dealt == 120);
 	CHECK(restored.players[0].kills == 2);
 	CHECK(restored.players[0].mvp);
+	CHECK(restored.players[0].badges == archer.badges);
+	CHECK(restored.players[1].badges.empty());
+	CHECK_FALSE(toJson(result)["players"][1].contains("badges"));
 	CHECK(restored.players[1].healed == 45);
 	CHECK(restored.players[1].shielded == 40);
 	CHECK_FALSE(restored.players[1].mvp);

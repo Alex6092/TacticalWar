@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "Achievements.h"
 #include "Emotes.h"
 
 #include <algorithm>
@@ -548,7 +549,15 @@ void BattleEngine::scoreZone()
 	zonePresence(state, present);
 	int holder = present[1] && !present[2] ? 1 : present[2] && !present[1] ? 2 : 0;
 	if (holder != 0)
+	{
 		state.zone.scores[holder]++;
+		// Bilan : le point revient à chaque combattant de l'équipe présent dans la zone.
+		for (Fighter & fighter : state.fighters)
+		{
+			if (fighter.alive && fighter.team == holder && state.zone.contains(fighter.position))
+				fighter.record.zonePoints++;
+		}
+	}
 	state.zone.holder = holder;
 	emit({ { "t", "score" }, { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "holder", holder },
 		{ "contested", present[1] && present[2] } });
@@ -599,6 +608,8 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	state.endReason = reason;
 	state.deadlineMs = 0;
 	state.mvpFighterId = chooseMvp(state);
+	for (Fighter & fighter : state.fighters)
+		fighter.record.badges = earnedAchievements(state, fighter);
 
 	// Bilan de chaque combattant, pour l'écran de fin (joueurs, spectateurs, rediffusions).
 	json records = json::array();
@@ -721,7 +732,10 @@ json BattleEngine::recordJson(const FighterRecord & record)
 		{ "healed", record.healed },
 		{ "shielded", record.shielded },
 		{ "kills", record.kills },
-		{ "casts", record.casts }
+		{ "casts", record.casts },
+		{ "combos", record.combos },
+		{ "zonePoints", record.zonePoints },
+		{ "badges", record.badges }
 	};
 }
 

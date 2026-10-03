@@ -36,6 +36,7 @@
     <Import Project="$(TwRootDir)build\TwProject.props" />
   </ImportGroup>
   <ItemGroup>
+    <ClInclude Include="Achievements.h" />
     <ClInclude Include="BattleEngine.h" />
     <ClInclude Include="BattleMirror.h" />
     <ClInclude Include="BattlePreview.h" />
@@ -47,6 +48,7 @@
     <ClInclude Include="GameData.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Achievements.cpp" />
     <ClCompile Include="BattleEffects.cpp" />
     <ClCompile Include="BattleEngine.cpp" />
     <ClCompile Include="BattleMirror.cpp" />

@@ -87,6 +87,7 @@ namespace tw
 			int shielded = 0;
 			int kills = 0;
 			bool mvp = false;
+			std::vector<std::string> badges;	// Hauts faits du combat (identifiants)
 		};
 
 		struct MatchResult

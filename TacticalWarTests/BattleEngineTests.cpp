@@ -7,6 +7,7 @@
 #include <random>
 #include <set>
 
+#include <Achievements.h>
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
@@ -750,11 +751,15 @@ TEST_CASE("Battle records credit damage, shields, casts and knockouts to the rig
 	CHECK(arena.fighter(0).record.kills == 1);
 	CHECK(arena.fighter(0).record.dealt == arena.fighter(2).record.taken);
 	CHECK(arena.state().mvpFighterId == 0);
+	CHECK(arena.state().firstBloodFighterId == 0);
+	const std::vector<std::string> & badges = arena.fighter(0).record.badges;
+	CHECK(std::find(badges.begin(), badges.end(), "first_blood") != badges.end());
 
 	std::vector<nlohmann::json> ends = arena.eventsOfType("end");
 	REQUIRE(ends.size() == 1);
 	CHECK(ends[0]["mvp"].get<int>() == 0);
 	CHECK(ends[0]["records"].size() == 3);
+	CHECK(ends[0]["records"][0]["badges"] == nlohmann::json(badges));
 
 	// Les clients retrouvent le bilan dans l'état complet.
 	BattleState mirror;
@@ -763,6 +768,79 @@ TEST_CASE("Battle records credit damage, shields, casts and knockouts to the rig
 	CHECK(mirror.mvpFighterId == 0);
 	CHECK(mirror.findFighter(0)->record.kills == 1);
 	CHECK(mirror.findFighter(1)->record.shielded == arena.fighter(1).record.shielded);
+	CHECK(mirror.findFighter(0)->record.badges == badges);
+}
+
+TEST_CASE("Achievements reward each feat at the end of the battle")
+{
+	BattleState state;
+	state.phase = BattlePhase::ENDED;
+	state.winnerTeam = 1;
+	state.endReason = EndReason::KO;
+	state.round = 9;
+	Fighter striker;
+	striker.id = 0;
+	striker.team = 1;
+	Fighter healer;
+	healer.id = 1;
+	healer.team = 1;
+	Fighter enemy;
+	enemy.id = 2;
+	enemy.team = 2;
+	enemy.alive = false;
+	state.fighters = { striker, healer, enemy };
+	auto earned = [&state](int id) { return earnedAchievements(state, *state.findFighter(id)); };
+	using Badges = std::vector<std::string>;
+
+	// Un combattant qui n'a rien fait n'obtient rien.
+	CHECK(earned(1).empty());
+
+	Fighter & a = *state.findFighter(0);
+	a.record.kills = 2;
+	a.record.combos = 2;
+	a.record.dealt = 150;
+	a.record.taken = 5;
+	a.record.casts = 6;
+	state.firstBloodFighterId = 0;
+	CHECK(earned(0) == Badges{ "first_blood", "double_ko", "combo_master", "demolisher" });
+	a.record.kills = 1;
+	a.record.combos = 1;
+	a.record.dealt = 149;
+	state.firstBloodFighterId = -1;
+	CHECK(earned(0).empty());
+
+	// Soins et boucliers donnés ; aucun dégât subi en ayant joué.
+	Fighter & h = *state.findFighter(1);
+	h.record.healed = 35;
+	h.record.shielded = 25;
+	h.record.casts = 4;
+	CHECK(earned(1) == Badges{ "guardian_angel", "untouchable" });
+	h.record.taken = 1;
+	CHECK(earned(1) == Badges{ "guardian_angel" });
+
+	// Seul survivant de l'équipe gagnante.
+	h.alive = false;
+	CHECK(earned(0) == Badges{ "last_standing" });
+	CHECK(earned(2).empty());
+
+	// Zone tenue pour 3 points ; victoire en 5 tours ou moins, pas sur une décision de l'organisateur.
+	a.record.zonePoints = 3;
+	state.round = 5;
+	CHECK(earned(0) == Badges{ "last_standing", "zone_keeper", "lightning" });
+	state.endReason = EndReason::ADMIN;
+	CHECK(earned(0) == Badges{ "last_standing", "zone_keeper" });
+
+	// Chaque haut fait a un nom et une description, et un identifiant unique.
+	std::set<std::string> ids;
+	for (const AchievementDef & achievement : ACHIEVEMENTS)
+	{
+		CHECK(findAchievement(achievement.id) == &achievement);
+		CHECK(std::string(achievement.name).size() > 0);
+		CHECK(std::string(achievement.description).size() > 0);
+		ids.insert(achievement.id);
+	}
+	CHECK(ids.size() == ACHIEVEMENT_COUNT);
+	CHECK(findAchievement("inconnu") == nullptr);
 }
 
 TEST_CASE("The MVP has the best record score, the winning team breaking ties")
@@ -850,6 +928,7 @@ TEST_CASE("Combos boost damage on a marked target and consume the mark when requ
 			if (event["t"] == "combo")
 				combos.push_back(event);
 		}
+		CHECK(engine.getState().findFighter(0)->record.combos == (int)combos.size());
 	};
 
 	std::vector<int> plain, boosted;
@@ -1099,6 +1178,11 @@ TEST_CASE("Holding the zone alone scores a point each round until the target sco
 	CHECK(duel.engine->isOver());
 	CHECK(duel.state().winnerTeam == 1);
 	CHECK((duel.state().endReason == EndReason::OBJECTIVE));
+
+	// Bilan : les 2 points reviennent au Guerrier dans la zone ; victoire en moins de 5 tours.
+	CHECK(duel.state().findFighter(0)->record.zonePoints == 2);
+	CHECK(duel.state().findFighter(1)->record.zonePoints == 0);
+	CHECK(duel.state().findFighter(0)->record.badges == std::vector<std::string>{ "lightning" });
 }
 
 TEST_CASE("A contested zone scores nothing and a decision counts zone points first")

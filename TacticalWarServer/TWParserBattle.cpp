@@ -1,6 +1,7 @@
 ﻿// Combats : sessions (choix des classes puis BattleEngine), actions des joueurs,
 // diffusion des événements et fin de combat.
 #include "TWParser.h"
+#include <Achievements.h>
 
 #include <chrono>
 #include <iostream>
@@ -315,11 +316,19 @@ void TWParser::finishBattle(BattleSession * session)
 		player.shielded = fighter.record.shielded;
 		player.kills = fighter.record.kills;
 		player.mvp = fighter.id == state.mvpFighterId;
+		player.badges = fighter.record.badges;
 		players.push_back(player);
 		if (player.mvp)
 		{
+			// Hauts faits du MVP par leur nom, pour la page projetée.
+			nlohmann::json badges = nlohmann::json::array();
+			for (const std::string & id : player.badges)
+			{
+				const tw::battle::AchievementDef * achievement = tw::battle::findAchievement(id);
+				badges.push_back(achievement != nullptr ? std::string(achievement->name) : id);
+			}
 			mvp = { { "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
-				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills } };
+				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills }, { "badges", badges } };
 		}
 	}
 	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round, players);

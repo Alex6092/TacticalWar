@@ -117,10 +117,13 @@ nlohmann::json tw::tournament::toJson(const MatchResult & result)
 		nlohmann::json players = nlohmann::json::array();
 		for (const PlayerRecord & player : result.players)
 		{
-			players.push_back({
+			nlohmann::json value = {
 				{ "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
 				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills }, { "mvp", player.mvp }
-			});
+			};
+			if (!player.badges.empty())
+				value["badges"] = player.badges;
+			players.push_back(value);
 		}
 		json["players"] = players;
 	}
@@ -146,6 +149,11 @@ MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
 		player.shielded = value.value("shielded", 0);
 		player.kills = value.value("kills", 0);
 		player.mvp = value.value("mvp", false);
+		for (const nlohmann::json & badge : value.value("badges", nlohmann::json::array()))
+		{
+			if (badge.is_string())
+				player.badges.push_back(badge.get<std::string>());
+		}
 		result.players.push_back(player);
 	}
 	return result;

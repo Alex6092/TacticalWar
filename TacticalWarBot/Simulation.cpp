@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <Achievements.h>
 #include <BattleEngine.h>
 #include <BotBrain.h>
 #include <EnvironmentManager.h>
@@ -33,6 +34,16 @@ namespace
 		std::ostringstream text;
 		text << std::fixed << std::setprecision(1) << value << " %";
 		return text.str();
+	}
+
+	// Complète un texte UTF-8 jusqu'à une largeur en caractères (setw compte les octets, et décale
+	// les noms accentués).
+	std::string padded(const std::string & text, int width)
+	{
+		int length = 0;
+		for (unsigned char c : text)
+			length += (c & 0xC0) != 0x80 ? 1 : 0;
+		return text + std::string(std::max(0, width - length), ' ');
 	}
 }
 
@@ -82,6 +93,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::vector<int> rounds;
 	double winnerHp = 0;
 	int unfinished = 0;
+	// Hauts faits obtenus (identifiant -> nombre de combattants).
+	std::map<std::string, int> badges;
 	// Combinaisons déclenchées (nom -> nombre).
 	std::map<std::string, int> combos;
 	auto countCombos = [&combos](const nlohmann::json & batch) {
@@ -204,6 +217,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 				if (fighter.team == winner)
 					tally.wins++;
 			}
+			for (const std::string & id : fighter.record.badges)
+				badges[id]++;
 		}
 
 		for (int team = 1; team <= 2; team++)
@@ -245,7 +260,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::cout << "\nSorts emportés (choix au hasard, 4 sur 6) : taux de victoire quand le sort est emporté :\n";
 	for (const auto & entry : bySpell)
 	{
-		std::cout << "  " << std::left << std::setw(34) << entry.first << std::right
+		std::cout << "  " << padded(entry.first, 34)
 			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " fois)\n";
 	}
 
@@ -254,7 +269,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::cout << "\nTalents (" << talents << " par combattant, au hasard) : taux de victoire quand le talent est pris :\n";
 		for (const auto & entry : byTalent)
 		{
-			std::cout << "  " << std::left << std::setw(20) << entry.first << std::right
+			std::cout << "  " << padded(entry.first, 20)
 				<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " fois)\n";
 		}
 	}
@@ -294,6 +309,14 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		{
 			std::cout << "  " << std::left << std::setw(18) << entry.first << std::right << std::setw(8) << std::fixed << std::setprecision(1)
 				<< 100.0 * entry.second / finished << "   (" << entry.second << " au total)\n";
+		}
+
+		// Un haut fait trop fréquent ne distingue personne, un haut fait trop rare n'est jamais vu.
+		std::cout << "\nHauts faits (part des combattants qui les obtiennent) :\n";
+		for (const AchievementDef & achievement : ACHIEVEMENTS)
+		{
+			int count = badges[achievement.id];
+			std::cout << "  " << padded(achievement.name, 22) << std::setw(8) << percent(100.0 * count / (4.0 * finished)) << "   (" << count << " fois)\n";
 		}
 	}
 

@@ -84,6 +84,10 @@ namespace tw
 			int shielded = 0;	// Boucliers donnés
 			int kills = 0;		// Ennemis mis hors combat
 			int casts = 0;		// Sorts lancés
+			int combos = 0;		// Combinaisons déclenchées
+			int zonePoints = 0;	// Points de zone marqués en étant dans la zone
+			// Hauts faits (identifiants de Achievements.h), décernés à la fin du combat.
+			std::vector<std::string> badges;
 		};
 
 		struct Fighter
@@ -173,6 +177,7 @@ namespace tw
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
 			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
+			int firstBloodFighterId = -1;	// Auteur du premier KO du combat
 			ZoneState zone;
 			int nextUid = 1;
 
