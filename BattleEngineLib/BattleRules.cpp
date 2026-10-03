@@ -181,6 +181,30 @@ std::vector<int> tw::battle::randomSpellChoice(const ClassDef & classDef, std::m
 	return all;
 }
 
+std::vector<std::string> tw::battle::validTalentChoice(const GameData & data, const std::vector<std::string> & requested, int slots)
+{
+	std::vector<std::string> talents;
+	for (const std::string & id : requested)
+	{
+		if ((int)talents.size() >= slots)
+			break;
+		if (data.findTalent(id) != nullptr && std::find(talents.begin(), talents.end(), id) == talents.end())
+			talents.push_back(id);
+	}
+	return talents;
+}
+
+std::vector<std::string> tw::battle::randomTalentChoice(const GameData & data, int slots, std::mt19937 & rng)
+{
+	std::vector<std::string> all;
+	for (const TalentDef & talent : data.talents)
+		all.push_back(talent.id);
+	std::shuffle(all.begin(), all.end(), rng);
+	if ((int)all.size() > std::max(0, slots))
+		all.resize(std::max(0, slots));
+	return all;
+}
+
 const SpellDef * tw::battle::spellOf(const GameData & data, const Fighter & fighter, int slot)
 {
 	const ClassDef * classDef = data.findClass(fighter.classId);

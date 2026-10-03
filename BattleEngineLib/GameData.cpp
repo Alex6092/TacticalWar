@@ -231,6 +231,16 @@ bool tw::battle::isPositiveEffect(const EffectDef & effect)
 	}
 }
 
+const TalentDef * GameData::findTalent(const std::string & id) const
+{
+	for (const TalentDef & talent : talents)
+	{
+		if (talent.id == id)
+			return &talent;
+	}
+	return nullptr;
+}
+
 const ClassDef * GameData::findClass(int classId) const
 {
 	for (const ClassDef & classDef : classes)
@@ -296,6 +306,28 @@ bool GameData::loadFromJsonText(const std::string & text, std::string & error)
 				throw std::runtime_error("classe " + classDef.name + " : MAX_HP doit être positif");
 
 			loaded.classes.push_back(classDef);
+		}
+
+		// Talents de tournoi (facultatifs).
+		for (const json & talentJson : root.value("talents", json::array()))
+		{
+			TalentDef talent;
+			talent.id = talentJson.at("id").get<std::string>();
+			talent.name = talentJson.value("name", talent.id);
+			talent.description = talentJson.value("description", std::string());
+			const json & stats = talentJson.value("stats", json::object());
+			for (auto it = stats.begin(); it != stats.end(); it++)
+			{
+				Stat stat;
+				if (!parseStat(it.key(), stat))
+					throw std::runtime_error("talent " + talent.id + " : caractéristique inconnue " + it.key());
+				talent.stats.set(stat, it.value().get<int>());
+			}
+			for (const json & effect : talentJson.value("effects", json::array()))
+				talent.effects.push_back(parseEffect(effect));
+			if (loaded.findTalent(talent.id) != nullptr)
+				throw std::runtime_error("talent en double : " + talent.id);
+			loaded.talents.push_back(talent);
 		}
 
 		loaded.sourceText = text;

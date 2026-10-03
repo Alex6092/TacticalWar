@@ -295,5 +295,17 @@
         }
       ]
     }
+  ],
+  "talents": [
+    {"id": "robustesse", "name": "Robustesse", "description": "+15 PV max.", "stats": {"MAX_HP": 15}},
+    {"id": "force", "name": "Force", "description": "+10 % de puissance : plus de dégâts.", "stats": {"POWER": 10}},
+    {"id": "carapace", "name": "Carapace", "description": "+8 % de résistance : moins de dégâts subis.", "stats": {"RESISTANCE": 8}},
+    {"id": "celerite", "name": "Célérité", "description": "+20 d'initiative (jouer plus tôt) et +2 de fuite.", "stats": {"INITIATIVE": 20, "DODGE": 2}},
+    {"id": "ancrage", "name": "Ancrage", "description": "+3 de tacle : les ennemis au contact ont du mal à s'enfuir.", "stats": {"LOCK": 3}},
+    {"id": "allonge", "name": "Allonge", "description": "+1 de portée pour les sorts à portée modifiable.", "stats": {"RANGE": 1}},
+    {"id": "ferveur", "name": "Ferveur", "description": "+15 % de soins.", "stats": {"HEAL_BONUS": 15}},
+    {"id": "garde", "name": "Garde", "description": "Bouclier de 15 au début du combat, pendant 2 tours.", "effects": [{"type": "SHIELD", "targets": "CASTER", "min": 15, "max": 15, "duration": 2, "name": "Garde"}]},
+    {"id": "elan", "name": "Élan", "description": "+1 PM pendant son premier tour.", "effects": [{"type": "STAT_MOD", "targets": "CASTER", "stat": "MP", "min": 1, "duration": 1, "name": "Élan"}]},
+    {"id": "vigueur", "name": "Vigueur", "description": "Récupère 4 PV au début de chacun de ses 4 premiers tours.", "effects": [{"type": "HOT", "targets": "CASTER", "min": 4, "max": 4, "duration": 4, "name": "Vigueur"}]}
   ]
 }

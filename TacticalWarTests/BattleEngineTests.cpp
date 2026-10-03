@@ -1308,3 +1308,61 @@ TEST_CASE("Spell preview separates what the shield absorbs from the HP lost")
 	CHECK(bare[0].minDamage == previews[0].minDamage);
 	CHECK(bare[0].maxDamage == previews[0].maxDamage);
 }
+
+TEST_CASE("Tournament talents add their bonuses and their start-of-fight effects")
+{
+	const GameData & data = gameData();
+	REQUIRE(data.talents.size() == 10);
+	REQUIRE(data.findTalent("garde") != nullptr);
+	CHECK(data.findTalent("inconnu") == nullptr);
+
+	CHECK(validTalentChoice(data, { "garde", "garde", "inconnu", "force", "elan" }, 2) == std::vector<std::string>{ "garde", "force" });
+	std::mt19937 rng(5);
+	std::vector<std::string> random = randomTalentChoice(data, 3, rng);
+	CHECK(random.size() == 3);
+	CHECK(validTalentChoice(data, random, 3) == random);
+	CHECK(randomTalentChoice(data, 0, rng).empty());
+
+	// Guerrier avec Robustesse, Garde et Élan (les doublons et inconnus sont ignorés) ; Archer sans talent.
+	BattleMap map = openMap();
+	map.startCells[1] = { { 2, 2 } };
+	map.startCells[2] = { { 8, 8 } };
+	BattleEngine engine(data, map, 1);
+	engine.addFighter(1, GUERRIER, "A", {}, { "robustesse", "garde", "elan", "garde", "?" });
+	engine.addFighter(2, ARCHER, "B");
+	int baseHp = data.findClass(GUERRIER)->baseStats.get(Stat::MAX_HP);
+	int baseMp = data.findClass(GUERRIER)->baseStats.get(Stat::MP);
+	const Fighter & warrior = *engine.getState().findFighter(0);
+	CHECK(warrior.talents == std::vector<std::string>{ "robustesse", "garde", "elan" });
+	CHECK(warrior.maxHp == baseHp + 15);
+	CHECK(warrior.hp == baseHp + 15);
+	CHECK(warrior.shield == 0);
+
+	engine.startPlacement(0);
+	REQUIRE(engine.setReady(0, true, 0).ok);
+	REQUIRE(engine.setReady(1, true, 0).ok);
+	REQUIRE((engine.getState().phase == BattlePhase::FIGHT));
+	CHECK(warrior.shield == 15);
+	// Un bouclier de talent ne compte pas dans le bilan des boucliers donnés.
+	CHECK(warrior.record.shielded == 0);
+
+	// Élan : +1 PM pendant le premier tour seulement.
+	auto playUntilWarrior = [&engine]() {
+		for (int guard = 0; engine.getState().activeFighterId() != 0; guard++)
+		{
+			REQUIRE(guard < 5);
+			REQUIRE(engine.endTurn(engine.getState().activeFighterId(), 0).ok);
+		}
+	};
+	playUntilWarrior();
+	CHECK(warrior.mp == baseMp + 1);
+	REQUIRE(engine.endTurn(0, 0).ok);
+	playUntilWarrior();
+	CHECK(warrior.mp == baseMp);
+
+	// Les clients reçoivent les talents.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(-1, 0));
+	CHECK(mirror.findFighter(0)->talents == warrior.talents);
+}

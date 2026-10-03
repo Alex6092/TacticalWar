@@ -25,7 +25,8 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const B
 {
 }
 
-int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells)
+int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells,
+	const std::vector<std::string> & talents)
 {
 	const ClassDef * classDef = data.findClass(classId);
 	if (classDef == nullptr || (team != 1 && team != 2) || state.phase != BattlePhase::PLACEMENT || state.round != 0)
@@ -38,6 +39,13 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name, co
 	fighter.name = name;
 	fighter.spells = validSpellChoice(*classDef, spells);
 	fighter.baseStats = classDef->baseStats;
+	fighter.talents = validTalentChoice(data, talents, (int)talents.size());
+	for (const std::string & id : fighter.talents)
+	{
+		const TalentDef * talent = data.findTalent(id);
+		for (int i = 0; i < STAT_COUNT; i++)
+			fighter.baseStats.set((Stat)i, fighter.baseStats.get((Stat)i) + talent->stats.get((Stat)i));
+	}
 	fighter.maxHp = fighter.baseStats.get(Stat::MAX_HP);
 	fighter.hp = fighter.maxHp;
 	fighter.ap = fighter.baseStats.get(Stat::AP);
@@ -183,6 +191,21 @@ void BattleEngine::startFight(std::int64_t nowMs)
 {
 	if (state.phase != BattlePhase::PLACEMENT)
 		return;
+
+	// Talents : effets de début de combat (bouclier, PM du premier tour...). Appliqués avant le passage
+	// en phase de combat, une durée d'un tour couvre exactement le premier tour de chacun. Un bouclier
+	// de talent ne compte pas dans le bilan des boucliers donnés.
+	for (Fighter & fighter : state.fighters)
+	{
+		int shielded = fighter.record.shielded;
+		for (const std::string & id : fighter.talents)
+		{
+			const TalentDef * talent = data.findTalent(id);
+			for (const EffectDef & effect : talent != nullptr ? talent->effects : std::vector<EffectDef>())
+				applyEffectToTarget(fighter, TALENT_SPELL_ID, effect, fighter, fighter.position);
+		}
+		fighter.record.shielded = shielded;
+	}
 
 	computeTurnOrder();
 	state.phase = BattlePhase::FIGHT;
@@ -727,6 +750,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "classId", fighter.classId },
 		{ "name", fighter.name },
 		{ "spells", fighter.spells },
+		{ "talents", fighter.talents },
 		{ "x", fighter.position.x },
 		{ "y", fighter.position.y },
 		{ "hp", fighter.hp },
