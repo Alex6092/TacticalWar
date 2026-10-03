@@ -1,5 +1,6 @@
 ﻿#include "ClientConfig.h"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -43,6 +44,22 @@ void ClientConfig::load()
 	serverPort = json.value("serverPort", serverPort);
 	soundInFile = json.value("sound", soundInFile);
 	soundEnabled = soundInFile;
+
+	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
+	if (spells.is_object())
+	{
+		for (auto it = spells.begin(); it != spells.end(); ++it)
+		{
+			if (!it.value().is_array())
+				continue;
+			std::vector<int> & choice = spellChoices[std::atoi(it.key().c_str())];
+			for (const nlohmann::json & index : it.value())
+			{
+				if (index.is_number_integer())
+					choice.push_back(index.get<int>());
+			}
+		}
+	}
 }
 
 void ClientConfig::save() const
@@ -52,6 +69,13 @@ void ClientConfig::save() const
 		{ "serverPort", serverPort },
 		{ "sound", soundInFile }
 	};
+	if (!spellChoices.empty())
+	{
+		nlohmann::json spells = nlohmann::json::object();
+		for (const auto & entry : spellChoices)
+			spells[std::to_string(entry.first)] = entry.second;
+		json["spells"] = spells;
+	}
 
 	std::ofstream file(CONFIG_PATH, std::ios::binary | std::ios::trunc);
 	file << json.dump(2) << "\n";
@@ -113,6 +137,39 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			fxGallery = true;
 			fxMap = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training")
+		{
+			training = true;
+		}
+		else if (arg == "--training-start")
+		{
+			training = trainingStart = true;
+		}
+		else if (arg == "--training-class" && hasValue)
+		{
+			training = trainingStart = true;
+			trainingClass = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-map" && hasValue)
+		{
+			training = trainingStart = true;
+			trainingMap = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-1v1")
+		{
+			training = trainingStart = true;
+			trainingDuel = true;
+		}
+		else if (arg == "--training-zone")
+		{
+			training = trainingStart = true;
+			trainingZone = true;
+		}
+		else if (arg == "--training-autoplay")
+		{
+			training = trainingStart = true;
+			trainingAutoplay = true;
 		}
 		else if (arg == "--spectator")
 		{

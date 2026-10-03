@@ -7,6 +7,7 @@
 #include <BattleMirror.h>
 #include <BattleRules.h>
 #include <CharacterFactory.h>
+#include <Emotes.h>
 #include <EnvironmentManager.h>
 #include <EnvironmentMap.h>
 #include <Message.h>
@@ -80,6 +81,7 @@ namespace
 		case battle::EndReason::ROUND_LIMIT: return L"Limite de tours atteinte : décision aux points de vie.";
 		case battle::EndReason::FORFEIT: return L"Victoire par forfait.";
 		case battle::EndReason::ADMIN: return L"Combat arrêté par l'organisateur : décision aux points de vie.";
+		case battle::EndReason::OBJECTIVE: return L"L'équipe a tenu la zone jusqu'au score demandé.";
 		default: return L"";
 		}
 	}
@@ -122,7 +124,8 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	fx.playSound = [this](const std::string & path) { playSound(path); };
 	hud->onSpellClicked = [this](int slot) { selectSpell(selectedSpell == slot ? -1 : slot); };
 	hud->onEndTurn = [this]() { sendAction("Ct", json::object()); };
-	hud->onReady = [this](bool ready) { LinkToServer::getInstance()->SendRaw("Cs" + json({ { "ready", ready } }).dump()); };
+	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
+	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
 
 	if (MusicManager::getInstance()->isEnabled())
@@ -209,6 +212,11 @@ void BattleScreen::update(float deltatime)
 
 	for (FloatingText & text : floatingTexts)
 		text.age += deltatime;
+	for (SpeechBubble & bubble : bubbles)
+		bubble.age += deltatime;
+	bubbles.erase(std::remove_if(bubbles.begin(), bubbles.end(), [](const SpeechBubble & bubble) { return bubble.age > 2.6f; }), bubbles.end());
+	emoteCooldown = std::max(0.f, emoteCooldown - deltatime);
+	pingCooldown = std::max(0.f, pingCooldown - deltatime);
 	floatingTexts.erase(std::remove_if(floatingTexts.begin(), floatingTexts.end(),
 		[](const FloatingText & text) { return text.age > 1.4f; }), floatingTexts.end());
 
@@ -279,6 +287,48 @@ void BattleScreen::render(sf::RenderWindow * window)
 	}
 
 	drawAimPreview(window);
+	drawBubbles(window);
+}
+
+void BattleScreen::drawBubbles(sf::RenderWindow * window)
+{
+	// Bulles des émotes, à gauche de la tête du personnage (l'aperçu des sorts est à droite, et
+	// au-dessus des PV elles passeraient sous les panneaux du haut) ; elles s'effacent à la fin.
+	for (const SpeechBubble & bubble : bubbles)
+	{
+		BaseCharacterModel * view = viewOf(bubble.fighterId);
+		if (view == NULL)
+			continue;
+
+		float alpha = std::max(0.f, std::min(1.f, (2.6f - bubble.age) / 0.4f));
+		sf::Text text(bubble.text, font, 18);
+		text.setFillColor(sf::Color(30, 30, 45, (sf::Uint8)(255 * alpha)));
+		sf::FloatRect bounds = text.getLocalBounds();
+
+		float headX = (view->getInterpolatedX() - view->getInterpolatedY()) * 60.f + 60.f - 34.f;
+		float headY = (view->getInterpolatedX() + view->getInterpolatedY()) * 30.f + 30.f - 100.f;
+		float width = bounds.width + 22;
+		float height = bounds.height + 16;
+		float left = headX - 12 - width;
+		float top = headY - height / 2;
+
+		sf::RectangleShape box(sf::Vector2f(width, height));
+		box.setPosition(std::round(left), std::round(top));
+		box.setFillColor(sf::Color(255, 255, 255, (sf::Uint8)(235 * alpha)));
+		box.setOutlineColor(sf::Color(40, 40, 60, (sf::Uint8)(255 * alpha)));
+		box.setOutlineThickness(2);
+		window->draw(box);
+
+		sf::ConvexShape tail(3);
+		tail.setPoint(0, sf::Vector2f(left + width - 1, headY - 8));
+		tail.setPoint(1, sf::Vector2f(left + width - 1, headY + 8));
+		tail.setPoint(2, sf::Vector2f(headX, headY));
+		tail.setFillColor(box.getFillColor());
+		window->draw(tail);
+
+		text.setPosition(std::round(left + 11 - bounds.left), std::round(top + 8 - bounds.top));
+		window->draw(text);
+	}
 }
 
 void BattleScreen::drawAimPreview(sf::RenderWindow * window)
@@ -353,7 +403,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 		if (seq != lastSeq + 1)
 		{
 			// Événements manquants : demande de l'état complet.
-			LinkToServer::getInstance()->SendRaw("BR{}");
+			sendToServer("BR", json::object());
 			return;
 		}
 		lastSeq = seq;
@@ -376,6 +426,12 @@ void BattleScreen::onMessageReceived(std::string msg)
 		awaitingServer = false;
 		if (message.parseJson(error))
 			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
+	}
+	else if (message.op == "BG")
+	{
+		json ping;
+		if (hasSnapshot && message.parseJson(ping))
+			showPing(ping.value("f", -1), { ping.value("x", -1), ping.value("y", -1) });
 	}
 	else if (message.op == "HW")
 	{
@@ -436,6 +492,7 @@ void BattleScreen::applySnapshot(const json & snapshot)
 		colorator->setStartCells(map.startCells[1], map.startCells[2]);
 	else
 		colorator->setStartCells({}, {});
+	colorator->setZone(truth.zone.cells);
 
 	if (truth.phase == battle::BattlePhase::ENDED)
 		showEnd();
@@ -649,14 +706,52 @@ float BattleScreen::playVisual(const json & event, bool fast)
 	if (type == "effect+" && fighter != NULL)
 	{
 		battle::ActiveEffect effect = battle::BattleMirror::effectFromJson(event["effect"]);
-		fx.effectAdded(fighterId, effect.uid, effect.spellId);
+		fx.effectAdded(fighterId, effect);
 		if (effect.spellId != "__passive")
 		{
-			sf::Color color = effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
+			// Marque de combinaison (état négatif) en doré, comme le réticule au sol.
+			bool mark = effect.type == battle::EffectType::STATE && !effect.positive;
+			sf::Color color = mark ? sf::Color(255, 205, 70) : effect.positive ? sf::Color(120, 200, 255) : sf::Color(255, 170, 90);
 			addFloatingText(fighterId, fromServerText(effect.name), color);
-			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name), color);
+			hud->log(fighterName(fighterId) + L" : " + fromServerText(effect.name) + (mark ? L" (combo possible)" : L""), color);
 		}
 		return fast ? 0 : 0.2f;
+	}
+	if (type == "score")
+	{
+		// Zone à tenir : point marqué à la fin d'un tour complet.
+		int holder = event.value("holder", 0);
+		sf::String score = num(shown.zone.scores[1]) + L" - " + num(shown.zone.scores[2]);
+		const battle::Fighter * me = shown.findFighter(you);
+		if (holder != 0)
+		{
+			sf::Color color = me == NULL ? sf::Color(255, 210, 80) : me->team == holder ? sf::Color(120, 255, 120) : sf::Color(255, 150, 90);
+			sf::String message = me == NULL ? teamLabel(holder) + L" marque un point !"
+				: me->team == holder ? sf::String(L"Votre équipe marque un point !") : sf::String(L"L'adversaire marque un point !");
+			hud->showMessage(message, color, 1.4f);
+			hud->log(L"Zone : " + teamLabel(holder) + L" tient la zone (+1), " + score, color);
+			if (!fast)
+				playSound("./assets/sound/ui/ping.ogg");
+			return fast ? 0 : 0.6f;
+		}
+		if (event.value("contested", false))
+			hud->log(L"Zone disputée : personne ne marque (" + score + L")", sf::Color(200, 200, 200));
+		return 0;
+	}
+	if (type == "combo" && fighter != NULL)
+	{
+		// Combinaison : annoncée avant les dégâts augmentés (événement suivant).
+		sf::String name = fromServerText(event.value("name", std::string()));
+		int percent = event.value("percent", 0);
+		if (!fast)
+		{
+			fx.playEvent("combo", fighterId);
+			playSound("./assets/sound/ui/combo.ogg");
+		}
+		addFloatingText(fighterId, L"Combo " + name + L" !", sf::Color(255, 205, 70));
+		hud->log(L"Combo " + name + L" : " + fighterName(event.value("src", -1)) + L" inflige +" + num(percent) + L" % à "
+			+ fighterName(fighterId), sf::Color(255, 205, 70));
+		return fast ? 0 : 0.35f;
 	}
 	if (type == "effect-")
 	{
@@ -751,6 +846,26 @@ float BattleScreen::playVisual(const json & event, bool fast)
 		hud->log(fighterName(fighterId) + L" est hors combat !", sf::Color(255, 90, 90));
 		return fast ? 0 : 0.9f;
 	}
+	if (type == "emote")
+	{
+		int id = event.value("id", -1);
+		if (id >= 0 && id < battle::EMOTE_COUNT)
+		{
+			sf::String text = fromServerText(battle::EMOTE_TEXTS[id]);
+			hud->log(fighterName(fighterId) + L" : " + text, sf::Color(200, 220, 255));
+			if (!fast)
+			{
+				bubbles.erase(std::remove_if(bubbles.begin(), bubbles.end(),
+					[fighterId](const SpeechBubble & bubble) { return bubble.fighterId == fighterId; }), bubbles.end());
+				SpeechBubble bubble;
+				bubble.fighterId = fighterId;
+				bubble.text = text;
+				bubbles.push_back(bubble);
+				playSound("./assets/sound/ui/emote.ogg");
+			}
+		}
+		return 0;
+	}
 	if (type == "timeout")
 	{
 		hud->log(L"Temps écoulé pour " + fighterName(fighterId), sf::Color(200, 200, 200));
@@ -803,15 +918,49 @@ void BattleScreen::showEnd()
 	}
 
 	sf::String winners;
+	int winnerCount = 0;
 	for (const battle::Fighter & fighter : shown.fighters)
 	{
 		if (fighter.team == shown.winnerTeam)
+		{
 			winners += (winners.isEmpty() ? sf::String() : sf::String(L" et ")) + fromServerText(fighter.name);
+			winnerCount++;
+		}
 	}
 
-	sf::String details = winners + L" remportent le combat.\n" + reasonLabel(shown.endReason)
+	sf::String reason = reasonLabel(shown.endReason);
+	if (shown.zone.enabled && (shown.endReason == battle::EndReason::ROUND_LIMIT || shown.endReason == battle::EndReason::ADMIN))
+		reason = L"Décision aux points de la zone, puis aux points de vie.";
+	if (shown.zone.enabled && me != NULL)
+		reason += L"\nZone : votre équipe " + num(shown.zone.scores[me->team]) + L" - " + num(shown.zone.scores[3 - me->team]) + L" adversaires";
+	else if (shown.zone.enabled)
+		reason += L"\nZone : " + teamLabel(1) + L" " + num(shown.zone.scores[1]) + L" - " + num(shown.zone.scores[2]) + L" " + teamLabel(2);
+	sf::String details = winners + (winnerCount > 1 ? L" remportent" : L" remporte") + L" le combat.\n" + reason
 		+ L"\nTours joués : " + num(shown.round);
-	hud->showEnd(title, details, victory || me == NULL);
+
+	// Bilan de chaque combattant, l'équipe gagnante d'abord.
+	std::vector<BattleHud::EndRow> rows;
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (const battle::Fighter & fighter : shown.fighters)
+		{
+			if ((fighter.team == shown.winnerTeam) != (pass == 0))
+				continue;
+			const battle::ClassDef * classDef = ClientGameData::get().data().findClass(fighter.classId);
+			BattleHud::EndRow row;
+			row.name = fromServerText(fighter.name) + (classDef != nullptr ? L" (" + fromServerText(classDef->name) + L")" : sf::String());
+			row.team = fighter.team;
+			row.mvp = fighter.id == shown.mvpFighterId;
+			row.dealt = fighter.record.dealt;
+			row.healed = fighter.record.healed;
+			row.shielded = fighter.record.shielded;
+			row.kills = fighter.record.kills;
+			rows.push_back(row);
+			if (row.mvp)
+				hud->log(L"MVP du combat : " + row.name, sf::Color(255, 215, 70));
+		}
+	}
+	hud->showEnd(title, details, victory || me == NULL, rows);
 	hud->log(title, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 
 	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())
@@ -916,7 +1065,50 @@ void BattleScreen::sendAction(const std::string & op, const json & body)
 	if (awaitingServer)
 		return;
 	awaitingServer = true;
+	sendToServer(op, body);
+}
+
+void BattleScreen::sendToServer(const std::string & op, const json & body)
+{
 	LinkToServer::getInstance()->SendRaw(op + body.dump());
+}
+
+void BattleScreen::sendEmote(int emoteId)
+{
+	const battle::Fighter * me = truth.findFighter(you);
+	if (mode != Mode::PLAYER || !hasSnapshot || me == NULL || truth.phase == battle::BattlePhase::ENDED
+		|| emoteId < 0 || emoteId >= battle::EMOTE_COUNT)
+		return;
+	if (emoteCooldown > 0)
+	{
+		hud->showMessage(L"Attendez un peu avant la prochaine émote", sf::Color(200, 200, 200), 1.f);
+		return;
+	}
+	emoteCooldown = battle::EMOTE_COOLDOWN_MS / 1000.f;
+	sendToServer("CE", { { "id", emoteId } });
+}
+
+void BattleScreen::sendPing(const battle::Cell & cell)
+{
+	// Seuls les coéquipiers voient le signal (le serveur le relaie à l'équipe uniquement).
+	if (mode != Mode::PLAYER || !hasSnapshot || !map.contains(cell) || truth.phase == battle::BattlePhase::ENDED || pingCooldown > 0)
+		return;
+	pingCooldown = 1.f;
+	sendToServer("CG", { { "x", cell.x }, { "y", cell.y } });
+}
+
+void BattleScreen::showPing(int fighterId, const battle::Cell & cell)
+{
+	if (!map.contains(cell))
+		return;
+	sf::Vector2f position((float)cell.x, (float)cell.y);
+	fx.playEffect("ping", position);
+	fx.playEffect("ping_arrow", position);
+	playSound("./assets/sound/ui/ping.ogg");
+
+	const battle::Fighter * target = shown.fighterAt(cell);
+	sf::String text = fighterName(fighterId) + (target != NULL ? L" désigne " + fromServerText(target->name) : sf::String(L" signale une case"));
+	hud->log(text, sf::Color(255, 215, 70));
 }
 
 void BattleScreen::refreshPreview()
@@ -1043,11 +1235,18 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 	if (me == NULL)
 		return;
 
+	// Alt+clic : signal pour son équipe.
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) || sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
+	{
+		sendPing(cell);
+		return;
+	}
+
 	if (truth.phase == battle::BattlePhase::PLACEMENT)
 	{
 		const std::vector<battle::Cell> & starts = map.startCells[me->team];
 		if (!me->ready && std::find(starts.begin(), starts.end(), cell) != starts.end())
-			LinkToServer::getInstance()->SendRaw("CP" + json({ { "x", cellX }, { "y", cellY } }).dump());
+			sendToServer("CP", { { "x", cellX }, { "y", cellY } });
 		return;
 	}
 
@@ -1098,6 +1297,12 @@ void BattleScreen::onEvent(void * e)
 	{
 		switch (event->key.code)
 		{
+		case sf::Keyboard::F1: sendEmote(0); break;
+		case sf::Keyboard::F2: sendEmote(1); break;
+		case sf::Keyboard::F3: sendEmote(2); break;
+		case sf::Keyboard::F4: sendEmote(3); break;
+		case sf::Keyboard::F5: sendEmote(4); break;
+		case sf::Keyboard::F6: sendEmote(5); break;
 		case sf::Keyboard::Num1: selectSpell(0); break;
 		case sf::Keyboard::Num2: selectSpell(1); break;
 		case sf::Keyboard::Num3: selectSpell(2); break;
@@ -1114,6 +1319,10 @@ void BattleScreen::onEvent(void * e)
 		default: break;
 		}
 	}
+
+	// Clic molette : signal pour son équipe sur la case survolée.
+	if (event->type == sf::Event::MouseButtonPressed && event->mouseButton.button == sf::Mouse::Middle && window != NULL && !isMouseOverHud())
+		sendPing(hoveredCell);
 
 	// Caméra : la molette au-dessus de l'interface (journal) reste à l'interface.
 	if (window != NULL)

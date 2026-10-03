@@ -55,6 +55,7 @@ namespace
 	{
 		if (reason == "KO") return L"KO";
 		if (reason == "ROUND_LIMIT") return L"décision PV";
+		if (reason == "OBJECTIVE") return L"zone";
 		if (reason == "FORFEIT") return L"forfait";
 		if (reason == "ADMIN") return L"arbitrage";
 		if (reason == "BYE") return L"exempt";
@@ -126,9 +127,20 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	swissRounds = createNumberBox("0");
 	topCutLabel = createLabel(L"Phase finale (0 = non)");
 	topCut = createNumberBox("4");
+	// Mode des combats : au KO, ou zone à tenir (premier à N points).
+	modeLabel = createLabel(L"Combats");
+	mode = tgui::ComboBox::create();
+	mode->setInheritedFont(font);
+	mode->setTextSize(TEXT_SIZE);
+	mode->addItem(L"KO", "KO");
+	mode->addItem(L"Zone à tenir", "ZONE");
+	mode->setSelectedItemById("KO");
+	mode->connect("ItemSelected", [this]() { refreshFormatOptions(); });
+	zonePointsLabel = createLabel(L"Points");
+	zonePoints = createNumberBox("5");
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints })
 		form->add(widget);
 
 	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -286,11 +298,11 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float height = (float)windowSize.y;
 
 	tournamentList->setPosition(margin, top);
-	tournamentList->setSize(380, 200);
-	newButton->setPosition(margin, top + 206);
+	tournamentList->setSize(380, 150);
+	newButton->setPosition(margin, top + 156);
 	newButton->setSize(380, 32);
 
-	float formTop = top + 250;
+	float formTop = top + 200;
 	form->setPosition(margin, formTop);
 	form->setSize(380, height - formTop - margin);
 
@@ -325,6 +337,14 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	grandFinalReset->setPosition(x, y);
 	grandFinalReset->setSize(18, 18);
 	y += 30;
+	// Mode des combats sur une seule ligne : Combats [KO | Zone à tenir]   Points [5]
+	modeLabel->setPosition(x, y + 4);
+	mode->setPosition(x + 95, y);
+	mode->setSize(140, 26);
+	zonePointsLabel->setPosition(x + 252, y + 4);
+	zonePoints->setPosition(x + 318, y);
+	zonePoints->setSize(42, 26);
+	y += 34;
 
 	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
 	teamList->setPosition(x, y + 20);
@@ -469,6 +489,9 @@ void TournamentAdminPanel::refreshFormatOptions()
 	swissRounds->setVisible(swiss);
 	topCutLabel->setVisible(swiss);
 	topCut->setVisible(swiss);
+	bool zone = mode->getSelectedItemId() == "ZONE";
+	zonePointsLabel->setVisible(zone);
+	zonePoints->setVisible(zone);
 }
 
 void TournamentAdminPanel::refreshForm()
@@ -487,6 +510,8 @@ void TournamentAdminPanel::refreshForm()
 		grandFinalReset->setChecked(settings.value("grandFinalReset", true));
 		swissRounds->setText(num(settings.value("swissRounds", 0)));
 		topCut->setText(num(settings.value("swissTopCut", 0)));
+		mode->setSelectedItemById(settings.value("mode", std::string("KO")) == "ZONE" ? "ZONE" : "KO");
+		zonePoints->setText(num(settings.value("zonePoints", 5)));
 	}
 	refreshFormatOptions();
 
@@ -531,6 +556,8 @@ void TournamentAdminPanel::refreshForm()
 
 	name->setEnabled(draft);
 	format->setEnabled(draft);
+	mode->setEnabled(draft);
+	zonePoints->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -629,7 +656,9 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "thirdPlaceMatch", thirdPlace->isChecked() },
 		{ "grandFinalReset", grandFinalReset->isChecked() },
 		{ "swissRounds", number(swissRounds) },
-		{ "swissTopCut", number(topCut) }
+		{ "swissTopCut", number(topCut) },
+		{ "mode", mode->getSelectedItemId().toAnsiString() },
+		{ "zonePoints", number(zonePoints) }
 	};
 }
 

@@ -242,14 +242,27 @@ float BattleFx::castSpell(const BattleMap & map, const SpellDef & spell, int cas
 	return impactDelay;
 }
 
-void BattleFx::effectAdded(int fighterId, int effectUid, const std::string & spellId)
+void BattleFx::effectAdded(int fighterId, const ActiveEffect & effect)
 {
-	const SpellDef * spell = spellById(spellId);
-	if (spell == nullptr || spell->visual.status.empty())
-		return;
+	std::string visual;
+	std::string key;
+	if (effect.type == EffectType::STATE && !effect.positive)
+	{
+		// Marque de combinaison : un seul visuel par combattant, quel que soit l'état.
+		visual = "combo_mark";
+		key = std::to_string(fighterId) + ":__mark";
+	}
+	else
+	{
+		const SpellDef * spell = spellById(effect.spellId);
+		if (spell == nullptr || spell->visual.status.empty())
+			return;
+		visual = spell->visual.status;
+		// Un seul visuel par combattant et par sort, même si le sort pose plusieurs effets.
+		key = std::to_string(fighterId) + ":" + effect.spellId;
+	}
 
-	// Un seul visuel par combattant et par sort, même si le sort pose plusieurs effets.
-	std::string key = std::to_string(fighterId) + ":" + spellId;
+	int effectUid = effect.uid;
 	statusOfUid[effectUid] = key;
 	Status & status = statuses[key];
 	bool first = status.uids.empty();
@@ -260,7 +273,7 @@ void BattleFx::effectAdded(int fighterId, int effectUid, const std::string & spe
 	sf::Vector2f cell;
 	if (!fighterCell(fighterId, cell))
 		return;
-	Instance * instance = spawn(spell->visual.status, cell, 0);
+	Instance * instance = spawn(visual, cell, 0);
 	if (instance != nullptr)
 	{
 		instance->follow = fighterId;
@@ -372,7 +385,7 @@ void BattleFx::rebuild(const BattleState & state)
 		if (!fighter.alive)
 			continue;
 		for (const ActiveEffect & effect : fighter.effects)
-			effectAdded(fighter.id, effect.uid, effect.spellId);
+			effectAdded(fighter.id, effect);
 	}
 	for (const Glyph & glyph : state.glyphs)
 		glyphAdded(glyph.uid, glyph.spellId, glyph.cells);

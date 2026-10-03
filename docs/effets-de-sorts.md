@@ -55,7 +55,16 @@ La section `events` associe un effet aux événements qui ne dépendent pas d'un
 - `death` : un combattant est mis hors combat ;
 - `collision` : un combattant poussé heurte un obstacle ;
 - `push`, `pull`, `dash` : poussée, attraction, bond ;
-- `lifesteal` : vol de vie.
+- `lifesteal` : vol de vie ;
+- `combo` : une combinaison se déclenche (éclat doré sur la cible, avec le son `assets/sound/ui/combo.ogg`).
+
+Le client joue aussi directement :
+- `ping` et `ping_arrow` : le signal d'un coéquipier (anneau au sol et flèche) ;
+- `combo_mark` : en boucle sous un combattant qui porte une marque de combinaison (état négatif :
+  gelé, entravé, provoqué, brûlé), à la place du visuel `status` du sort qui l'a posée.
+
+Ces planches sont dessinées par `tools/fx/import_fx.py`, comme celles de quatre sorts au choix : `whirlwind`
+(Tourbillon), `arrow_rain` (Pluie de flèches), `trap` (Piège) et `ice_prison` (Prison de glace).
 
 ## Galerie de réglage
 
@@ -104,6 +113,8 @@ Les animations et les sons viennent du projet Exode (voir `assets/CREDITS.md`). 
 py tools/fx/import_fx.py --preview                  (planches réduites dans assets/spellsprites)
 py -m pip install miniaudio soundfile
 py tools/fx/convert_sounds.py                       (MP3 convertis en OGG dans assets/sound/spells)
+py -m pip install numpy
+py tools/fx/make_ui_sounds.py                       (sons d'interface synthétisés dans assets/sound/ui)
 ```
 
 Options d'un effet dans `selection.json` :

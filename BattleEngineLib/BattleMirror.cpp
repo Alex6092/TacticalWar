@@ -20,6 +20,7 @@ namespace
 		if (text == "ROUND_LIMIT") return EndReason::ROUND_LIMIT;
 		if (text == "FORFEIT") return EndReason::FORFEIT;
 		if (text == "ADMIN") return EndReason::ADMIN;
+		if (text == "OBJECTIVE") return EndReason::OBJECTIVE;
 		return EndReason::NONE;
 	}
 
@@ -87,6 +88,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 	fresh.turnOrder = snapshot.value("order", std::vector<int>());
 	fresh.winnerTeam = snapshot.value("winner", 0);
 	fresh.endReason = reasonFromString(snapshot.value("reason", std::string()));
+	fresh.mvpFighterId = snapshot.value("mvp", -1);
 
 	int active = snapshot.value("active", -1);
 	for (int i = 0; i < (int)fresh.turnOrder.size(); i++)
@@ -102,6 +104,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.team = value.value("team", 0);
 		fighter.classId = value.value("classId", 0);
 		fighter.name = value.value("name", std::string());
+		fighter.spells = value.value("spells", std::vector<int>());
 		fighter.position = { value.value("x", 0), value.value("y", 0) };
 		fighter.hp = value.value("hp", 0);
 		fighter.maxHp = value.value("maxHp", 0);
@@ -121,11 +124,25 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.castsThisTurn = intMap(value.value("casts", json::object()));
 		for (const json & effect : value.value("effects", json::array()))
 			fighter.effects.push_back(effectFromJson(effect));
+		fighter.record = recordFromJson(value.value("record", json::object()));
 		fresh.fighters.push_back(fighter);
 	}
 
 	for (const json & glyph : snapshot.value("glyphs", json::array()))
 		fresh.glyphs.push_back(glyphFromJson(glyph));
+
+	const json & zone = snapshot.contains("zone") ? snapshot["zone"] : json();
+	if (zone.is_object())
+	{
+		fresh.zone.enabled = true;
+		for (const json & cell : zone.value("cells", json::array()))
+			fresh.zone.cells.push_back(cellFromJson(cell));
+		fresh.zone.pointsToWin = zone.value("points", 0);
+		std::vector<int> scores = zone.value("scores", std::vector<int>());
+		for (int team = 1; team <= 2 && team <= (int)scores.size(); team++)
+			fresh.zone.scores[team] = scores[team - 1];
+		fresh.zone.holder = zone.value("holder", 0);
+	}
 
 	if (snapshot.contains("startCells"))
 	{
@@ -274,10 +291,36 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 	{
 		fighter->connected = event.value("connected", true);
 	}
+	else if (type == "score")
+	{
+		std::vector<int> scores = event.value("scores", std::vector<int>());
+		for (int team = 1; team <= 2 && team <= (int)scores.size(); team++)
+			state.zone.scores[team] = scores[team - 1];
+		state.zone.holder = event.value("holder", 0);
+	}
 	else if (type == "end")
 	{
 		state.phase = BattlePhase::ENDED;
 		state.winnerTeam = event.value("winner", 0);
 		state.endReason = reasonFromString(event.value("reason", std::string()));
+		state.mvpFighterId = event.value("mvp", -1);
+		for (const json & record : event.value("records", json::array()))
+		{
+			Fighter * fighter = state.findFighter(record.value("f", -1));
+			if (fighter != nullptr)
+				fighter->record = recordFromJson(record);
+		}
 	}
+}
+
+FighterRecord BattleMirror::recordFromJson(const json & value)
+{
+	FighterRecord record;
+	record.dealt = value.value("dealt", 0);
+	record.taken = value.value("taken", 0);
+	record.healed = value.value("healed", 0);
+	record.shielded = value.value("shielded", 0);
+	record.kills = value.value("kills", 0);
+	record.casts = value.value("casts", 0);
+	return record;
 }

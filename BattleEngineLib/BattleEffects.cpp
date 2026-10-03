@@ -115,12 +115,16 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 	switch (effect.type)
 	{
 	case EffectType::DAMAGE:
-		dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max)), caster.id, "spell");
+	{
+		int combo = triggerCombo(caster, effect, target);
+		dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max), combo), caster.id, "spell");
 		break;
+	}
 
 	case EffectType::LIFESTEAL:
 	{
-		int dealt = dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max)), caster.id, "spell");
+		int combo = triggerCombo(caster, effect, target);
+		int dealt = dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max), combo), caster.id, "spell");
 		if (caster.alive && dealt > 0)
 			heal(caster, dealt * effect.percent / 100, caster.id, "lifesteal");
 		break;
@@ -143,6 +147,7 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 		shield.spellId = spellId;
 		shield.name = effect.name;
 		shield.positive = true;
+		caster.record.shielded += shield.value;
 		addActiveEffect(target, shield, effect.refresh);
 		break;
 	}
@@ -190,7 +195,7 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 		stateEffect.casterId = caster.id;
 		stateEffect.spellId = spellId;
 		stateEffect.name = effect.name.empty() ? effect.state : effect.name;
-		stateEffect.positive = true;
+		stateEffect.positive = !effect.negative;
 		addActiveEffect(target, stateEffect, effect.refresh);
 		break;
 	}
@@ -220,7 +225,22 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 	}
 }
 
-int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, int baseRoll) const
+int BattleEngine::triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target)
+{
+	if (effect.comboState.empty() || effect.comboPercent <= 0 || !target.hasState(effect.comboState))
+		return 0;
+
+	emit({ { "t", "combo" }, { "f", target.id }, { "src", caster.id }, { "name", effect.comboName }, { "percent", effect.comboPercent } });
+	if (effect.comboConsumes)
+	{
+		removeEffects(target, [&](const ActiveEffect & active) {
+			return active.type == EffectType::STATE && active.state == effect.comboState;
+		});
+	}
+	return effect.comboPercent;
+}
+
+int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, int baseRoll, int comboPercent) const
 {
 	int power = effectiveStat(state, data, caster, Stat::POWER);
 
@@ -245,7 +265,7 @@ int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, 
 	int maxResistance = data.rules.maxResistance;
 	int resistance = std::max(-maxResistance, std::min(maxResistance, effectiveStat(state, data, target, Stat::RESISTANCE)));
 
-	double damage = baseRoll * (100.0 + power) / 100.0 * (100.0 - resistance) / 100.0;
+	double damage = baseRoll * (100.0 + power) / 100.0 * (100.0 + comboPercent) / 100.0 * (100.0 - resistance) / 100.0;
 	return std::max(0, (int)std::lround(damage));
 }
 
@@ -269,6 +289,13 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 	int hpLoss = amount - absorbed;
 	target.hp -= hpLoss;
 
+	// Bilan : dégâts subis, et infligés par un ennemi (le lanceur d'un poison, le pousseur d'une collision).
+	Fighter * source = state.findFighter(sourceId);
+	bool byEnemy = source != nullptr && source->team != target.team;
+	target.record.taken += amount;
+	if (byEnemy)
+		source->record.dealt += amount;
+
 	// Érosion : une partie des PV perdus est retirée des PV max.
 	int erosion = effectiveStat(state, data, target, Stat::EROSION);
 	if (erosion > 0 && hpLoss > 0)
@@ -284,6 +311,8 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 	{
 		target.hp = 0;
 		target.alive = false;
+		if (byEnemy)
+			source->record.kills++;
 	}
 
 	emit({
@@ -330,6 +359,9 @@ int BattleEngine::heal(Fighter & target, int amount, int sourceId, const std::st
 
 	int healed = std::min(amount, target.maxHp - target.hp);
 	target.hp += healed;
+	Fighter * source = state.findFighter(sourceId);
+	if (source != nullptr)
+		source->record.healed += healed;
 	emit({ { "t", "heal" }, { "f", target.id }, { "src", sourceId }, { "kind", kind }, { "amount", healed }, { "hp", target.hp }, { "maxHp", target.maxHp } });
 	return healed;
 }

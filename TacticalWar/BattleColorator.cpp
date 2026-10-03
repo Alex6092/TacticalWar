@@ -47,7 +47,14 @@ sf::Color BattleColorator::getOverlayForCell(tw::CellData * data)
 		return sf::Color(150, 205, 255, 75);
 	if (threat.count(cell) > 0)
 		return threatEnemy ? sf::Color(255, 140, 40, 85) : sf::Color(60, 200, 230, 85);
+	if (zone.count(cell) > 0)
+		return sf::Color(255, 200, 40, 95);
 	return sf::Color::Transparent;
+}
+
+void BattleColorator::setZone(const std::vector<Cell> & cells)
+{
+	zone = toSet(cells);
 }
 
 void BattleColorator::clearPreview()

@@ -8,9 +8,10 @@ Chaque animation est réduite à la taille utile pour le jeu (côté le plus lon
 limité à "maxFrameSize" pixels), puis réécrite avec un atlas au même format. Options par effet
 dans selection.json : "as" (nom de la planche produite), "grayscale" (niveaux de gris clairs, à
 teinter dans le catalogue d'effets), "step" (une image sur n, pour les animations très longues).
-La flèche des
-tirs de l'Archer, la bulle de bouclier et l'aura au sol des effets durables (blanche, teintée par le
-catalogue d'effets), absentes des animations d'origine, sont dessinées par le script.
+La flèche des tirs de l'Archer, la bulle de bouclier, l'aura au sol des effets durables, le
+signal d'équipe (anneau et flèche) et les combinaisons (marque au sol, éclat au déclenchement),
+absents des animations d'origine, sont dessinés par le script (en blanc, teintés par le catalogue
+d'effets).
 """
 import argparse
 import json
@@ -162,6 +163,220 @@ def make_aura(output, frames=12, width=128, height=64):
     write_sheet('aura', result, output)
 
 
+def make_ping_ring(output, frames=12, width=128, height=64):
+    """Signal d'équipe au sol : anneau elliptique qui s'élargit et s'efface (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k / 2
+        # Anneau qui s'élargit en s'effaçant, et un anneau fixe au centre.
+        rx, ry = width * k * (0.12 + 0.34 * t), height * k * (0.12 + 0.34 * t)
+        alpha = int(255 * (1 - t) ** 1.2)
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(255, 255, 255, alpha), width=3 * k)
+        draw.ellipse((cx - width * k * 0.14, cy - height * k * 0.14, cx + width * k * 0.14, cy + height * k * 0.14),
+                     outline=(255, 255, 255, 230), width=2 * k)
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('ping_ring', result, output)
+
+
+def make_ping_arrow(output, frames=12, width=40, height=64):
+    """Flèche du signal d'équipe : chevron pointé vers le bas qui rebondit (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        bounce = abs(math.sin(math.pi * i / frames)) * 10 * k
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        top = 4 * k + (10 * k - bounce)
+        cx = width * k / 2
+        points = [(cx - 9 * k, top), (cx + 9 * k, top), (cx + 9 * k, top + 22 * k), (cx + 17 * k, top + 22 * k),
+                  (cx, top + 46 * k), (cx - 17 * k, top + 22 * k), (cx - 9 * k, top + 22 * k)]
+        draw.polygon(points, fill=(255, 255, 255, 255), outline=(60, 50, 20, 255))
+        draw.line(points + [points[0]], fill=(60, 50, 20, 255), width=2 * k)
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('ping_arrow', result, output)
+
+
+def make_combo_mark(output, frames=16, width=128, height=64):
+    """Marque de combinaison au sol : réticule elliptique dont les quatre crans tournent (blanc, teinté par le catalogue)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames)
+        pulse = 0.5 + 0.5 * math.sin(2 * math.pi * t)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k / 2
+        rx, ry = width * k * 0.34, height * k * 0.34
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(255, 255, 255, int(150 + 80 * pulse)), width=2 * k)
+        # Quatre crans en triangle, pointés vers le centre, qui tournent d'un quart de tour par boucle.
+        for notch in range(4):
+            angle = 2 * math.pi * (notch / 4.0 + t / 4.0)
+            ox, oy = math.cos(angle), math.sin(angle)
+            tip = (cx + ox * rx * 0.72, cy + oy * ry * 0.72)
+            base = 1.18
+            side = 0.16
+            left = (cx + (ox * base - oy * side) * rx, cy + (oy * base + ox * side) * ry)
+            right = (cx + (ox * base + oy * side) * rx, cy + (oy * base - ox * side) * ry)
+            draw.polygon([tip, left, right], fill=(255, 255, 255, 235))
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('combo_mark', result, output)
+
+
+def make_combo_burst(output, frames=14, size=160):
+    """Déclenchement d'une combinaison : étoile de rayons et anneau qui s'élargissent et s'effacent (blanc, teinté)."""
+    k = 4
+    result = []
+    rays = 12
+    for i in range(frames):
+        t = i / float(frames - 1)
+        image = Image.new('RGBA', (size * k, size * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        c = size * k / 2
+        fade = (1 - t) ** 1.3
+        # Rayons alternés longs et courts, qui partent du centre.
+        for ray in range(rays):
+            angle = 2 * math.pi * ray / rays + 0.15
+            length = size * k * (0.18 + 0.30 * t) * (1.0 if ray % 2 == 0 else 0.65)
+            inner = size * k * 0.06 * (1 + 2 * t)
+            ox, oy = math.cos(angle), math.sin(angle)
+            px, py = -oy, ox
+            w = size * k * 0.018 * (1.2 - t * 0.5)
+            points = [(c + ox * inner + px * w, c + oy * inner + py * w), (c + ox * length, c + oy * length),
+                      (c + ox * inner - px * w, c + oy * inner - py * w)]
+            draw.polygon(points, fill=(255, 255, 255, int(255 * fade)))
+        r = size * k * (0.10 + 0.36 * t)
+        draw.ellipse((c - r, c - r, c + r, c + r), outline=(255, 255, 255, int(220 * fade)), width=int(3 * k * (1 - t * 0.6)) + 1)
+        core = size * k * 0.07 * (1 - t)
+        if core > 1:
+            draw.ellipse((c - core, c - core, c + core, c + core), fill=(255, 255, 255, int(255 * fade)))
+        result.append(image.resize((size, size), Image.LANCZOS))
+    write_sheet('combo_burst', result, output)
+
+
+def make_whirlwind(output, frames=14, width=192, height=128):
+    """Tourbillon : trois lames en croissant qui tournent autour du lanceur et s'effacent (blanc, teinté)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames - 1)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k * 0.58
+        rx, ry = width * k * 0.42, height * k * 0.36
+        fade = 1.0 if t < 0.6 else (1 - t) / 0.4
+        spin = 2 * math.pi * 1.4 * t
+        for blade in range(3):
+            base = spin + blade * 2 * math.pi / 3
+            # Traînée : segments de plus en plus fins et transparents derrière la lame.
+            for step in range(14):
+                a0 = base - step * 0.09
+                a1 = a0 - 0.09
+                alpha = int(255 * fade * (1 - step / 14.0) ** 1.5)
+                w = max(1, int(k * 7 * (1 - step / 14.0)))
+                p0 = (cx + rx * math.cos(a0), cy + ry * math.sin(a0))
+                p1 = (cx + rx * math.cos(a1), cy + ry * math.sin(a1))
+                draw.line([p0, p1], fill=(255, 255, 255, alpha), width=w)
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('whirlwind', result, output)
+
+
+def make_arrow_rain(output, frames=14, width=128, height=192):
+    """Pluie de flèches : des flèches tombent en biais sur la case, puis de petits éclats au sol."""
+    k = 4
+    result = []
+    drops = [(-0.22, 0.0), (0.05, 0.12), (0.25, 0.05), (-0.08, 0.25), (0.15, 0.32), (-0.25, 0.38)]
+    for i in range(frames):
+        t = i / float(frames - 1)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        ground = height * k * 0.86
+        for dx, delay in drops:
+            p = (t - delay) / 0.45
+            if p < 0:
+                continue
+            land_x = width * k * (0.5 + dx * 0.9)
+            if p <= 1:
+                # Flèche en vol, pointe vers le bas à droite.
+                tip = (land_x - (1 - p) * width * k * 0.35, ground - (1 - p) * height * k * 0.8)
+                ux, uy = 0.42, 0.91
+                tail = (tip[0] - ux * 40 * k, tip[1] - uy * 40 * k)
+                draw.line([tail, tip], fill=(120, 85, 50, 255), width=int(3.2 * k))
+                draw.polygon([tip, (tip[0] - ux * 11 * k - uy * 5 * k, tip[1] - uy * 11 * k + ux * 5 * k),
+                              (tip[0] - ux * 11 * k + uy * 5 * k, tip[1] - uy * 11 * k - ux * 5 * k)], fill=(225, 225, 235, 255))
+                draw.line([tail, (tail[0] + ux * 9 * k, tail[1] + uy * 9 * k)], fill=(250, 250, 250, 255), width=int(6 * k))
+            else:
+                # Plantée dans le sol, avec un éclat qui s'efface.
+                q = min(1.0, (p - 1) * 2)
+                draw.line([(land_x - 0.42 * 12 * k, ground - 0.91 * 12 * k), (land_x, ground)], fill=(120, 85, 50, int(255 * (1 - q * 0.3))), width=int(2.2 * k))
+                for a in (200, 250, 290, 340):
+                    r = math.radians(a)
+                    s = (4 + 8 * q) * k
+                    draw.line([(land_x + math.cos(r) * s * 0.5, ground + math.sin(r) * s * 0.25),
+                               (land_x + math.cos(r) * s, ground + math.sin(r) * s * 0.5)], fill=(235, 220, 190, int(200 * (1 - q))), width=int(1.5 * k))
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('arrow_rain', result, output)
+
+
+def make_trap(output, frames=10, width=128, height=64):
+    """Piège au sol : mâchoires dentées en ellipse, avec un reflet qui fait le tour (blanc, teinté)."""
+    k = 4
+    result = []
+    for i in range(frames):
+        t = i / float(frames)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        cx, cy = width * k / 2, height * k / 2
+        rx, ry = width * k * 0.3, height * k * 0.3
+        draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(170, 170, 175, 255), width=int(3 * k))
+        teeth = 14
+        for tooth in range(teeth):
+            a0 = 2 * math.pi * tooth / teeth
+            a1 = 2 * math.pi * (tooth + 0.5) / teeth
+            a2 = 2 * math.pi * (tooth + 1) / teeth
+            pts = [(cx + rx * math.cos(a0), cy + ry * math.sin(a0)), (cx + rx * 0.62 * math.cos(a1), cy + ry * 0.62 * math.sin(a1)),
+                   (cx + rx * math.cos(a2), cy + ry * math.sin(a2))]
+            draw.polygon(pts, fill=(215, 215, 220, 255), outline=(90, 90, 95, 255))
+        # Plaque centrale et reflet tournant.
+        draw.ellipse((cx - rx * 0.28, cy - ry * 0.28, cx + rx * 0.28, cy + ry * 0.28), fill=(120, 120, 125, 255))
+        a = 2 * math.pi * t
+        gx, gy = cx + rx * math.cos(a), cy + ry * math.sin(a)
+        draw.ellipse((gx - 5 * k, gy - 3 * k, gx + 5 * k, gy + 3 * k), fill=(255, 255, 255, 230))
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('trap', result, output)
+
+
+def make_ice_prison(output, frames=14, width=128, height=160):
+    """Prison de glace : des éclats de glace sortent du sol autour de la cible, puis s'effacent (blanc, teinté)."""
+    k = 4
+    result = []
+    shards = [(-0.32, 0.55, 0.0), (0.3, 0.6, 0.05), (-0.12, 0.85, 0.1), (0.14, 0.8, 0.12), (-0.36, 0.4, 0.18), (0.36, 0.45, 0.2)]
+    for i in range(frames):
+        t = i / float(frames - 1)
+        image = Image.new('RGBA', (width * k, height * k), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        ground = height * k * 0.9
+        fade = 1.0 if t < 0.75 else (1 - t) / 0.25
+        for dx, size, delay in shards:
+            g = max(0.0, min(1.0, (t - delay) / 0.3))
+            if g <= 0:
+                continue
+            x = width * k * (0.5 + dx)
+            h = height * k * 0.55 * size * g
+            w = width * k * 0.09 * size
+            lean = dx * 0.4 * h
+            tip = (x + lean, ground - h)
+            body = [(x - w, ground), tip, (x + w, ground)]
+            draw.polygon(body, fill=(255, 255, 255, int(170 * fade)))
+            draw.line([(x - w * 0.2, ground), tip], fill=(255, 255, 255, int(255 * fade)), width=int(1.5 * k))
+            draw.line(body + [body[0]], fill=(255, 255, 255, int(235 * fade)), width=int(1.2 * k))
+        result.append(image.resize((width, height), Image.LANCZOS))
+    write_sheet('ice_prison', result, output)
+
+
 def make_preview(names, output, path):
     """Planche : image du milieu de chaque animation, avec son nom."""
     thumbs = []
@@ -208,8 +423,16 @@ def main():
     make_arrow(OUTPUT)
     make_bubble(OUTPUT)
     make_aura(OUTPUT)
-    names += ['arrow', 'bubble', 'aura']
-    print('arrow, bubble, aura        dessinées')
+    make_ping_ring(OUTPUT)
+    make_ping_arrow(OUTPUT)
+    make_combo_mark(OUTPUT)
+    make_combo_burst(OUTPUT)
+    make_whirlwind(OUTPUT)
+    make_arrow_rain(OUTPUT)
+    make_trap(OUTPUT)
+    make_ice_prison(OUTPUT)
+    names += ['arrow', 'bubble', 'aura', 'ping_ring', 'ping_arrow', 'combo_mark', 'combo_burst', 'whirlwind', 'arrow_rain', 'trap', 'ice_prison']
+    print('arrow, bubble, aura, ping, combo, whirlwind, arrow_rain, trap, ice_prison  dessinées')
 
     if args.preview:
         path = os.path.join(HERE, 'preview.png')

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <random>
 #include <string>
 #include <vector>
@@ -42,7 +43,12 @@ namespace tw
 			void setRollMode(RollMode mode) { rollMode = mode; }
 
 			// Ajoute un combattant avant le placement. Retourne son identifiant (ou -1).
-			int addFighter(int team, int classId, const std::string & name);
+			// spells : sorts emportés (indices dans les sorts de la classe) ; un choix non valable
+			// (voir validSpellChoice) donne les premiers sorts de la classe.
+			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>());
+
+			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
+			void enableZone(int pointsToWin);
 
 			void startPlacement(std::int64_t nowMs);
 
@@ -52,6 +58,9 @@ namespace tw
 			ActionResult move(int fighterId, const std::vector<Cell> & path, std::int64_t nowMs);
 			ActionResult cast(int fighterId, int spellIndex, const Cell & target, std::int64_t nowMs);
 			ActionResult endTurn(int fighterId, std::int64_t nowMs);
+			// Émote prédéfinie (Emotes.h), visible de tous et enregistrée dans les rediffusions. À tout
+			// moment du combat, au plus une toutes les EMOTE_COOLDOWN_MS par combattant.
+			ActionResult emote(int fighterId, int emoteId, std::int64_t nowMs);
 
 			// Minuteurs (placement, tour). À appeler régulièrement.
 			void tick(std::int64_t nowMs);
@@ -87,11 +96,17 @@ namespace tw
 			void finishTurn(std::int64_t nowMs);
 			bool checkEnd(int actingFighterId);
 			void endBattle(int winnerTeam, EndReason reason);
+			// Fin d'un tour complet : point de la zone à tenir.
+			void scoreZone();
+			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.
+			int decideWinner() const;
 
 			// Effets (BattleEffects.cpp)
 			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds);
 			void applyEffectToTarget(Fighter & caster, const std::string & spellId, const EffectDef & effect, Fighter & target, const Cell & targetCell);
-			int computeDamage(const Fighter & caster, const Fighter & target, int roll) const;
+			int computeDamage(const Fighter & caster, const Fighter & target, int roll, int comboPercent = 0) const;
+			// Combinaison de l'effet sur la cible : bonus de dégâts en %, 0 sans combinaison.
+			int triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target);
 			int dealDamage(Fighter & target, int amount, int sourceId, const std::string & kind);
 			int heal(Fighter & target, int amount, int sourceId, const std::string & kind);
 			void addActiveEffect(Fighter & target, ActiveEffect effect, bool refresh);
@@ -106,6 +121,8 @@ namespace tw
 			nlohmann::json fighterJson(const Fighter & fighter) const;
 			nlohmann::json effectJson(const ActiveEffect & effect) const;
 			nlohmann::json glyphJson(const Glyph & glyph) const;
+			static nlohmann::json recordJson(const FighterRecord & record);
+			static nlohmann::json zoneJson(const ZoneState & zone);
 			void emit(const nlohmann::json & event);
 			void emitStats(const Fighter & fighter);
 
@@ -117,6 +134,7 @@ namespace tw
 			std::uint32_t seed;
 			std::uint64_t seq;
 			nlohmann::json pendingEvents;
+			std::map<int, std::int64_t> lastEmoteMs;
 		};
 	}
 }

@@ -1,6 +1,8 @@
 ﻿#pragma once
 
+#include <map>
 #include <string>
+#include <vector>
 
 // Configuration du client, lue depuis client.json (créé avec les valeurs par défaut s'il est absent).
 class ClientConfig
@@ -10,6 +12,14 @@ public:
 	unsigned short serverPort = 12345;
 	// Musique et sons (désactivables, ex : poste de projection ou PC sans carte son).
 	bool soundEnabled = true;
+	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
+	// proposés à nouveau au choix suivant et à l'entraînement.
+	std::map<int, std::vector<int>> spellChoices;
+	std::vector<int> spellChoice(int classId) const
+	{
+		auto it = spellChoices.find(classId);
+		return it == spellChoices.end() ? std::vector<int>() : it->second;
+	}
 
 	// Connexion automatique au lancement (ligne de commande, non enregistrée) :
 	//   --server hote[:port]  --login X --password Y  ou  --spectator [--director]
@@ -29,6 +39,17 @@ public:
 	bool fxGallery = false;
 	std::string fxSpell;
 	int fxMap = 4;
+	// Entraînement hors ligne : --training ouvre ses réglages ; --training-start (ou l'une des options
+	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-autoplay) lance directement
+	// un combat. --training-autoplay : le personnage du joueur est aussi joué par l'IA et les combats
+	// s'enchaînent (démonstration sur l'écran projeté, captures).
+	bool training = false;
+	bool trainingStart = false;
+	int trainingClass = 0;
+	int trainingMap = 0;
+	bool trainingDuel = false;
+	bool trainingAutoplay = false;
+	bool trainingZone = false;
 
 	static ClientConfig & get();
 

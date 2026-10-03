@@ -35,8 +35,9 @@ public:
 	int fighterIdOf(tw::Player * player) const;
 	tw::Player * playerOfFighter(int fighterId) const;
 
-	// Choix des classes (une seule fois par joueur).
-	bool chooseClass(tw::Player * player, int classId);
+	// Choix des classes et des sorts (une seule fois par joueur). Un choix de sorts non valable
+	// donne les sorts par défaut de la classe.
+	bool chooseClass(tw::Player * player, int classId, const std::vector<int> & spells = std::vector<int>());
 	int chosenClass(tw::Player * player) const;
 	bool allClassesChosen() const;
 	std::int64_t getClassSelectionDeadline() const { return classSelectionDeadline; }
@@ -47,6 +48,9 @@ public:
 	tw::battle::BattleEngine * getEngine() { return engine.get(); }
 
 	void markEnded() { phase = Phase::ENDED; }
+
+	// Zone à tenir : score à atteindre (0 : combat au KO). À régler avant le début du combat.
+	void setZonePoints(int points) { zonePoints = points; }
 
 	// Match de tournoi joué par cette session (0 : match amical).
 	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
@@ -71,9 +75,11 @@ private:
 	Phase phase;
 	std::vector<tw::Player*> participants;
 	std::map<tw::Player*, int> classes;
+	std::map<tw::Player*, std::vector<int>> spellChoices;
 	std::int64_t classSelectionDeadline;
 	std::unique_ptr<tw::battle::BattleEngine> engine;
 	std::uint32_t seed;
 	int tournamentId = 0;
 	int tournamentMatchId = 0;
+	int zonePoints = 0;
 };

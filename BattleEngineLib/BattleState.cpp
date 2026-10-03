@@ -1,5 +1,7 @@
 #include "BattleState.h"
 
+#include <algorithm>
+
 using namespace tw::battle;
 
 namespace
@@ -28,6 +30,11 @@ void BattleMap::setCell(const Cell & cell, bool walkable, bool blocksSight)
 	if (!contains(cell))
 		return;
 	flags[cell.y * width + cell.x] = (walkable ? WALKABLE : 0) | (blocksSight ? BLOCKS_SIGHT : 0);
+}
+
+bool ZoneState::contains(const Cell & cell) const
+{
+	return std::find(cells.begin(), cells.end(), cell) != cells.end();
 }
 
 bool Fighter::hasState(const std::string & state) const
@@ -97,6 +104,7 @@ const char * tw::battle::toString(EndReason reason)
 	case EndReason::ROUND_LIMIT: return "ROUND_LIMIT";
 	case EndReason::FORFEIT: return "FORFEIT";
 	case EndReason::ADMIN: return "ADMIN";
+	case EndReason::OBJECTIVE: return "OBJECTIVE";
 	}
 	return "";
 }

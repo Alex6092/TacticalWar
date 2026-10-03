@@ -47,6 +47,8 @@ namespace tw
 
 			// Cellules de départ de chaque équipe (1 et 2).
 			std::vector<Cell> startCells[3];
+			// Zone à tenir peinte dans l'éditeur (vide : zone calculée, voir objectiveZone).
+			std::vector<Cell> zoneCells;
 
 		private:
 			int width = 0;
@@ -73,6 +75,17 @@ namespace tw
 			std::string state;
 		};
 
+		// Bilan d'un combattant sur tout le combat (écran de fin, page projetée).
+		struct FighterRecord
+		{
+			int dealt = 0;		// Dégâts infligés aux ennemis, bouclier compris
+			int taken = 0;		// Dégâts subis, bouclier compris
+			int healed = 0;		// PV rendus (lui compris)
+			int shielded = 0;	// Boucliers donnés
+			int kills = 0;		// Ennemis mis hors combat
+			int casts = 0;		// Sorts lancés
+		};
+
 		struct Fighter
 		{
 			int id = 0;
@@ -90,10 +103,14 @@ namespace tw
 			bool ready = false;
 			bool connected = true;
 
+			// Sorts emportés : indices dans les sorts de la classe, dans l'ordre de la barre de sorts
+			// (emplacements 0 à 3). Vide (ancien instantané) : les sorts de la classe dans l'ordre.
+			std::vector<int> spells;
 			std::map<std::string, int> cooldowns;			// sort -> tours restants
 			std::map<std::string, int> castsThisTurn;
 			std::map<std::string, std::map<int, int>> castsOnTarget;	// sort -> combattant -> lancers ce tour
 			std::vector<ActiveEffect> effects;
+			FighterRecord record;
 
 			int initialMaxHp() const { return baseStats.get(Stat::MAX_HP); }
 			bool hasState(const std::string & state) const;
@@ -125,7 +142,21 @@ namespace tw
 			KO,
 			ROUND_LIMIT,
 			FORFEIT,
-			ADMIN
+			ADMIN,
+			OBJECTIVE		// Zone à tenir : l'équipe a atteint le score demandé
+		};
+
+		// Mode "zone à tenir" : à la fin de chaque tour complet, une équipe marque un point si elle a
+		// au moins un combattant vivant dans la zone et l'autre aucun. Un KO fait toujours gagner.
+		struct ZoneState
+		{
+			bool enabled = false;
+			std::vector<Cell> cells;
+			int pointsToWin = 0;
+			int scores[3] = { 0, 0, 0 };	// Par équipe (1 et 2)
+			int holder = 0;					// Équipe qui a marqué au dernier décompte (0 : personne)
+
+			bool contains(const Cell & cell) const;
 		};
 
 		struct BattleState
@@ -139,6 +170,8 @@ namespace tw
 			std::int64_t deadlineMs = 0;	// Fin du tour (ou du placement) en cours
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
+			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
+			ZoneState zone;
 			int nextUid = 1;
 
 			int activeFighterId() const;

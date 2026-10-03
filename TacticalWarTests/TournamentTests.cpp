@@ -474,3 +474,65 @@ TEST_CASE("Ready matches are ordered by stage, round and bracket")
 		previousRound = match->round;
 	}
 }
+
+TEST_CASE("Match results keep the players' records through JSON")
+{
+	MatchResult result;
+	result.winnerTeamId = 3;
+	result.reason = ResultReason::KO;
+	result.rounds = 7;
+	PlayerRecord archer;
+	archer.name = u8"Léa";
+	archer.className = "Archer";
+	archer.side = 1;
+	archer.dealt = 120;
+	archer.kills = 2;
+	archer.mvp = true;
+	PlayerRecord healer;
+	healer.name = "Tom";
+	healer.className = "Protecteur";
+	healer.side = 2;
+	healer.healed = 45;
+	healer.shielded = 40;
+	result.players = { archer, healer };
+
+	MatchResult restored = resultFromJson(toJson(result));
+	REQUIRE(restored.players.size() == 2);
+	CHECK(restored.players[0].name == archer.name);
+	CHECK(restored.players[0].className == "Archer");
+	CHECK(restored.players[0].side == 1);
+	CHECK(restored.players[0].dealt == 120);
+	CHECK(restored.players[0].kills == 2);
+	CHECK(restored.players[0].mvp);
+	CHECK(restored.players[1].healed == 45);
+	CHECK(restored.players[1].shielded == 40);
+	CHECK_FALSE(restored.players[1].mvp);
+
+	// Un match sans combat (forfait) n'a pas de bilan.
+	MatchResult forfeit;
+	forfeit.reason = ResultReason::FORFEIT;
+	CHECK_FALSE(toJson(forfeit).contains("players"));
+	CHECK(resultFromJson(toJson(forfeit)).players.empty());
+}
+
+TEST_CASE("The battle mode of a tournament goes through JSON")
+{
+	Settings settings;
+	CHECK_FALSE(settings.zoneMode);
+	settings.zoneMode = true;
+	settings.zonePoints = 7;
+	Settings restored = settingsFromJson(toJson(settings));
+	CHECK(restored.zoneMode);
+	CHECK(restored.zonePoints == 7);
+
+	// Anciens tournois (sans "mode") : au KO ; un score hors bornes est ramené entre 1 et 20.
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("mode");
+	legacy["zonePoints"] = 0;
+	CHECK_FALSE(settingsFromJson(legacy).zoneMode);
+	CHECK(settingsFromJson(legacy).zonePoints == 1);
+
+	ResultReason reason;
+	REQUIRE(parseReason(toString(ResultReason::OBJECTIVE), reason));
+	CHECK((reason == ResultReason::OBJECTIVE));
+}

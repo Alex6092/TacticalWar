@@ -99,6 +99,10 @@ namespace
 				std::string kind = event.value("kind", std::string());
 				addNote(outcome, fighterId, kind == "push" ? "Repoussé" : kind == "pull" ? "Attiré" : kind == "dash" ? "Bondit" : "Téléporté");
 			}
+			else if (type == "combo")
+			{
+				addNote(outcome, fighterId, "Combo " + event.value("name", std::string()) + " +" + std::to_string(event.value("percent", 0)) + " %");
+			}
 			else if (type == "swap")
 			{
 				addNote(outcome, fighterId, "Échange de place");

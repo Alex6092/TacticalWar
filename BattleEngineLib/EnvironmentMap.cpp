@@ -20,6 +20,8 @@ tw::battle::BattleMap tw::battle::battleMapFromEnvironment(tw::Environment * env
 			int team = cell->getTeamStartPointNumber();
 			if (walkable && (team == 1 || team == 2))
 				map.startCells[team].push_back({ x, y });
+			if (walkable && cell->getIsZone())
+				map.zoneCells.push_back({ x, y });
 		}
 	}
 	return map;

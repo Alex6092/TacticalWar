@@ -1,6 +1,8 @@
 ﻿// Bot de test : TacticalWarBot.exe --login <login> --password <mdp> [--server hote:port] [--class <id>] [--delay <ms>] [--verbose]
 // Simulation d'équilibrage (sans serveur) : TacticalWarBot.exe --simulate <combats> [--map <id>] [--seed <n>] [--data <gamedata.json>]
+//   [--mode zone [--points <n>]]
 // À lancer depuis le dossier du jeu (il lit les cartes dans ./assets/map).
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -15,6 +17,8 @@ int main(int argc, char ** argv)
 	int simulationMap = 0;
 	std::uint32_t seed = 1;
 	std::string dataPath = "./assets/data/gamedata.json";
+	bool zoneMode = false;
+	int zonePoints = 5;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string arg = argv[i];
@@ -36,6 +40,10 @@ int main(int argc, char ** argv)
 			simulationMap = std::atoi(argv[++i]);
 		else if (arg == "--data" && hasValue)
 			dataPath = argv[++i];
+		else if (arg == "--mode" && hasValue)
+			zoneMode = std::string(argv[++i]) == "zone";
+		else if (arg == "--points" && hasValue)
+			zonePoints = std::atoi(argv[++i]);
 		else if (arg == "--seed" && hasValue)
 			seed = (std::uint32_t)std::strtoul(argv[++i], nullptr, 10);
 		else if (arg == "--server" && hasValue)
@@ -49,12 +57,12 @@ int main(int argc, char ** argv)
 	}
 
 	if (simulate > 0)
-		return runSimulation(simulate, simulationMap, seed, dataPath);
+		return runSimulation(simulate, simulationMap, seed, dataPath, zoneMode ? std::max(1, zonePoints) : 0);
 
 	if (options.login.empty())
 	{
 		std::cerr << "Usage : TacticalWarBot.exe --login <login> --password <mdp> [--server hote:port] [--class <id>] [--delay <ms>] [--verbose]" << std::endl;
-		std::cerr << "        TacticalWarBot.exe --simulate <combats> [--map <id>] [--seed <n>] [--data <gamedata.json>]" << std::endl;
+		std::cerr << "        TacticalWarBot.exe --simulate <combats> [--map <id>] [--seed <n>] [--data <gamedata.json>] [--mode zone [--points <n>]]" << std::endl;
 		return 1;
 	}
 

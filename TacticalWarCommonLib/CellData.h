@@ -18,6 +18,9 @@ namespace tw
 		// - Par défaut = Pas un point de départ
 		int teamStartPoint;
 
+		// Case de la zone à tenir (mode de combat "zone"), peinte dans l'éditeur.
+		bool zone = false;
+
 		// Identifiant de la tuile (registre TileRegistry). Vide : déduite des indicateurs (cartes v1).
 		std::string tile;
 
@@ -46,6 +49,16 @@ namespace tw
 
 		inline void setIsObstacle(bool isObstacle) {
 			this->isObstacle = isObstacle;
+		}
+
+		inline bool getIsZone() const
+		{
+			return zone;
+		}
+
+		inline void setIsZone(bool inZone)
+		{
+			zone = inZone;
 		}
 
 		inline void setTeamStartPoint(int teamId)

@@ -77,15 +77,22 @@ nlohmann::json TWParser::publicStateJson()
 				});
 			}
 			battle["fighters"] = fighters;
+			if (state.zone.enabled)
+				battle["zone"] = { { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "points", state.zone.pointsToWin } };
 		}
 
 		live.push_back(battle);
 	}
 
+	nlohmann::json recent = nlohmann::json::array();
+	for (const nlohmann::json & battle : recentBattles)
+		recent.push_back(battle);
+
 	return {
 		{ "generatedAt", (long long)std::time(nullptr) },
 		{ "tournaments", tournamentsJson },
-		{ "live", live }
+		{ "live", live },
+		{ "recent", recent }
 	};
 }
 

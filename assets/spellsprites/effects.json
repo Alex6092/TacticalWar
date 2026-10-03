@@ -35,7 +35,25 @@
     "shield_bubble": { "sheet": "assets/spellsprites/bubble", "fps": 8, "loop": true, "scale": 0.8, "offsetY": -42, "color": [140, 200, 255, 200] },
     "aura_rampart": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [255, 120, 60] },
     "aura_slow": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [140, 170, 255] },
-    "aura_poison": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [120, 255, 120] }
+    "aura_poison": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [120, 255, 120] },
+    "ping": { "sheet": "assets/spellsprites/ping_ring", "fps": 10, "loop": true, "duration": 2.4, "layer": "ground", "scale": 1.0, "color": [255, 215, 70] },
+    "ping_arrow": { "sheet": "assets/spellsprites/ping_arrow", "fps": 12, "loop": true, "duration": 2.4, "anchor": [0.5, 1.0], "offsetY": -150, "color": [255, 215, 70] },
+    "combo_mark": { "sheet": "assets/spellsprites/combo_mark", "fps": 12, "loop": true, "layer": "ground", "scale": 0.9, "color": [255, 200, 60] },
+    "combo": { "sheet": "assets/spellsprites/combo_burst", "fps": 22, "scale": 0.8, "offsetY": -45, "additive": true, "color": [255, 205, 70] },
+    "whirlwind": { "sheet": "assets/spellsprites/whirlwind", "fps": 20, "scale": 1.0, "offsetY": -30, "color": [255, 225, 200] },
+    "claw_ring": { "sheet": "assets/spellsprites/claw1_red", "fps": 16, "scale": 0.45, "offsetY": -40 },
+    "warcry": { "sheet": "assets/spellsprites/circleimpact1_red", "fps": 12, "scale": 1.3, "offsetY": -30, "additive": true, "color": [255, 200, 90] },
+    "aura_power": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [255, 185, 50] },
+    "arrow_rain": { "sheet": "assets/spellsprites/arrow_rain", "fps": 20, "scale": 0.9, "anchor": [0.5, 0.86] },
+    "trap": { "sheet": "assets/spellsprites/trap", "fps": 8, "loop": true, "layer": "ground", "scale": 0.75, "color": [200, 205, 215] },
+    "trap_snap": { "sheet": "assets/spellsprites/clawbig1_red", "fps": 16, "scale": 0.4, "anchor": [0.5, 0.8], "color": [220, 220, 230] },
+    "flame_wave": { "sheet": "assets/spellsprites/flame2_normal", "fps": 16, "scale": 0.6, "anchor": [0.5, 0.9], "offsetY": 5 },
+    "ice_prison": { "sheet": "assets/spellsprites/ice_prison", "fps": 18, "scale": 0.8, "anchor": [0.5, 0.9], "offsetY": 6, "color": [175, 230, 255] },
+    "aura_ice": { "sheet": "assets/spellsprites/aura", "fps": 8, "loop": true, "layer": "ground", "scale": 0.85, "color": [180, 240, 255] },
+    "barrier": { "sheet": "assets/spellsprites/bubble", "fps": 10, "scale": 0.9, "offsetY": -42, "color": [255, 215, 90, 220] },
+    "aura_barrier": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [255, 225, 120] },
+    "regen": { "sheet": "assets/spellsprites/heal1_blue", "fps": 18, "scale": 0.55, "anchor": [0.5, 0.92], "color": [150, 255, 170] },
+    "aura_regen": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [110, 240, 140] }
   },
   "events": {
     "death": "death_smoke",
@@ -43,6 +61,7 @@
     "push": "dust",
     "pull": "dust",
     "dash": "dust",
-    "lifesteal": "lifesteal"
+    "lifesteal": "lifesteal",
+    "combo": "combo"
   }
 }

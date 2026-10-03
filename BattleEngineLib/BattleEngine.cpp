@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "Emotes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -24,7 +25,7 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const B
 {
 }
 
-int BattleEngine::addFighter(int team, int classId, const std::string & name)
+int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells)
 {
 	const ClassDef * classDef = data.findClass(classId);
 	if (classDef == nullptr || (team != 1 && team != 2) || state.phase != BattlePhase::PLACEMENT || state.round != 0)
@@ -35,6 +36,7 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name)
 	fighter.team = team;
 	fighter.classId = classId;
 	fighter.name = name;
+	fighter.spells = validSpellChoice(*classDef, spells);
 	fighter.baseStats = classDef->baseStats;
 	fighter.maxHp = fighter.baseStats.get(Stat::MAX_HP);
 	fighter.hp = fighter.maxHp;
@@ -47,6 +49,15 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name)
 
 	state.fighters.push_back(fighter);
 	return fighter.id;
+}
+
+void BattleEngine::enableZone(int pointsToWin)
+{
+	if (state.phase != BattlePhase::PLACEMENT || state.round > 0)
+		return;
+	state.zone.enabled = true;
+	state.zone.cells = objectiveZone(map);
+	state.zone.pointsToWin = std::max(1, pointsToWin);
 }
 
 void BattleEngine::startPlacement(std::int64_t nowMs)
@@ -280,6 +291,7 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		return;
 	}
 
+	int round = state.round;
 	do
 	{
 		state.turnIndex++;
@@ -290,11 +302,16 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		}
 	} while (!state.findFighter(state.activeFighterId())->alive);
 
+	if (state.round != round)
+	{
+		scoreZone();
+		if (state.phase == BattlePhase::ENDED)
+			return;
+	}
+
 	if (state.round > data.rules.maxRounds)
 	{
-		double hp1 = teamHpPercent(1);
-		double hp2 = teamHpPercent(2);
-		endBattle(hp1 >= hp2 ? 1 : 2, EndReason::ROUND_LIMIT);
+		endBattle(decideWinner(), EndReason::ROUND_LIMIT);
 		return;
 	}
 
@@ -307,6 +324,22 @@ ActionResult BattleEngine::endTurn(int fighterId, std::int64_t nowMs)
 		return ActionResult::failure("Ce n'est pas votre tour.");
 
 	finishTurn(nowMs);
+	return ActionResult::success();
+}
+
+ActionResult BattleEngine::emote(int fighterId, int emoteId, std::int64_t nowMs)
+{
+	if (state.findFighter(fighterId) == nullptr || state.phase == BattlePhase::ENDED)
+		return ActionResult::failure("Aucun combat en cours.");
+	if (emoteId < 0 || emoteId >= EMOTE_COUNT)
+		return ActionResult::failure("Émote inconnue.");
+
+	auto last = lastEmoteMs.find(fighterId);
+	if (last != lastEmoteMs.end() && nowMs - last->second < EMOTE_COOLDOWN_MS)
+		return ActionResult::failure("Attendez un peu avant la prochaine émote.");
+	lastEmoteMs[fighterId] = nowMs;
+
+	emit({ { "t", "emote" }, { "f", fighterId }, { "id", emoteId } });
 	return ActionResult::success();
 }
 
@@ -361,6 +394,7 @@ ActionResult BattleEngine::cast(int fighterId, int spellIndex, const Cell & targ
 		return ActionResult::failure(error);
 
 	caster.ap -= spell->apCost;
+	caster.record.casts++;
 	if (spell->cooldown > 0)
 		caster.cooldowns[spell->id] = spell->cooldown;
 	caster.castsThisTurn[spell->id]++;
@@ -458,9 +492,7 @@ void BattleEngine::stopByDecision(std::int64_t nowMs)
 {
 	if (state.phase == BattlePhase::ENDED)
 		return;
-	double hp1 = teamHpPercent(1);
-	double hp2 = teamHpPercent(2);
-	endBattle(hp1 >= hp2 ? 1 : 2, EndReason::ADMIN);
+	endBattle(decideWinner(), EndReason::ADMIN);
 }
 
 void BattleEngine::declareWinner(int winnerTeam, std::int64_t nowMs)
@@ -482,6 +514,31 @@ double BattleEngine::teamHpPercent(int team) const
 		max += fighter.initialMaxHp();
 	}
 	return max > 0 ? 100.0 * hp / max : 0;
+}
+
+void BattleEngine::scoreZone()
+{
+	if (!state.zone.enabled)
+		return;
+
+	bool present[3];
+	zonePresence(state, present);
+	int holder = present[1] && !present[2] ? 1 : present[2] && !present[1] ? 2 : 0;
+	if (holder != 0)
+		state.zone.scores[holder]++;
+	state.zone.holder = holder;
+	emit({ { "t", "score" }, { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "holder", holder },
+		{ "contested", present[1] && present[2] } });
+
+	if (holder != 0 && state.zone.scores[holder] >= state.zone.pointsToWin)
+		endBattle(holder, EndReason::OBJECTIVE);
+}
+
+int BattleEngine::decideWinner() const
+{
+	if (state.zone.enabled && state.zone.scores[1] != state.zone.scores[2])
+		return state.zone.scores[1] > state.zone.scores[2] ? 1 : 2;
+	return teamHpPercent(1) >= teamHpPercent(2) ? 1 : 2;
 }
 
 bool BattleEngine::checkEnd(int actingFighterId)
@@ -518,6 +575,16 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	state.winnerTeam = winnerTeam;
 	state.endReason = reason;
 	state.deadlineMs = 0;
+	state.mvpFighterId = chooseMvp(state);
+
+	// Bilan de chaque combattant, pour l'écran de fin (joueurs, spectateurs, rediffusions).
+	json records = json::array();
+	for (const Fighter & fighter : state.fighters)
+	{
+		json record = recordJson(fighter.record);
+		record["f"] = fighter.id;
+		records.push_back(record);
+	}
 
 	emit({
 		{ "t", "end" },
@@ -525,7 +592,9 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 		{ "reason", toString(reason) },
 		{ "hp1", teamHpPercent(1) },
 		{ "hp2", teamHpPercent(2) },
-		{ "round", state.round }
+		{ "round", state.round },
+		{ "records", records },
+		{ "mvp", state.mvpFighterId }
 	});
 }
 
@@ -621,6 +690,18 @@ json BattleEngine::glyphJson(const Glyph & glyph) const
 	};
 }
 
+json BattleEngine::recordJson(const FighterRecord & record)
+{
+	return {
+		{ "dealt", record.dealt },
+		{ "taken", record.taken },
+		{ "healed", record.healed },
+		{ "shielded", record.shielded },
+		{ "kills", record.kills },
+		{ "casts", record.casts }
+	};
+}
+
 json BattleEngine::fighterJson(const Fighter & fighter) const
 {
 	json cooldowns = json::object();
@@ -645,6 +726,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "team", fighter.team },
 		{ "classId", fighter.classId },
 		{ "name", fighter.name },
+		{ "spells", fighter.spells },
 		{ "x", fighter.position.x },
 		{ "y", fighter.position.y },
 		{ "hp", fighter.hp },
@@ -657,7 +739,8 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "connected", fighter.connected },
 		{ "cooldowns", cooldowns },
 		{ "casts", casts },
-		{ "effects", effects }
+		{ "effects", effects },
+		{ "record", recordJson(fighter.record) }
 	};
 }
 
@@ -694,6 +777,18 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 		{ "glyphs", glyphs },
 		{ "startCells", startCells },
 		{ "winner", state.winnerTeam },
-		{ "reason", toString(state.endReason) }
+		{ "reason", toString(state.endReason) },
+		{ "mvp", state.mvpFighterId },
+		{ "zone", zoneJson(state.zone) }
 	};
+}
+
+json BattleEngine::zoneJson(const ZoneState & zone)
+{
+	if (!zone.enabled)
+		return nullptr;
+	json cells = json::array();
+	for (const Cell & cell : zone.cells)
+		cells.push_back(cellJson(cell));
+	return { { "cells", cells }, { "points", zone.pointsToWin }, { "scores", { zone.scores[1], zone.scores[2] } }, { "holder", zone.holder } };
 }

@@ -2,6 +2,7 @@
 #include "LinkToServer.h"
 
 #include <BattleRules.h>
+#include <Emotes.h>
 #include <algorithm>
 
 using namespace tw::battle;
@@ -103,7 +104,7 @@ namespace
 }
 
 BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
-	: gui(gui), font(font), messageRemaining(0), spellBarClassId(0), readyState(false), spectator(false)
+	: gui(gui), font(font), messageRemaining(0), readyState(false), spectator(false)
 {
 	timelinePanel = tgui::Panel::create();
 	timelinePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 170));
@@ -113,6 +114,13 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	timerLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	timerLabel->getRenderer()->setTextOutlineThickness(2);
 	gui->add(timerLabel);
+
+	// Score de la zone à tenir, sous le minuteur.
+	zoneLabel = createLabel(18, sf::Color(255, 210, 80));
+	zoneLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	zoneLabel->getRenderer()->setTextOutlineThickness(2);
+	zoneLabel->setVisible(false);
+	gui->add(zoneLabel);
 
 	messageLabel = createLabel(30, sf::Color(255, 220, 80));
 	messageLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
@@ -183,6 +191,32 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	});
 	gui->add(endTurnButton);
 
+	// Émotes prédéfinies : le bouton ouvre la liste (aussi au clavier, touches F1 à F6).
+	emoteButton = tgui::Button::create(L"Émotes");
+	emoteButton->setInheritedFont(font);
+	emoteButton->setTextSize(16);
+	emoteButton->connect("pressed", [this]() { emotePanel->setVisible(!emotePanel->isVisible()); });
+	gui->add(emoteButton);
+
+	emotePanel = tgui::Panel::create();
+	emotePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 225));
+	emotePanel->setVisible(false);
+	for (int i = 0; i < EMOTE_COUNT; i++)
+	{
+		tgui::Button::Ptr button = tgui::Button::create(L"F" + num(i + 1) + L"   " + fromServerText(EMOTE_TEXTS[i]));
+		button->setInheritedFont(font);
+		button->setTextSize(15);
+		button->setPosition(6, 6 + i * 38.f);
+		button->setSize(208, 34);
+		button->connect("pressed", [this, i]() {
+			emotePanel->setVisible(false);
+			if (onEmote)
+				onEmote(i);
+		});
+		emotePanel->add(button);
+	}
+	gui->add(emotePanel);
+
 	readyButton = tgui::Button::create(L"Prêt !");
 	readyButton->setInheritedFont(font);
 	readyButton->setTextSize(20);
@@ -232,6 +266,13 @@ void BattleHud::setSpectator(const sf::String & banner)
 	layout(windowSize);
 }
 
+void BattleHud::showLeaveButton(const sf::String & text)
+{
+	leaveButton->setText(text);
+	leaveButton->setVisible(true);
+	layout(windowSize);
+}
+
 void BattleHud::setEndButtonText(const sf::String & text)
 {
 	if (endButton != nullptr && endButton->getText() != text)
@@ -255,6 +296,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 
 	timelinePanel->setPosition(width - TIMELINE_WIDTH - 15, 15);
 	timerLabel->setPosition((width - timerLabel->getSize().x) / 2, 12);
+	zoneLabel->setPosition((width - zoneLabel->getSize().x) / 2, spectator ? 76.f : 46.f);
 	messageLabel->setPosition((width - messageLabel->getSize().x) / 2, height / 2 - 140);
 	hintLabel->setPosition((width - hintLabel->getSize().x) / 2, height - SPELL_SIZE - 60);
 
@@ -264,7 +306,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 	logBox->setPosition(15, height - 215);
 	logBox->setSize(440, 200);
 
-	float barWidth = 4 * (SPELL_SIZE + 10) + 190;
+	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120;
 	float barX = (width - barWidth) / 2;
 	float barY = height - SPELL_SIZE - 18;
 	for (int i = 0; i < (int)spells.size(); i++)
@@ -279,15 +321,27 @@ void BattleHud::layout(const sf::Vector2u & size)
 
 	endTurnButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 10, barY + 8);
 	endTurnButton->setSize(170, SPELL_SIZE - 16);
+	emoteButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 190, barY + 8);
+	emoteButton->setSize(110, SPELL_SIZE - 16);
+	emotePanel->setSize(220, EMOTE_COUNT * 38.f + 8);
+	emotePanel->setPosition(barX + 4 * (SPELL_SIZE + 10) + 300 - 220, barY - (EMOTE_COUNT * 38.f + 8) - 8);
 	readyButton->setSize(220, 60);
 	readyButton->setPosition((width - 220) / 2, height - 90);
 
-	endPanel->setSize(520, 220);
-	endPanel->setPosition((width - 520) / 2, (height - 220) / 2);
+	endPanel->setSize(endPanelSize.x, endPanelSize.y);
+	endPanel->setPosition((width - endPanelSize.x) / 2, (height - endPanelSize.y) / 2);
 
 	bannerLabel->setPosition((width - bannerLabel->getSize().x) / 2, 46);
-	leaveButton->setSize(180, 50);
-	leaveButton->setPosition((width - 180) / 2, height - 68);
+	if (spectator)
+	{
+		leaveButton->setSize(180, 50);
+		leaveButton->setPosition((width - 180) / 2, height - 68);
+	}
+	else
+	{
+		leaveButton->setSize(150, 36);
+		leaveButton->setPosition(width - 165, height - cameraHelp->getSize().y - 56);
+	}
 	cameraHelp->setPosition(width - cameraHelp->getSize().x - 15, height - cameraHelp->getSize().y - 10);
 }
 
@@ -323,19 +377,19 @@ void BattleHud::log(const sf::String & line, const sf::Color & color)
 	logBox->addLine(line, color);
 }
 
-void BattleHud::setSpellBar(const ClassDef & classDef)
+void BattleHud::setSpellBar(const GameData & data, const Fighter & fighter)
 {
-	spellBarClassId = classDef.id;
 	for (int i = 0; i < (int)spells.size(); i++)
 	{
 		SpellButton & button = spells[i];
-		if (i >= (int)classDef.spells.size())
+		const SpellDef * slotSpell = spellOf(data, fighter, i);
+		if (slotSpell == nullptr)
 		{
 			button.icon->setVisible(false);
 			continue;
 		}
 
-		const SpellDef & spell = classDef.spells[i];
+		const SpellDef & spell = *slotSpell;
 		button.spellId = spell.id;
 		button.icon->getRenderer()->setTexture(cachedTexture(spell.icon));
 		button.cost->setText(num(spell.apCost));
@@ -462,6 +516,24 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		layout(windowSize);
 	}
 
+	// Zone à tenir : score de chaque équipe (la sienne d'abord pour un joueur).
+	sf::String zoneText;
+	if (state.zone.enabled)
+	{
+		const Fighter * me = state.findFighter(you);
+		sf::String goal = L"  (premier à " + num(state.zone.pointsToWin) + L")";
+		if (me != nullptr)
+			zoneText = L"Zone à tenir : votre équipe " + num(state.zone.scores[me->team]) + L" - " + num(state.zone.scores[3 - me->team]) + L" adversaires" + goal;
+		else
+			zoneText = L"Zone à tenir : bleus " + num(state.zone.scores[1]) + L" - " + num(state.zone.scores[2]) + L" rouges" + goal;
+	}
+	zoneLabel->setVisible(!zoneText.isEmpty());
+	if (zoneLabel->getText() != zoneText)
+	{
+		zoneLabel->setText(zoneText);
+		layout(windowSize);
+	}
+
 	// Détails du combattant survolé (par défaut : le sien, ou le combattant actif pour un spectateur).
 	int detailsId = hoveredFighter >= 0 ? hoveredFighter : (you >= 0 ? you : active);
 	const Fighter * shown = state.findFighter(detailsId);
@@ -484,17 +556,20 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 
 	if (me != nullptr)
 	{
-		const ClassDef * classDef = data.findClass(me->classId);
-		if (classDef != nullptr && classDef->id != spellBarClassId)
+		std::string key = std::to_string(me->classId) + ":";
+		for (int index : me->spells)
+			key += std::to_string(index) + ",";
+		if (key != spellBarKey)
 		{
-			setSpellBar(*classDef);
+			spellBarKey = key;
+			setSpellBar(data, *me);
 			layout(windowSize);
 		}
 
-		for (int i = 0; i < (int)spells.size() && classDef != nullptr && i < (int)classDef->spells.size(); i++)
+		for (int i = 0; i < (int)spells.size() && spellOf(data, *me, i) != nullptr; i++)
 		{
 			SpellButton & button = spells[i];
-			const SpellDef & spell = classDef->spells[i];
+			const SpellDef & spell = *spellOf(data, *me, i);
 			auto cooldown = me->cooldowns.find(spell.id);
 			int remaining = cooldown == me->cooldowns.end() ? 0 : cooldown->second;
 			bool usable = myTurn && checkSpellResources(*me, spell).empty();
@@ -521,6 +596,10 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	}
 
 	endTurnButton->setVisible(fighting && myTurn);
+	bool canEmote = me != nullptr && !spectator && state.phase != BattlePhase::ENDED;
+	emoteButton->setVisible(canEmote);
+	if (!canEmote)
+		emotePanel->setVisible(false);
 	readyButton->setVisible(state.phase == BattlePhase::PLACEMENT && me != nullptr);
 	if (me != nullptr && me->ready != readyState)
 	{
@@ -529,9 +608,10 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	}
 }
 
-void BattleHud::showEnd(const sf::String & title, const sf::String & details, bool victory)
+void BattleHud::showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows)
 {
 	endPanel->removeAllWidgets();
+	endPanelSize.x = rows.empty() ? 660.f : 760.f;
 
 	tgui::Label::Ptr titleLabel = createLabel(34, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 	titleLabel->setText(title);
@@ -539,24 +619,72 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	endPanel->add(titleLabel);
 
 	tgui::Label::Ptr detailsText = createLabel(18, sf::Color::White);
+	detailsText->setMaximumTextWidth(endPanelSize.x - 40);
 	detailsText->setText(details);
-	detailsText->setPosition(20, 80);
+	detailsText->setPosition(20, 76);
 	endPanel->add(detailsText);
 
-	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : L"Fermer");
+	// Bilan : une ligne par combattant (couleur de son équipe), le MVP en doré.
+	// Colonne des noms assez large pour "Prénom (Classe)   MVP".
+	const float columns[5] = { 20, 400, 495, 580, 700 };
+	const sf::String headers[5] = { L"Combattant", L"Dégâts", L"Soins", L"Boucliers", L"KO" };
+	// Sous le texte (3 ou 4 lignes selon le mode de combat).
+	float tableTop = std::max(160.f, 76.f + detailsText->getSize().y + 12.f);
+	if (!rows.empty())
+	{
+		for (int column = 0; column < 5; column++)
+		{
+			tgui::Label::Ptr header = createLabel(15, sf::Color(170, 170, 190));
+			header->setText(headers[column]);
+			header->setPosition(columns[column], tableTop);
+			endPanel->add(header);
+		}
+		for (std::size_t i = 0; i < rows.size(); i++)
+		{
+			const EndRow & row = rows[i];
+			sf::Color color = row.mvp ? sf::Color(255, 215, 70) : row.team == 1 ? sf::Color(150, 200, 255) : sf::Color(255, 160, 150);
+			const sf::String cells[5] = { row.name + (row.mvp ? sf::String(L"   MVP") : sf::String()), num(row.dealt), num(row.healed), num(row.shielded), num(row.kills) };
+			for (int column = 0; column < 5; column++)
+			{
+				tgui::Label::Ptr cell = createLabel(17, color);
+				cell->setText(cells[column]);
+				cell->setPosition(columns[column], tableTop + 28 + i * 28.f);
+				endPanel->add(cell);
+			}
+		}
+	}
+	float buttonTop = rows.empty() ? tableTop : tableTop + 28 + rows.size() * 28.f + 20;
+	endPanelSize.y = buttonTop + 44 + 16;
+
+	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : onReplay ? L"Retour" : L"Fermer");
 	endButton->setInheritedFont(font);
 	endButton->setTextSize(18);
 	endButton->setSize(spectator ? 240 : 160, 44);
-	endButton->setPosition(spectator ? 260 : 340, 160);
+	endButton->setPosition((endPanelSize.x - (spectator ? 240 : 160)) / 2, buttonTop);
 	endButton->connect("pressed", [this]() {
 		if (onClose)
 			onClose();
 	});
 	endPanel->add(endButton);
+	if (onReplay)
+	{
+		// Rejouer (à gauche) et Retour (à droite).
+		replayButton = tgui::Button::create(L"Rejouer");
+		replayButton->setInheritedFont(font);
+		replayButton->setTextSize(18);
+		replayButton->setSize(160, 44);
+		replayButton->setPosition(endPanelSize.x / 2 - 170, buttonTop);
+		replayButton->connect("pressed", [this]() { onReplay(); });
+		endPanel->add(replayButton);
+		endButton->setPosition(endPanelSize.x / 2 + 10, buttonTop);
+	}
 	leaveButton->setVisible(false);
 
 	endPanel->setVisible(true);
+	layout(windowSize);
 	endTurnButton->setVisible(false);
+	emoteButton->setVisible(false);
+	emotePanel->setVisible(false);
 	for (SpellButton & button : spells)
 		button.icon->setVisible(false);
 }

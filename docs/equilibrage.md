@@ -45,3 +45,54 @@ Modifications :
 
 Sans le 4e PM et la Charge améliorée, le Guerrier restait à 34 % : il a besoin de mobilité pour
 rattraper un tireur qui recule.
+
+## Combinaisons entre classes (octobre 2026)
+
+Mesures sur 2000 combats (graine 7), avant et après l'ajout des combinaisons (voir `docs/regles-du-jeu.md`) :
+
+| Classe | Avant | Après |
+|---|---|---|
+| Guerrier | 46,1 % | 46,6 % |
+| Archer | 52,3 % | 52,4 % |
+| Mage | 48,4 % | 51,2 % |
+| Protecteur | 53,3 % | 49,7 % |
+
+Les compositions qui disposent d'une combinaison progressent, sans dépasser 55 % : Guerrier + Mage passe
+de 47 à 52 %. Pour 100 combats, l'IA déclenche Brise-glace 20 fois, Cible immobile 25 fois, Dans le
+mille 32 fois et Jugement ardent 52 fois. Le rapport du simulateur donne ces chiffres à chaque essai.
+
+## Mode « zone à tenir » (octobre 2026)
+
+Mesures sur 2000 combats (graine 7, `--mode zone`, 5 points) :
+
+| Classe | Taux de victoire |
+|---|---|
+| Guerrier | 48,7 % |
+| Archer | 42,2 % |
+| Mage | 56,6 % |
+| Protecteur | 52,9 % |
+
+- 29 % des combats se terminent par la zone, les autres par KO.
+- Victoires de l'équipe 1 par carte entre 49 et 56 %.
+- La zone calculée est symétrique sur les cartes symétriques. Avant cela, une zone placée d'un seul côté
+  de la carte 2 donnait 72 % de victoires à l'équipe 1.
+- L'IA des tireurs laisse la zone à un coéquipier qui la tient déjà et évite le contact. Sans ce
+  réglage, les tireurs allaient se faire battre dans la zone (Archer à 33 %).
+
+## Sorts au choix (octobre 2026)
+
+Le simulateur fait emporter à chaque combattant 4 sorts au hasard parmi les 6 de sa classe, et donne le
+taux de victoire quand chaque sort est emporté. Mesures sur 3000 combats (graine 7, au KO) :
+
+| Classe | Taux de victoire |
+|---|---|
+| Guerrier | 47,5 % |
+| Archer | 49,6 % |
+| Mage | 49,1 % |
+| Protecteur | 53,8 % |
+
+- Les sorts d'attaque de base (Tir précis, Taillade, Éclair) ressortent à 57-62 % : l'IA les utilise à chaque
+  tour.
+- Les nouveaux sorts sont entre 43 et 53 % : Cri de guerre à 43 %, Prison de glace à 45 %, Barrière à 51 %.
+- L'IA tire peu parti des renforcements et des marques de combinaison : les essais avec de vrais joueurs
+  décideront des retouches.

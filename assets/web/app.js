@@ -21,7 +21,7 @@ function el(id) {
   return document.getElementById(id);
 }
 
-const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", ADMIN: "arbitrage", BYE: "exempt" };
+const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", ADMIN: "arbitrage", BYE: "exempt", OBJECTIVE: "zone" };
 const STATUS = { RUNNING: "En cours", FINISHED: "Terminé", DRAFT: "Préparation" };
 
 function teamName(tournament, id) {
@@ -64,6 +64,7 @@ function boardTabs(tournament) {
   }
   const elimination = tournament.stages.some((s, i) => s.built && (s.type === "SINGLE_ELIMINATION" || s.type === "DOUBLE_ELIMINATION"));
   if (elimination) tabs.push({ id: "bracket", label: "Arbre" });
+  if (tournament.leaders && tournament.leaders.length) tabs.push({ id: "leaders", label: "Meilleurs joueurs" });
   return tabs;
 }
 
@@ -101,7 +102,24 @@ function renderBoard(tournament) {
   });
 
   el("board-title").textContent = tabs.find((t) => t.id === activeTab).label;
-  board.innerHTML = activeTab === "bracket" ? renderBracket(tournament) : renderStandings(tournament);
+  board.innerHTML = activeTab === "bracket" ? renderBracket(tournament)
+    : activeTab === "leaders" ? renderLeaders(tournament)
+    : renderStandings(tournament);
+}
+
+// Meilleurs joueurs du tournoi : bilan cumulé sur les matchs joués (score : dégâts + soins
+// + boucliers / 2 + 25 par KO).
+function renderLeaders(tournament) {
+  const rows = tournament.leaders.map((p, i) => `<tr class="${i < 3 ? "top" : ""}">
+    <td class="rank">${i + 1}</td>
+    <td><strong>${esc(p.name)}</strong> <small>${esc(p.class)} · ${esc(teamName(tournament, p.team))}</small></td>
+    <td>${p.dealt}</td><td>${p.healed}</td><td>${p.shielded}</td><td>${p.kills}</td>
+    <td class="mvp-count">${p.mvp ? "★ " + p.mvp : ""}</td><td>${p.matches}</td>
+  </tr>`).join("");
+  return `<table class="leaders">
+    <thead><tr><th>#</th><th>Joueur</th><th>Dégâts</th><th>Soins</th><th>Boucliers</th><th>KO</th><th>MVP</th><th>Matchs</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function renderStandings(tournament) {
@@ -267,12 +285,39 @@ function renderLive(tournament) {
       }).join("");
       body = `<div class="battle-teams">
         <div class="side-1"><div class="team-name">${esc(battle.teams[0])}</div>${side(1)}</div>
-        <div class="vs">VS</div>
+        <div class="vs">${battle.zone
+          ? `<span class="zone-score">${battle.zone.scores[0]} - ${battle.zone.scores[1]}</span><small class="zone-goal">zone, premier à ${battle.zone.points}</small>`
+          : "VS"}</div>
         <div class="side-2"><div class="team-name">${esc(battle.teams[1])}</div>${side(2)}</div>
       </div>`;
     }
     const phase = battle.phase === "PLACEMENT" ? "Placement" : battle.phase === "FIGHT" ? `Tour ${battle.round}` : "";
     return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}</div>`;
+  }).join("");
+}
+
+// Derniers combats terminés : vainqueur et MVP (meilleur bilan du combat).
+function renderRecent(tournament) {
+  const panel = el("recent-panel");
+  const battles = (state && state.recent ? state.recent : [])
+    .filter((b) => !tournament || !b.tournament || b.tournament === tournament.id)
+    .slice(0, 3);
+  if (!battles.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  el("recent").innerHTML = battles.map((b) => {
+    const label = tournament && b.match ? tournament.labels[String(b.match)] : b.name;
+    const winner = b.teams[b.winner - 1] || "";
+    const mvp = b.mvp && b.mvp.name
+      ? `<div class="mvp"><span class="star">★ MVP</span> <strong>${esc(b.mvp.name)}</strong> <small>${esc(b.mvp.class)}</small>
+          <div class="mvp-stats">${b.mvp.dealt} dégâts · ${b.mvp.healed} soins · ${b.mvp.shielded} boucliers · ${b.mvp.kills} KO</div></div>`
+      : "";
+    return `<div class="recent-battle">
+      <div class="battle-head"><span>${esc(label || "")}</span><span>${esc(REASONS[b.reason] || "")}</span></div>
+      <div class="winner">Victoire : <strong>${esc(winner)}</strong></div>${mvp}
+    </div>`;
   }).join("");
 }
 
@@ -314,6 +359,7 @@ function render() {
   renderHeader(tournament);
   renderBoard(tournament);
   renderLive(tournament);
+  renderRecent(tournament);
   renderUpcoming(tournament);
   renderRanking(tournament);
 }

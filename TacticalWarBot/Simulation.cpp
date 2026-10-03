@@ -36,7 +36,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints)
 {
 	GameData data;
 	std::string error;
@@ -69,6 +69,9 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	}
 
 	std::mt19937 rng(seed);
+	// Sorts emportés : tirés à part, pour que les classes et les combats d'une graine restent comparables.
+	std::mt19937 spellRng(seed ^ 0x5eedu);
+	std::map<std::string, Tally> bySpell;
 	std::map<int, Tally> byClass;
 	std::map<std::string, Tally> byComposition;
 	std::map<int, Tally> byMapTeam1;
@@ -76,6 +79,15 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::vector<int> rounds;
 	double winnerHp = 0;
 	int unfinished = 0;
+	// Combinaisons déclenchées (nom -> nombre).
+	std::map<std::string, int> combos;
+	auto countCombos = [&combos](const nlohmann::json & batch) {
+		for (const nlohmann::json & event : batch["ev"])
+		{
+			if (event.value("t", std::string()) == "combo")
+				combos[event.value("name", std::string())]++;
+		}
+	};
 
 	auto className = [&](int classId) {
 		const ClassDef * classDef = data.findClass(classId);
@@ -91,11 +103,13 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		for (int i = 0; i < 4; i++)
 			classes[i] = data.classes[rng() % data.classes.size()].id;
 		for (int i = 0; i < 4; i++)
-			engine.addFighter(i < 2 ? 1 : 2, classes[i], "IA " + std::to_string(i + 1));
+			engine.addFighter(i < 2 ? 1 : 2, classes[i], "IA " + std::to_string(i + 1), randomSpellChoice(*data.findClass(classes[i]), spellRng));
 
 		// Placement au hasard sur les cases de départ (le placement automatique prend les cases
 		// dans l'ordre de la carte, ce qui peut grouper une équipe et disperser l'autre).
 		std::int64_t now = 0;
+		if (zonePoints > 0)
+			engine.enableZone(zonePoints);
 		engine.startPlacement(now);
 		for (int team = 1; team <= 2; team++)
 		{
@@ -121,7 +135,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			// Temps simulé : bien en dessous de la durée d'un tour, aucun tour ne passe par minuteur.
 			now += 100;
 			engine.tick(now);
-			engine.flushEvents();
+			countCombos(engine.flushEvents());
 
 			int active = engine.getState().activeFighterId();
 			if (active < 0 || engine.getState().phase != BattlePhase::FIGHT)
@@ -148,6 +162,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 				engine.endTurn(active, now);
 		}
 
+		countCombos(engine.flushEvents());
 		if (!engine.isOver())
 		{
 			unfinished++;
@@ -166,6 +181,18 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			tally.games++;
 			if ((i < 2 ? 1 : 2) == winner)
 				tally.wins++;
+		}
+
+		// Sorts emportés par chaque combattant.
+		for (const Fighter & fighter : state.fighters)
+		{
+			for (const SpellDef * spell : fighterSpells(data, fighter))
+			{
+				Tally & tally = bySpell[className(fighter.classId) + " : " + spell->name];
+				tally.games++;
+				if (fighter.team == winner)
+					tally.wins++;
+			}
 		}
 
 		for (int team = 1; team <= 2; team++)
@@ -190,7 +217,10 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::cout << "\n=== Simulation : " << finished << " combats terminés sur " << battles;
 	if (unfinished > 0)
 		std::cout << " (" << unfinished << " interrompus)";
-	std::cout << ", " << maps.size() << " carte(s) ===\n";
+	std::cout << ", " << maps.size() << " carte(s)";
+	if (zonePoints > 0)
+		std::cout << ", zone à tenir (" << zonePoints << " points)";
+	std::cout << " ===\n";
 	std::cout << "IA simple (BotBrain) : les écarts importants signalent un déséquilibre,\n"
 		<< "les petits écarts ne disent rien du jeu entre humains.\n";
 
@@ -199,6 +229,13 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	{
 		std::cout << "  " << std::left << std::setw(12) << className(entry.first) << std::right
 			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " participations)\n";
+	}
+
+	std::cout << "\nSorts emportés (choix au hasard, 4 sur 6) : taux de victoire quand le sort est emporté :\n";
+	for (const auto & entry : bySpell)
+	{
+		std::cout << "  " << std::left << std::setw(34) << entry.first << std::right
+			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " fois)\n";
 	}
 
 	std::vector<std::pair<std::string, Tally>> compositions(byComposition.begin(), byComposition.end());
@@ -226,11 +263,41 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::cout << "\n";
 	}
 
+	if (finished > 0)
+	{
+		std::cout << "\nCombinaisons déclenchées (pour 100 combats) :";
+		if (combos.empty())
+			std::cout << " aucune";
+		std::cout << "\n";
+		for (const auto & entry : combos)
+		{
+			std::cout << "  " << std::left << std::setw(18) << entry.first << std::right << std::setw(8) << std::fixed << std::setprecision(1)
+				<< 100.0 * entry.second / finished << "   (" << entry.second << " au total)\n";
+		}
+	}
+
 	std::cout << "\nVictoires de l'équipe 1 par carte (50 % = départs équitables) :\n";
 	for (const auto & entry : byMapTeam1)
 	{
 		std::cout << "  carte " << std::setw(3) << entry.first << " : " << std::setw(8) << percent(entry.second.rate())
-			<< "   (" << entry.second.games << " combats)\n";
+			<< "   (" << entry.second.games << " combats)";
+		if (zonePoints > 0)
+		{
+			// Zone de la carte : nombre de cases et distance de marche de chaque équipe.
+			for (const auto & map : maps)
+			{
+				if (map.first != entry.first)
+					continue;
+				std::vector<Cell> zone = objectiveZone(map.second);
+				int distances[3];
+				zoneDistances(map.second, zone, distances);
+				std::cout << "   zone " << (map.second.zoneCells.empty() ? "calculée" : "peinte") << " de " << zone.size()
+					<< " cases, à " << distances[1] << " / " << distances[2] << " pas";
+				if (!zone.empty())
+					std::cout << ", centre (" << zone[0].x << ", " << zone[0].y << ")";
+			}
+		}
+		std::cout << "\n";
 	}
 	return 0;
 }

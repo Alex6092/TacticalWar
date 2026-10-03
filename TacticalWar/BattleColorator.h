@@ -27,6 +27,8 @@ public:
 	void setThreat(const std::vector<tw::battle::Cell> & cells, bool enemy);
 	void setImpact(const std::vector<tw::battle::Cell> & cells);
 	void setGlyphs(const std::vector<tw::battle::Glyph> & glyphs, int viewerTeam);
+	// Zone à tenir : voile doré sous tout le reste.
+	void setZone(const std::vector<tw::battle::Cell> & cells);
 
 	bool isReachable(const tw::battle::Cell & cell) const { return reachable.count(cell) > 0; }
 	bool isInRange(const tw::battle::Cell & cell) const { return range.count(cell) > 0; }
@@ -47,4 +49,5 @@ private:
 	bool threatEnemy = true;
 	std::set<tw::battle::Cell> impact;
 	std::map<tw::battle::Cell, sf::Color> glyphColors;
+	std::set<tw::battle::Cell> zone;
 };

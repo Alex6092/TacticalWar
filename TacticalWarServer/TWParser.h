@@ -12,6 +12,7 @@
 #include <TeamStore.h>
 #include <TournamentService.h>
 #include <ReplayStore.h>
+#include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -119,8 +120,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	BattleSession * sessionOfMatch(tw::Match * match);
 	BattleSession * sessionOfPlayer(tw::Player * player);
 	void sendGameData(ClientState * client);
-	void handlePickClass(ClientState * client, tw::Player * player, int classId);
+	void handlePickClass(ClientState * client, tw::Player * player, const std::string & body);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
+	// Signal d'un joueur à ses coéquipiers (CG -> BG), limité en cadence.
+	void handlePing(ClientState * client, const nlohmann::json & body);
+	std::map<tw::Player*, std::deque<std::int64_t>> recentPings;
 	void startBattle(BattleSession * session);
 	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
 	void broadcastBattleEvents(BattleSession * session);
@@ -166,7 +170,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	BattleSession * sessionOfTournamentMatch(int tournamentId, int matchId);
 	void handleTournamentAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void dispatchTournamentMatches();
-	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds);
+	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds,
+		const std::vector<tw::tournament::PlayerRecord> & players = std::vector<tw::tournament::PlayerRecord>());
 	void finishWithoutBattle(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason);
 	void cancelSession(BattleSession * session);
 
@@ -176,6 +181,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::int64_t lastPublicPublish;
 	std::string displayNameOf(tw::Player * player);
 	nlohmann::json publicStateJson();
+	// Derniers combats terminés (bilan et MVP), du plus récent au plus ancien.
+	std::deque<nlohmann::json> recentBattles;
 	void publishPublicState(bool force = false);
 
 	// Mode spectateur (TWParserSpectator.cpp) :

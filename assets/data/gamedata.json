@@ -25,18 +25,18 @@
       "passive": { "type": "LOW_HP_DAMAGE", "name": "Rage", "description": "+15 % de dégâts sous 50 % des PV, +30 % sous 25 %.", "threshold": 50, "bonus": 15, "threshold2": 25, "bonus2": 30 },
       "spells": [
         {
-          "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps.",
+          "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps. Combo Brise-glace : +40 % sur une cible gelée (Glyphe de givre ou Prison de glace du Mage), qui dégèle.",
           "icon": "./assets/spellicons/taillade.png", "ap": 3, "range": [1, 1], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 16, "max": 19 } ],
+          "effects": [ { "type": "DAMAGE", "min": 16, "max": 19, "combo": { "state": "gele", "percent": 40, "name": "Brise-glace", "consumes": true } } ],
           "visual": {"impact": "slash_x"},
           "sound": "./assets/sound/spells/punch1.ogg", "animation": "physical"
         },
         {
-          "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour).",
+          "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour). Combo Brise-glace : +40 % sur une cible gelée, qui dégèle.",
           "icon": "./assets/spellicons/charge.png", "ap": 3, "range": [2, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 2,
           "effects": [
             { "type": "DASH", "targets": "CASTER" },
-            { "type": "DAMAGE", "min": 8, "max": 10 },
+            { "type": "DAMAGE", "min": 8, "max": 10, "combo": { "state": "gele", "percent": 40, "name": "Brise-glace", "consumes": true } },
             { "type": "STAT_MOD", "stat": "MP", "min": -1, "duration": 1, "name": "Ralenti" }
           ],
           "visual": {"impact": "claw_red", "status": "aura_slow", "impactSound": "./assets/sound/spells/punch5.ogg"},
@@ -53,13 +53,28 @@
           "sound": "./assets/sound/spells/boost.ogg", "animation": "magical"
         },
         {
-          "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour.",
+          "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour. L'ennemi est provoqué 2 tours : Tir précis de l'Archer lui inflige +30 %.",
           "icon": "./assets/spellicons/provocation.png", "ap": 2, "range": [2, 6], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
           "effects": [
             { "type": "PULL", "min": 3 },
+            { "type": "STATE", "state": "provoque", "negative": true, "duration": 2, "name": "Provoqué" },
             { "type": "STAT_MOD", "targets": "CASTER", "stat": "LOCK", "min": 4, "duration": 1, "name": "Provocation" }
           ],
           "visual": {"cast": "roar"},
+          "sound": "./assets/sound/spells/roar1.ogg", "animation": "physical"
+        },
+        {
+          "id": "tourbillon", "name": "Tourbillon", "description": "Frappe tous les ennemis au contact du Guerrier. Combo Brise-glace : +40 % sur une cible gelée, qui dégèle.",
+          "icon": "./assets/spellicons/tourbillon.png", "ap": 4, "launch": "SELF", "cooldown": 2, "zone": { "shape": "CIRCLE", "size": 1 },
+          "effects": [ { "type": "DAMAGE", "min": 10, "max": 12, "combo": { "state": "gele", "percent": 40, "name": "Brise-glace", "consumes": true } } ],
+          "visual": {"cast": "whirlwind", "impact": "claw_ring", "impactOn": "cells", "impactSound": "./assets/sound/spells/punch5.ogg"},
+          "sound": "./assets/sound/spells/punch1.ogg", "animation": "physical"
+        },
+        {
+          "id": "cri_de_guerre", "name": "Cri de guerre", "description": "+20 % de puissance pour le Guerrier et les alliés à 2 cases ou moins, pendant 1 tour.",
+          "icon": "./assets/spellicons/cri_de_guerre.png", "ap": 2, "launch": "SELF", "cooldown": 4, "zone": { "shape": "CIRCLE", "size": 2 },
+          "effects": [ { "type": "STAT_MOD", "targets": "ALLIES", "stat": "POWER", "min": 20, "duration": 1, "name": "Cri de guerre" } ],
+          "visual": {"cast": "warcry", "status": "aura_power"},
           "sound": "./assets/sound/spells/roar1.ogg", "animation": "physical"
         }
       ]
@@ -76,9 +91,9 @@
       "passive": { "type": "DISTANCE_DAMAGE", "name": "Tireur d'élite", "description": "+15 % de dégâts si la cible est à 6 cases ou plus.", "distance": 6, "bonus": 15 },
       "spells": [
         {
-          "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée.",
+          "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée. Combo Dans le mille : +30 % sur une cible provoquée (Provocation du Guerrier).",
           "icon": "./assets/spellicons/tir_precis.png", "ap": 3, "range": [4, 9], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 11, "max": 13 } ],
+          "effects": [ { "type": "DAMAGE", "min": 11, "max": 13, "combo": { "state": "provoque", "percent": 30, "name": "Dans le mille" } } ],
           "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "hit_red"},
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
@@ -103,14 +118,41 @@
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
         {
-          "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour.",
+          "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour. La cible est entravée 2 tours : Éclair du Mage lui inflige +30 %.",
           "icon": "./assets/spellicons/fleche_entravante.png", "ap": 2, "range": [3, 7], "launch": "CIRCLE", "target": "ENEMY", "cooldown": 3,
           "effects": [
             { "type": "DAMAGE", "min": 4, "max": 5 },
-            { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" }
+            { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" },
+            { "type": "STATE", "state": "entrave", "negative": true, "duration": 2, "name": "Entravé" }
           ],
           "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "root", "status": "aura_slow"},
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
+        },
+        {
+          "id": "pluie_de_fleches", "name": "Pluie de flèches", "description": "Une volée de flèches : touche les ennemis sur la case visée et sur les 4 cases autour.",
+          "icon": "./assets/spellicons/pluie_de_fleches.png", "ap": 4, "range": [4, 7], "rangeModifiable": true, "launch": "CIRCLE", "cooldown": 2, "zone": { "shape": "CIRCLE", "size": 1 },
+          "effects": [ { "type": "DAMAGE", "min": 7, "max": 9 } ],
+          "visual": {"impact": "arrow_rain", "impactOn": "cells", "impactSound": "./assets/sound/spells/impact1.ogg"},
+          "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
+        },
+        {
+          "id": "piege", "name": "Piège", "description": "Pose un piège sur une case libre pendant 2 tours : un ennemi qui y commence son tour subit 10 dégâts, perd 4 PM et reste entravé jusqu'à son tour suivant (Éclair du Mage : +30 %).",
+          "icon": "./assets/spellicons/piege.png", "ap": 3, "range": [1, 5], "launch": "CIRCLE", "target": "FREE_CELL", "cooldown": 3,
+          "effects": [
+            {
+              "type": "GLYPH", "duration": 2, "name": "Piège",
+              "glyph": {
+                "shape": "SINGLE", "size": 0,
+                "effects": [
+                  { "type": "DAMAGE", "targets": "ENEMIES", "min": 10, "max": 10 },
+                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -4, "duration": 0, "name": "Immobilisé" },
+                  { "type": "STATE", "targets": "ENEMIES", "state": "entrave", "negative": true, "duration": 1, "name": "Entravé" }
+                ]
+              }
+            }
+          ],
+          "visual": {"impact": "dust", "glyph": "trap", "glyphTrigger": "trap_snap"},
+          "sound": "./assets/sound/spells/impact3.ogg", "animation": "physical"
         }
       ]
     },
@@ -126,24 +168,25 @@
       "passive": { "type": "ON_CAST_POWER", "name": "Surcharge", "description": "Chaque sort lancé donne +10 % de puissance jusqu'à la fin du tour (3 fois maximum).", "bonus": 10, "maxStacks": 3 },
       "spells": [
         {
-          "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide.",
+          "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide. Combo Cible immobile : +30 % sur une cible entravée (Flèche entravante ou Piège de l'Archer).",
           "icon": "./assets/spellicons/eclair.png", "ap": 2, "range": [1, 6], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 3,
-          "effects": [ { "type": "DAMAGE", "min": 8, "max": 9 } ],
+          "effects": [ { "type": "DAMAGE", "min": 8, "max": 9, "combo": { "state": "entrave", "percent": 30, "name": "Cible immobile" } } ],
           "visual": {"projectile": {"effect": "bolt", "speed": 30, "arc": 0}, "impact": "spark"},
           "sound": "./assets/sound/spells/thunder1.ogg", "animation": "magical"
         },
         {
-          "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours.",
+          "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours. Les ennemis brûlés subissent +30 % du Châtiment du Protecteur.",
           "icon": "./assets/spellicons/boule_de_feu.png", "ap": 4, "range": [2, 6], "rangeModifiable": true, "launch": "CIRCLE", "cooldown": 2, "zone": { "shape": "CROSS", "size": 1 },
           "effects": [
             { "type": "DAMAGE", "targets": "ALL", "min": 12, "max": 15 },
-            { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" }
+            { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" },
+            { "type": "STATE", "state": "brule", "negative": true, "duration": 2, "name": "Brûlé" }
           ],
           "visual": {"projectile": {"effect": "fireball", "speed": 10, "arc": 0.3}, "impact": "explosion", "impactOn": "cells", "status": "burning", "tick": "burn_tick", "impactSound": "./assets/sound/spells/blast1.ogg"},
           "sound": "./assets/sound/spells/fire1.ogg", "animation": "magical"
         },
         {
-          "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts et perd 2 PM.",
+          "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts, perd 2 PM et reste gelé jusqu'à son tour suivant (Taillade, Charge et Tourbillon du Guerrier : +40 %).",
           "icon": "./assets/spellicons/glyphe_givre.png", "ap": 3, "range": [1, 5], "lineOfSight": false, "launch": "CIRCLE", "cooldown": 3,
           "effects": [
             {
@@ -152,7 +195,8 @@
                 "shape": "CIRCLE", "size": 1,
                 "effects": [
                   { "type": "DAMAGE", "targets": "ENEMIES", "min": 8, "max": 8 },
-                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -2, "duration": 0, "name": "Gel" }
+                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -2, "duration": 0, "name": "Gel" },
+                  { "type": "STATE", "targets": "ENEMIES", "state": "gele", "negative": true, "duration": 1, "name": "Gelé" }
                 ]
               }
             }
@@ -166,6 +210,27 @@
           "effects": [ { "type": "TELEPORT", "targets": "CASTER", "allowSwap": true } ],
           "visual": {"cast": "portal", "impact": "portal"},
           "sound": "./assets/sound/spells/teleport1.ogg", "animation": "magical"
+        },
+        {
+          "id": "vague_de_flammes", "name": "Vague de flammes", "description": "Une vague de feu en ligne droite sur 3 cases, qui épargne les alliés : dégâts puis brûlure de 3 pendant 2 tours. Les ennemis brûlés subissent +30 % du Châtiment du Protecteur.",
+          "icon": "./assets/spellicons/vague_de_flammes.png", "ap": 4, "range": [1, 3], "launch": "LINE", "cooldown": 2, "zone": { "shape": "LINE", "size": 2 },
+          "effects": [
+            { "type": "DAMAGE", "min": 9, "max": 11 },
+            { "type": "DOT", "min": 3, "max": 3, "duration": 2, "name": "Brûlure" },
+            { "type": "STATE", "state": "brule", "negative": true, "duration": 2, "name": "Brûlé" }
+          ],
+          "visual": {"impact": "flame_wave", "impactOn": "cells", "status": "burning", "tick": "burn_tick"},
+          "sound": "./assets/sound/spells/fire1.ogg", "animation": "magical"
+        },
+        {
+          "id": "prison_de_glace", "name": "Prison de glace", "description": "Enferme un ennemi dans la glace : -3 PM pendant 1 tour, et il reste gelé 2 tours (Taillade, Charge et Tourbillon du Guerrier : +40 %).",
+          "icon": "./assets/spellicons/prison_de_glace.png", "ap": 3, "range": [2, 6], "launch": "CIRCLE", "target": "ENEMY", "cooldown": 3,
+          "effects": [
+            { "type": "STAT_MOD", "stat": "MP", "min": -3, "duration": 1, "name": "Prison de glace" },
+            { "type": "STATE", "state": "gele", "negative": true, "duration": 2, "name": "Gelé" }
+          ],
+          "visual": {"cast": "shockwave_blue", "impact": "ice_prison", "status": "aura_ice"},
+          "sound": "./assets/sound/spells/ice1.ogg", "animation": "magical"
         }
       ]
     },
@@ -181,9 +246,9 @@
       "passive": { "type": "ALLY_AURA", "name": "Aura protectrice", "description": "Les alliés à 2 cases ou moins gagnent +10 % de résistance.", "stat": "RESISTANCE", "distance": 2, "bonus": 10 },
       "spells": [
         {
-          "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés.",
+          "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés. Combo Jugement ardent : +30 % sur une cible brûlée (Boule de feu ou Vague de flammes du Mage).",
           "icon": "./assets/spellicons/chatiment.png", "ap": 3, "range": [1, 4], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50 } ],
+          "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50, "combo": { "state": "brule", "percent": 30, "name": "Jugement ardent" } } ],
           "visual": {"impact": "hit_holy"},
           "sound": "./assets/sound/spells/impact3.ogg", "animation": "magical"
         },
@@ -209,6 +274,23 @@
             { "type": "DISPEL", "targets": "ENEMIES", "dispel": "POSITIVE" }
           ],
           "visual": {"cast": "purify_wave", "impact": "sparkles", "impactOn": "cells"},
+          "sound": "./assets/sound/spells/heal2.ogg", "animation": "magical"
+        },
+        {
+          "id": "barriere", "name": "Barrière", "description": "Un allié ou soi-même gagne +25 % de résistance et devient inamovible (ni poussé, ni attiré, ni échangé) pendant 1 tour.",
+          "icon": "./assets/spellicons/barriere.png", "ap": 3, "range": [0, 4], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "cooldown": 3,
+          "effects": [
+            { "type": "STAT_MOD", "targets": "ALLIES", "stat": "RESISTANCE", "min": 25, "duration": 1, "name": "Barrière" },
+            { "type": "STATE", "targets": "ALLIES", "state": "unmovable", "duration": 1, "name": "Inamovible" }
+          ],
+          "visual": {"impact": "barrier", "status": "aura_barrier"},
+          "sound": "./assets/sound/spells/shield1.ogg", "animation": "magical"
+        },
+        {
+          "id": "lien_de_vie", "name": "Lien de vie", "description": "Un allié ou soi-même récupère 7 PV au début de chacun de ses 3 prochains tours.",
+          "icon": "./assets/spellicons/lien_de_vie.png", "ap": 3, "range": [0, 5], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "cooldown": 2,
+          "effects": [ { "type": "HOT", "targets": "ALLIES", "min": 7, "max": 7, "duration": 3, "name": "Lien de vie" } ],
+          "visual": {"cast": "sparkles", "impact": "regen", "status": "aura_regen", "tick": "heal"},
           "sound": "./assets/sound/spells/heal2.ogg", "animation": "magical"
         }
       ]

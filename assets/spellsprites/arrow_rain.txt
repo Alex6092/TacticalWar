@@ -1,0 +1,104 @@
+
+arrow_rain.png
+size: 640, 576
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+arrow_rain
+  rotate: false
+  xy: 0, 0
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 0
+arrow_rain
+  rotate: false
+  xy: 128, 0
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 1
+arrow_rain
+  rotate: false
+  xy: 256, 0
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 2
+arrow_rain
+  rotate: false
+  xy: 384, 0
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 3
+arrow_rain
+  rotate: false
+  xy: 512, 0
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 4
+arrow_rain
+  rotate: false
+  xy: 0, 192
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 5
+arrow_rain
+  rotate: false
+  xy: 128, 192
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 6
+arrow_rain
+  rotate: false
+  xy: 256, 192
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 7
+arrow_rain
+  rotate: false
+  xy: 384, 192
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 8
+arrow_rain
+  rotate: false
+  xy: 512, 192
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 9
+arrow_rain
+  rotate: false
+  xy: 0, 384
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 10
+arrow_rain
+  rotate: false
+  xy: 128, 384
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 11
+arrow_rain
+  rotate: false
+  xy: 256, 384
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 12
+arrow_rain
+  rotate: false
+  xy: 384, 384
+  size: 128, 192
+  orig: 128, 192
+  offset: 0, 0
+  index: 13

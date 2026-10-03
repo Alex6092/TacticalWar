@@ -24,6 +24,15 @@ namespace tw
 			std::vector<Cell> path;
 		};
 
-		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng);
+		struct BotOptions
+		{
+			// Part des décisions (en %) où l'IA choisit au hasard parmi ses sorts utiles et ses
+			// déplacements possibles au lieu du meilleur choix : 0 pour le bot réseau et la simulation,
+			// plus pour la difficulté « Facile » de l'entraînement.
+			int mistakePercent = 0;
+		};
+
+		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng,
+			const BotOptions & options = BotOptions());
 	}
 }

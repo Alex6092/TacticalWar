@@ -22,14 +22,11 @@ namespace tw
 			// Portée d'attaque la plus longue du combattant (sorts offensifs).
 			int attackRange(const BattleState & state, const GameData & data, const Fighter & fighter)
 			{
-				const ClassDef * classDef = data.findClass(fighter.classId);
 				int range = 1;
-				if (classDef == nullptr)
-					return range;
-				for (const SpellDef & spell : classDef->spells)
+				for (const SpellDef * spell : fighterSpells(data, fighter))
 				{
-					if (isOffensive(spell))
-						range = std::max(range, effectiveMaxRange(state, data, fighter, spell));
+					if (isOffensive(*spell))
+						range = std::max(range, effectiveMaxRange(state, data, fighter, *spell));
 				}
 				return range;
 			}
@@ -77,6 +74,25 @@ namespace tw
 				}
 			}
 
+			// Un coéquipier vivant du lanceur a un sort qui profite de cet état (combinaison).
+			bool teammateExploits(const BattleState & state, const GameData & data, const Fighter & caster, const std::string & stateName)
+			{
+				for (const Fighter & ally : state.fighters)
+				{
+					if (!ally.alive || ally.team != caster.team || ally.id == caster.id)
+						continue;
+					for (const SpellDef * spell : fighterSpells(data, ally))
+					{
+						for (const EffectDef & effect : spell->effects)
+						{
+							if (effect.comboState == stateName)
+								return true;
+						}
+					}
+				}
+				return false;
+			}
+
 			// Valeur estimée d'un effet sur une cible (positive si l'effet sert l'équipe du lanceur).
 			int effectValue(const BattleState & state, const GameData & data, const Fighter & caster, const std::string & spellId, const EffectDef & effect, const Fighter & target)
 			{
@@ -88,6 +104,9 @@ namespace tw
 				{
 				case EffectType::DAMAGE:
 				case EffectType::LIFESTEAL:
+					// Combinaison : dégâts augmentés, et un petit bonus pour la rechercher.
+					if (enemy && !effect.comboState.empty() && target.hasState(effect.comboState))
+						average = average * (100 + effect.comboPercent) / 100 + 3;
 					// Bonus pour achever une cible affaiblie ; un allié touché coûte plus cher.
 					return enemy ? average + (target.hp <= average ? 15 : 0) : -average * 3 / 2;
 				case EffectType::DOT:
@@ -131,23 +150,28 @@ namespace tw
 					return 6 * useful;
 				}
 				case EffectType::STATE:
-					return enemy ? 3 : 0;
+					// Un état négatif sert contre un ennemi, un état positif sur un allié ; un état négatif
+					// vaut plus si un coéquipier peut en profiter (combinaison).
+					if (enemy != effect.negative)
+						return -3;
+					return effect.negative && teammateExploits(state, data, caster, effect.state) ? 7 : 3;
 				default:
 					return 0;
 				}
 			}
 
 			// Lance le sort le plus utile, d'après la valeur estimée de ses effets sur les combattants touchés.
-			bool chooseCast(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng, BotAction & action)
+			bool chooseCast(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng,
+				bool mistake, BotAction & action)
 			{
-				const ClassDef * classDef = data.findClass(me.classId);
-				if (classDef == nullptr)
-					return false;
-
+				std::vector<BotAction> useful;
 				int bestScore = 0;
-				for (int slot = 0; slot < (int)classDef->spells.size(); slot++)
+				for (int slot = 0; slot < SPELL_SLOTS; slot++)
 				{
-					const SpellDef & spell = classDef->spells[slot];
+					const SpellDef * slotSpell = spellOf(data, me, slot);
+					if (slotSpell == nullptr)
+						continue;
+					const SpellDef & spell = *slotSpell;
 					if (!checkSpellResources(me, spell).empty())
 						continue;
 
@@ -171,6 +195,18 @@ namespace tw
 									for (const EffectDef & triggered : effect.glyphEffects)
 										value += effectValue(state, data, me, spell.id, triggered, *fighter) * 3 / 4;
 								}
+								// Piège sur une case libre : un ennemi tout proche risque d'y passer.
+								if (effect.glyphShape == ZoneShape::SINGLE && state.fighterAt(cell) == nullptr && nearestEnemyDistance(state, me.team, cell) == 1)
+								{
+									for (const Fighter & enemy : state.fighters)
+									{
+										if (!enemy.alive || enemy.team == me.team || manhattan(enemy.position, cell) != 1)
+											continue;
+										for (const EffectDef & triggered : effect.glyphEffects)
+											value += effectValue(state, data, me, spell.id, triggered, enemy) / 3;
+										break;
+									}
+								}
 								continue;
 							}
 
@@ -190,6 +226,14 @@ namespace tw
 
 						// Un peu de hasard pour varier les combats.
 						int score = value * 4 + (int)(rng() % 4);
+						if (value >= 2)
+						{
+							BotAction candidate;
+							candidate.kind = BotAction::Kind::CAST;
+							candidate.slot = slot;
+							candidate.target = cell;
+							useful.push_back(candidate);
+						}
 						if (value >= 2 && score > bestScore)
 						{
 							bestScore = score;
@@ -199,20 +243,20 @@ namespace tw
 						}
 					}
 				}
+				// Erreur volontaire (difficulté « Facile ») : un sort utile au hasard.
+				if (mistake && !useful.empty())
+					action = useful[rng() % useful.size()];
 				return action.kind == BotAction::Kind::CAST;
 			}
 
 			// Un sort offensif pourrait-il toucher un ennemi depuis cette case (sans compter les PA) ?
 			bool canHitFrom(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, const Cell & from)
 			{
-				const ClassDef * classDef = data.findClass(me.classId);
-				if (classDef == nullptr)
-					return false;
-
 				Fighter moved = me;
 				moved.position = from;
-				for (const SpellDef & spell : classDef->spells)
+				for (const SpellDef * offensive : fighterSpells(data, me))
 				{
+					const SpellDef & spell = *offensive;
 					if (!isOffensive(spell))
 						continue;
 					for (const Cell & cell : castableCells(state, map, data, moved, spell))
@@ -228,7 +272,8 @@ namespace tw
 			// Déplacement : vers une case d'où un ennemi est à portée. Les combattants à distance y
 			// gardent leurs distances (et évitent le contact, qui les expose au tacle) ; ceux de
 			// mêlée vont au contact. Si aucun ennemi n'est atteignable ce tour-ci, tous s'approchent.
-			bool chooseMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, BotAction & action)
+			bool chooseMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng,
+				bool mistake, BotAction & action)
 			{
 				if (me.mp <= 0)
 					return false;
@@ -246,6 +291,16 @@ namespace tw
 					anyHit = anyHit || hits.back();
 				}
 
+				// Zone à tenir : y entrer ou y rester (surtout pour la disputer), sinon s'en rapprocher.
+				bool zone = state.zone.enabled && !state.zone.cells.empty();
+				bool present[3] = { false, false, false };
+				if (zone)
+					zonePresence(state, present);
+				int holdBonus = present[3 - me.team] ? 90 : 60;
+				bool allyHolds = false;
+				for (const Fighter & ally : state.fighters)
+					allyHolds = allyHolds || (zone && ally.alive && ally.team == me.team && ally.id != me.id && state.zone.contains(ally.position));
+
 				Cell best = me.position;
 				int bestScore = -1000000;
 				for (std::size_t i = 0; i < candidates.size(); i++)
@@ -260,12 +315,33 @@ namespace tw
 					else
 						score += (hits[i] ? 100 : 0) - distance * 4;
 
+					if (zone)
+					{
+						int toZone = 1000;
+						for (const Cell & zoneCell : state.zone.cells)
+							toZone = std::min(toZone, manhattan(zoneCell, cell));
+						if (ranged)
+						{
+							// Un tireur laisse la zone à un coéquipier qui la tient, et ne s'y expose pas au contact.
+							score += toZone == 0 ? (allyHolds ? 10 : holdBonus * 2 / 3) : -toZone * 3;
+							if (distance <= 1)
+								score -= 60;
+						}
+						else
+						{
+							score += toZone == 0 ? holdBonus : -toZone * 5;
+						}
+					}
+
 					if (score > bestScore)
 					{
 						bestScore = score;
 						best = cell;
 					}
 				}
+				// Erreur volontaire (difficulté « Facile ») : une case au hasard.
+				if (mistake)
+					best = candidates[rng() % candidates.size()];
 				if (best == me.position)
 					return false;
 
@@ -275,18 +351,21 @@ namespace tw
 			}
 		}
 
-		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng)
+		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng,
+			const BotOptions & options)
 		{
 			BotAction action;
 			const Fighter * me = state.findFighter(fighterId);
 			if (me == nullptr || !me->alive)
 				return action;
 
-			if (chooseCast(state, map, data, *me, rng, action))
+			// Pas de tirage sans erreurs prévues : le bot réseau et la simulation restent identiques.
+			bool mistake = options.mistakePercent > 0 && (int)(rng() % 100) < options.mistakePercent;
+			if (chooseCast(state, map, data, *me, rng, mistake, action))
 				return action;
 
 			action = BotAction();
-			if (chooseMove(state, map, data, *me, action))
+			if (chooseMove(state, map, data, *me, rng, mistake, action))
 				return action;
 
 			return BotAction();

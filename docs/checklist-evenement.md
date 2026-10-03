@@ -13,6 +13,8 @@
       d'identifiants générées dans `data\exports\fiches-equipes.html`.
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
+- [ ] Proposer aux élèves de s'entraîner avant le jour J : bouton « Entraînement » de l'écran de
+      connexion, sans serveur (voir `docs/regles-du-jeu.md`).
 
 ## Test grandeur nature sans joueurs
 
@@ -26,12 +28,16 @@
 2. Sur chaque PC joueur, lancer `TacticalWar.exe` et se connecter avec la fiche de l'équipe
    (l'adresse du serveur se règle sur l'écran de connexion).
 3. **Écran projeté** :
-   - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11) ;
+   - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11).
+     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs » ;
    - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré) ;
    - temps forts : chaque combat est enregistré (`data\replays\`) et peut être revu depuis l'écran
      spectateur, onglet « Rediffusions » (client connecté sans identifiants).
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
-   Les matchs se lancent automatiquement dès que les deux équipes sont libres.
+   Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
+   au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
+5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
+   match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 
 ## En cas de problème
 
@@ -42,5 +48,6 @@
 | Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
 | Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
+| Les émotes des joueurs gênent | Mettre `"emotes": false` dans `server.json`, puis relancer le serveur. |
 
 Sauvegarder le dossier `data\` du serveur après l'événement, puis supprimer les fiches d'identifiants.

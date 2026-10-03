@@ -1,5 +1,7 @@
 #include "TournamentJson.h"
 
+#include <algorithm>
+
 using namespace tw::tournament;
 
 namespace
@@ -61,7 +63,8 @@ bool tw::tournament::parseFormat(const std::string & text, Format & format)
 
 bool tw::tournament::parseReason(const std::string & text, ResultReason & reason)
 {
-	return parseEnum(text, reason, { ResultReason::KO, ResultReason::ROUND_LIMIT, ResultReason::FORFEIT, ResultReason::ADMIN, ResultReason::BYE });
+	return parseEnum(text, reason, { ResultReason::KO, ResultReason::ROUND_LIMIT, ResultReason::FORFEIT, ResultReason::ADMIN, ResultReason::BYE,
+		ResultReason::OBJECTIVE });
 }
 
 nlohmann::json tw::tournament::toJson(const Settings & settings)
@@ -75,7 +78,9 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "swissRounds", settings.swissRounds },
 		{ "swissTopCut", settings.swissTopCut },
 		{ "pointsForWin", settings.pointsForWin },
-		{ "pointsForLoss", settings.pointsForLoss }
+		{ "pointsForLoss", settings.pointsForLoss },
+		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
+		{ "zonePoints", settings.zonePoints }
 	};
 }
 
@@ -91,18 +96,33 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.swissTopCut = json.value("swissTopCut", settings.swissTopCut);
 	settings.pointsForWin = json.value("pointsForWin", settings.pointsForWin);
 	settings.pointsForLoss = json.value("pointsForLoss", settings.pointsForLoss);
+	settings.zoneMode = json.value("mode", std::string("KO")) == "ZONE";
+	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
 	return settings;
 }
 
 nlohmann::json tw::tournament::toJson(const MatchResult & result)
 {
-	return {
+	nlohmann::json json = {
 		{ "winner", result.winnerTeamId },
 		{ "reason", toString(result.reason) },
 		{ "hpA", result.hpPercentA },
 		{ "hpB", result.hpPercentB },
 		{ "rounds", result.rounds }
 	};
+	if (!result.players.empty())
+	{
+		nlohmann::json players = nlohmann::json::array();
+		for (const PlayerRecord & player : result.players)
+		{
+			players.push_back({
+				{ "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
+				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills }, { "mvp", player.mvp }
+			});
+		}
+		json["players"] = players;
+	}
+	return json;
 }
 
 MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
@@ -113,6 +133,19 @@ MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
 	result.hpPercentA = json.value("hpA", 0.0);
 	result.hpPercentB = json.value("hpB", 0.0);
 	result.rounds = json.value("rounds", 0);
+	for (const nlohmann::json & value : json.value("players", nlohmann::json::array()))
+	{
+		PlayerRecord player;
+		player.name = value.value("name", std::string());
+		player.className = value.value("class", std::string());
+		player.side = value.value("side", 0);
+		player.dealt = value.value("dealt", 0);
+		player.healed = value.value("healed", 0);
+		player.shielded = value.value("shielded", 0);
+		player.kills = value.value("kills", 0);
+		player.mvp = value.value("mvp", false);
+		result.players.push_back(player);
+	}
 	return result;
 }
 

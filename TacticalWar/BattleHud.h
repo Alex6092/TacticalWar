@@ -17,6 +17,10 @@ public:
 	std::function<void()> onEndTurn;
 	std::function<void(bool)> onReady;
 	std::function<void()> onClose;
+	// Entraînement : bouton "Rejouer" à côté de "Retour" sur l'écran de fin.
+	std::function<void()> onReplay;
+	// Émote choisie dans la liste (identifiant de BattleEngineLib/Emotes.h).
+	std::function<void(int)> onEmote;
 
 	void layout(const sf::Vector2u & windowSize);
 	void update(float deltatime);
@@ -28,10 +32,23 @@ public:
 	void showMessage(const sf::String & text, const sf::Color & color, float seconds);
 	void setHint(const sf::String & text);
 	void log(const sf::String & line, const sf::Color & color = sf::Color(230, 230, 230));
-	void showEnd(const sf::String & title, const sf::String & details, bool victory);
+	// Ligne du bilan de fin de combat.
+	struct EndRow
+	{
+		sf::String name;
+		int team = 0;
+		bool mvp = false;
+		int dealt = 0;
+		int healed = 0;
+		int shielded = 0;
+		int kills = 0;
+	};
+	void showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows);
 
 	// Mode spectateur : bandeau (équipes en présence) et bouton "Quitter" permanent.
 	void setSpectator(const sf::String & banner);
+	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
+	void showLeaveButton(const sf::String & text);
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
 	void setEndButtonText(const sf::String & text);
 
@@ -58,7 +75,8 @@ private:
 	};
 
 	tgui::Label::Ptr createLabel(unsigned int size, const sf::Color & color);
-	void setSpellBar(const tw::battle::ClassDef & classDef);
+	// Barre de sorts : les sorts emportés par le combattant.
+	void setSpellBar(const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
 
 	tgui::Gui * gui;
 	const sf::Font & font;
@@ -74,15 +92,21 @@ private:
 	tgui::Label::Ptr detailsLabel;
 	tgui::ChatBox::Ptr logBox;
 	std::vector<SpellButton> spells;
-	int spellBarClassId;
+	// Classe et sorts affichés dans la barre ("classe:indices").
+	std::string spellBarKey;
 	tgui::Button::Ptr endTurnButton;
+	tgui::Button::Ptr emoteButton;
+	tgui::Panel::Ptr emotePanel;
 	tgui::Button::Ptr readyButton;
 	bool readyState;
 	tgui::Panel::Ptr endPanel;
+	sf::Vector2f endPanelSize = sf::Vector2f(520, 220);
 	tgui::Button::Ptr endButton;
+	tgui::Button::Ptr replayButton;
 
 	bool spectator;
 	tgui::Label::Ptr bannerLabel;
+	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;
 	tgui::Label::Ptr cameraHelp;
 };

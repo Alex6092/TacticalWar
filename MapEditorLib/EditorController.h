@@ -13,14 +13,15 @@ namespace tw
 
 	namespace editor
 	{
-		enum class Tool { PAINT, FILL, RECTANGLE, START_TEAM1, START_TEAM2, ERASE_START };
+		enum class Tool { PAINT, FILL, RECTANGLE, START_TEAM1, START_TEAM2, ERASE_START, ZONE, ERASE_ZONE };
 
 		struct CellState
 		{
 			std::string tile;
 			int start = 0;
+			bool zone = false;	// Case de la zone à tenir
 
-			bool operator==(const CellState & other) const { return tile == other.tile && start == other.start; }
+			bool operator==(const CellState & other) const { return tile == other.tile && start == other.start && zone == other.zone; }
 			bool operator!=(const CellState & other) const { return !(*this == other); }
 		};
 

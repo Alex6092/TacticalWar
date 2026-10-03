@@ -51,7 +51,8 @@ namespace tw
 			ROUND_LIMIT,	// Décision aux points de vie après la limite de tours
 			FORFEIT,		// Équipe absente ou déconnectée
 			ADMIN,			// Résultat saisi par l'admin
-			BYE				// Exempt : victoire automatique
+			BYE,			// Exempt : victoire automatique
+			OBJECTIVE		// Zone à tenir : score atteint
 		};
 
 		// Origine d'une équipe dans un match.
@@ -75,6 +76,19 @@ namespace tw
 			static SlotRef bye() { return { Kind::BYE, 0 }; }
 		};
 
+		// Bilan d'un joueur dans un match (meilleurs joueurs du tournoi sur la page projetée).
+		struct PlayerRecord
+		{
+			std::string name;			// Nom affiché du joueur
+			std::string className;
+			int side = 0;				// 1 : équipe A du match, 2 : équipe B
+			int dealt = 0;
+			int healed = 0;
+			int shielded = 0;
+			int kills = 0;
+			bool mvp = false;
+		};
+
 		struct MatchResult
 		{
 			int winnerTeamId = UNKNOWN_TEAM;
@@ -83,6 +97,8 @@ namespace tw
 			double hpPercentA = 0;
 			double hpPercentB = 0;
 			int rounds = 0;
+			// Bilan des joueurs (vide pour un match sans combat : forfait, exempt).
+			std::vector<PlayerRecord> players;
 		};
 
 		struct TMatch
@@ -126,6 +142,10 @@ namespace tw
 
 			int pointsForWin = 3;
 			int pointsForLoss = 0;
+
+			// Mode des combats : KO (par défaut) ou zone à tenir, gagnée au premier à zonePoints points.
+			bool zoneMode = false;
+			int zonePoints = 5;
 		};
 
 		struct Stage

@@ -23,7 +23,19 @@ namespace tw
 		// combattants vivants bloquent la vue.
 		bool hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to);
 
-		const SpellDef * spellOf(const GameData & data, const Fighter & fighter, int spellIndex);
+		// Sorts au choix : chaque combattant emporte SPELL_SLOTS sorts parmi ceux de sa classe.
+		const int SPELL_SLOTS = 4;
+		// Choix par défaut : les premiers sorts de la classe.
+		std::vector<int> defaultSpells(const ClassDef & classDef);
+		// Choix demandé s'il est valable (SPELL_SLOTS indices distincts de sorts de la classe, ou tous
+		// ses sorts si elle en a moins), sinon le choix par défaut.
+		std::vector<int> validSpellChoice(const ClassDef & classDef, const std::vector<int> & requested);
+		// Choix au hasard (bots, entraînement), dans l'ordre des sorts de la classe.
+		std::vector<int> randomSpellChoice(const ClassDef & classDef, std::mt19937 & rng);
+		// Sort de l'emplacement "slot" de la barre du combattant (nullptr si aucun).
+		const SpellDef * spellOf(const GameData & data, const Fighter & fighter, int slot);
+		// Sorts emportés par le combattant, dans l'ordre de sa barre.
+		std::vector<const SpellDef *> fighterSpells(const GameData & data, const Fighter & fighter);
 		int effectiveMaxRange(const BattleState & state, const GameData & data, const Fighter & fighter, const SpellDef & spell);
 
 		// Cellules de la zone de lancer (forme et portée, sans la ligne de vue).
@@ -41,6 +53,15 @@ namespace tw
 
 		// Cellules touchées par la zone d'effet (dans la carte).
 		std::vector<Cell> impactCells(const BattleMap & map, const Cell & caster, const Cell & target, const ZoneDef & zone);
+
+		// Zone à tenir de la carte : les cases peintes dans l'éditeur, sinon 5 ou 6 cases praticables
+		// voisines, à égale distance de marche des deux équipes, au plus près du centre.
+		std::vector<Cell> objectiveZone(const BattleMap & map);
+		// Distance de marche de chaque équipe à la zone (depuis sa case de départ la plus proche) :
+		// distances[1] et distances[2], -1 si la zone est inaccessible.
+		void zoneDistances(const BattleMap & map, const std::vector<Cell> & zone, int distances[3]);
+		// Équipes présentes dans la zone (combattants vivants) : present[1] et present[2].
+		void zonePresence(const BattleState & state, bool present[3]);
 
 		// Déplacement : cellules atteignables avec les PM actuels (sans tenir compte du tacle).
 		std::vector<Cell> reachableCells(const BattleState & state, const BattleMap & map, const Fighter & fighter);
@@ -65,6 +86,12 @@ namespace tw
 
 		// Simule un déplacement (tacle compris) sans modifier l'état.
 		MovePreview previewMove(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & fighter, const std::vector<Cell> & path);
+
+		// Score du bilan d'un combattant : dégâts infligés + soins + boucliers / 2 + 25 par KO.
+		int recordScore(const FighterRecord & record);
+		// Meilleur combattant du combat (MVP) : plus haut score, l'équipe gagnante en cas d'égalité.
+		// -1 si personne n'a rien fait.
+		int chooseMvp(const BattleState & state);
 
 		// Direction dominante de "from" vers "to" (pas en x et y : -1, 0 ou 1).
 		Cell directionBetween(const Cell & from, const Cell & to);

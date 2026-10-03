@@ -28,6 +28,8 @@ void TWParser::createSession(tw::Match * match)
 {
 	std::int64_t deadline = nowMs() + (std::int64_t)config.classSelectionSeconds * 1000;
 	BattleSession * session = new BattleSession(nextSessionId++, match, gameData, match->getEnvironment(), deadline);
+	// Matchs amicaux : mode de server.json (un match de tournoi prend ensuite le réglage du tournoi).
+	session->setZonePoints(config.battleMode == "ZONE" ? config.zonePoints : 0);
 	sessions[session->getId()] = session;
 	match->setBattlePayload(session);
 }
@@ -50,13 +52,37 @@ void TWParser::sendGameData(ClientState * client)
 	send(client, gameDataMessage);
 }
 
-void TWParser::handlePickClass(ClientState * client, tw::Player * player, int classId)
+void TWParser::handlePickClass(ClientState * client, tw::Player * player, const std::string & body)
 {
 	BattleSession * session = sessionOfPlayer(player);
 	if (session == NULL || !player->getHasJoinBattle())
 		return;
 
-	if (session->chooseClass(player, classId))
+	// PC{"class": id, "spells": [indices]} ; ancien format PC<classId> : sorts par défaut.
+	int classId = 0;
+	std::vector<int> spells;
+	if (!body.empty() && body[0] == '{')
+	{
+		nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
+		if (pick.is_object())
+		{
+			classId = pick.value("class", 0);
+			if (pick.contains("spells") && pick["spells"].is_array())
+			{
+				for (const nlohmann::json & index : pick["spells"])
+				{
+					if (index.is_number_integer())
+						spells.push_back(index.get<int>());
+				}
+			}
+		}
+	}
+	else
+	{
+		classId = std::atoi(body.c_str());
+	}
+
+	if (session->chooseClass(player, classId, spells))
 	{
 		send(client, "PO" + std::to_string(classId) + "\n");
 		if (session->allClassesChosen())
@@ -164,6 +190,11 @@ void TWParser::handleBattleAction(ClientState * client, const std::string & op, 
 		{
 			result = engine->endTurn(fighterId, now);
 		}
+		else if (op == "CE")
+		{
+			result = config.emotesEnabled ? engine->emote(fighterId, body.at("id").get<int>(), now)
+				: tw::battle::ActionResult::failure("Les émotes sont désactivées par l'organisateur.");
+		}
 	}
 	catch (const nlohmann::json::exception &)
 	{
@@ -174,6 +205,39 @@ void TWParser::handleBattleAction(ClientState * client, const std::string & op, 
 		send(client, encode("ER", { { "op", op }, { "message", result.error } }));
 
 	broadcastBattleEvents(session);
+}
+
+void TWParser::handlePing(ClientState * client, const nlohmann::json & body)
+{
+	// Signal d'un joueur à son équipe : relayé à ses seuls coéquipiers. Ni les adversaires ni les
+	// spectateurs ne le reçoivent (l'écran projeté est visible des joueurs), et il n'est pas enregistré.
+	tw::Player * player = getPlayerFromClientState(client);
+	BattleSession * session = player != NULL ? sessionOfPlayer(player) : NULL;
+	if (session == NULL || session->getPhase() != BattleSession::Phase::BATTLE)
+		return;
+
+	const tw::battle::BattleState & state = session->getEngine()->getState();
+	const tw::battle::Fighter * fighter = state.findFighter(session->fighterIdOf(player));
+	tw::battle::Cell cell = { body.value("x", -1), body.value("y", -1) };
+	if (fighter == nullptr || !session->getEngine()->getMap().contains(cell))
+		return;
+
+	std::int64_t now = nowMs();
+	std::deque<std::int64_t> & recent = recentPings[player];
+	while (!recent.empty() && now - recent.front() > 5000)
+		recent.pop_front();
+	if (recent.size() >= 3)
+		return;
+	recent.push_back(now);
+
+	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y } });
+	for (tw::Player * mate : session->getParticipants())
+	{
+		const tw::battle::Fighter * other = state.findFighter(session->fighterIdOf(mate));
+		ClientState * mateClient = getClientStateFromPlayer(mate);
+		if (other != nullptr && other->team == fighter->team && mateClient != NULL && mate->getHasJoinBattle())
+			send(mateClient, message);
+	}
 }
 
 void TWParser::broadcastBattleEvents(BattleSession * session)
@@ -218,7 +282,44 @@ void TWParser::finishBattle(BattleSession * session)
 		reason = tw::tournament::ResultReason::FORFEIT;
 	else if (state.endReason == tw::battle::EndReason::ADMIN)
 		reason = tw::tournament::ResultReason::ADMIN;
-	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round);
+	else if (state.endReason == tw::battle::EndReason::OBJECTIVE)
+		reason = tw::tournament::ResultReason::OBJECTIVE;
+	// Bilan des joueurs : enregistré avec le résultat du tournoi, et affiché sur la page projetée.
+	std::vector<tw::tournament::PlayerRecord> players;
+	nlohmann::json mvp;
+	for (const tw::battle::Fighter & fighter : state.fighters)
+	{
+		const tw::battle::ClassDef * classDef = gameData.findClass(fighter.classId);
+		tw::tournament::PlayerRecord player;
+		player.name = fighter.name;
+		player.className = classDef != nullptr ? classDef->name : std::string();
+		player.side = fighter.team;
+		player.dealt = fighter.record.dealt;
+		player.healed = fighter.record.healed;
+		player.shielded = fighter.record.shielded;
+		player.kills = fighter.record.kills;
+		player.mvp = fighter.id == state.mvpFighterId;
+		players.push_back(player);
+		if (player.mvp)
+		{
+			mvp = { { "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
+				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills } };
+		}
+	}
+	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round, players);
+
+	recentBattles.push_front({
+		{ "name", match->getMatchName() },
+		{ "tournament", session->getTournamentId() },
+		{ "match", session->getTournamentMatchId() },
+		{ "teams", nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) }) },
+		{ "winner", state.winnerTeam },
+		{ "reason", tw::battle::toString(state.endReason) },
+		{ "rounds", state.round },
+		{ "mvp", mvp }
+	});
+	while (recentBattles.size() > 6)
+		recentBattles.pop_back();
 	stopRecording(session, { { "winner", state.winnerTeam }, { "reason", tw::battle::toString(state.endReason) }, { "rounds", state.round } }, true);
 
 	session->markEnded();
