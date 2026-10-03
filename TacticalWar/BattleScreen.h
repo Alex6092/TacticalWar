@@ -23,6 +23,8 @@
 
 namespace tw
 {
+	class BattleEventView;
+
 	// Écran de combat. Le serveur fait autorité :
 	// - "truth" est l'état du combat tel que le serveur l'a annoncé (mis à jour dès réception) ;
 	//   il sert aux prévisualisations (déplacement, zones de sort) avec les mêmes règles que le serveur ;
@@ -55,6 +57,12 @@ namespace tw
 		virtual void onMoveFinished();
 
 	protected:
+		// Animation des événements (une fonction par type d'événement) : voir BattleEventView.
+		friend class BattleEventView;
+
+		// Durée des animations d'action des personnages (attaque, dégâts, mort), en secondes.
+		static constexpr float ACTION_ANIMATION_SECONDS = 1.f;
+
 		// La galerie des effets (FxGalleryScreen) alimente cet écran avec un moteur de combat local.
 		struct FloatingText
 		{
@@ -116,6 +124,7 @@ namespace tw
 		bool awaitingServer;
 
 		std::deque<nlohmann::json> visualQueue;
+		std::unique_ptr<BattleEventView> eventView;
 		float stepRemaining;
 		bool waitingMove;
 		float waitingMoveTime;

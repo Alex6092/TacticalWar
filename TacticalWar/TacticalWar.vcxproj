@@ -158,6 +158,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleEventView.cpp" />
     <ClCompile Include="LocalBattleScreen.cpp" />
     <ClCompile Include="TrainingScreen.cpp" />
     <ClCompile Include="TrainingSetupScreen.cpp" />
@@ -226,6 +227,7 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BattleEventView.h" />
     <ClInclude Include="LocalBattleScreen.h" />
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />

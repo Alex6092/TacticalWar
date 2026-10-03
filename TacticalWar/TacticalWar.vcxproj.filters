@@ -149,4 +149,8 @@
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BattleEventView.cpp" />
+    <ClInclude Include="BattleEventView.h" />
+  </ItemGroup>
 </Project>
