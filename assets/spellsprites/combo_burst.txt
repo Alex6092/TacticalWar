@@ -1,0 +1,104 @@
+
+combo_burst.png
+size: 640, 640
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+combo_burst
+  rotate: false
+  xy: 0, 0
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 0
+combo_burst
+  rotate: false
+  xy: 160, 0
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 1
+combo_burst
+  rotate: false
+  xy: 320, 0
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 2
+combo_burst
+  rotate: false
+  xy: 480, 0
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 3
+combo_burst
+  rotate: false
+  xy: 0, 160
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 4
+combo_burst
+  rotate: false
+  xy: 160, 160
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 5
+combo_burst
+  rotate: false
+  xy: 320, 160
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 6
+combo_burst
+  rotate: false
+  xy: 480, 160
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 7
+combo_burst
+  rotate: false
+  xy: 0, 320
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 8
+combo_burst
+  rotate: false
+  xy: 160, 320
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 9
+combo_burst
+  rotate: false
+  xy: 320, 320
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 10
+combo_burst
+  rotate: false
+  xy: 480, 320
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 11
+combo_burst
+  rotate: false
+  xy: 0, 480
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 12
+combo_burst
+  rotate: false
+  xy: 160, 480
+  size: 160, 160
+  orig: 160, 160
+  offset: 0, 0
+  index: 13

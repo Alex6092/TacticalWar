@@ -1,6 +1,8 @@
 ﻿#include <doctest.h>
 
+#include <cmath>
 #include <filesystem>
+#include <functional>
 #include <random>
 #include <set>
 
@@ -798,4 +800,169 @@ TEST_CASE("Bot mistakes for easy training stay legal and vary the choices")
 		choices.insert(std::to_string((int)action.kind) + ":" + std::to_string(action.slot) + ":" + std::to_string(end.x) + "," + std::to_string(end.y));
 	}
 	CHECK(choices.size() >= 3);
+}
+
+TEST_CASE("Combos boost damage on a marked target and consume the mark when required")
+{
+	Arena arena({ { GUERRIER, { 5, 5 } } }, { { MAGE, { 5, 6 } } });
+	arena.playUntilTurnOf(0);
+	int taillade = spellIndex(GUERRIER, "taillade");
+
+	BattleState frozen = arena.state();
+	ActiveEffect mark;
+	mark.uid = frozen.nextUid++;
+	mark.type = EffectType::STATE;
+	mark.state = "gele";
+	mark.name = "Gelé";
+	mark.remainingTurns = 1;
+	frozen.findFighter(1)->effects.push_back(mark);
+
+	// Deux Taillade de suite (jets minimaux) : dégâts de chacune et combinaisons déclenchées.
+	auto strike = [&](const BattleState & start, std::vector<int> & damage, std::vector<nlohmann::json> & combos) {
+		BattleEngine engine(gameData(), arena.map, start, 1);
+		engine.setRollMode(BattleEngine::RollMode::MIN);
+		for (int i = 0; i < 2; i++)
+		{
+			int before = engine.getState().findFighter(1)->hp;
+			REQUIRE(engine.cast(0, taillade, { 5, 6 }, arena.now).ok);
+			damage.push_back(before - engine.getState().findFighter(1)->hp);
+		}
+		CHECK_FALSE(engine.getState().findFighter(1)->hasState("gele"));
+		nlohmann::json batch = engine.flushEvents();
+		for (const nlohmann::json & event : batch["ev"])
+		{
+			if (event["t"] == "combo")
+				combos.push_back(event);
+		}
+	};
+
+	std::vector<int> plain, boosted;
+	std::vector<nlohmann::json> none, triggered;
+	strike(arena.state(), plain, none);
+	strike(frozen, boosted, triggered);
+
+	CHECK(none.empty());
+	REQUIRE(triggered.size() == 1);
+	CHECK(triggered[0]["name"] == "Brise-glace");
+	CHECK(triggered[0]["percent"].get<int>() == 40);
+	CHECK(triggered[0]["src"].get<int>() == 0);
+	CHECK(triggered[0]["f"].get<int>() == 1);
+	// +40 % sur la première, la cible dégèle : pas de bonus sur la seconde.
+	CHECK(boosted[0] == (int)std::lround(plain[0] * 1.4));
+	CHECK(boosted[1] == plain[1]);
+
+	// L'aperçu annonce la combinaison et compte le bonus.
+	std::vector<TargetPreview> previews = previewSpell(frozen, arena.map, gameData(), 0, taillade, { 5, 6 });
+	REQUIRE(previews.size() == 1);
+	CHECK(previews[0].minDamage == boosted[0]);
+	const std::vector<std::string> & notes = previews[0].notes;
+	CHECK(std::find(notes.begin(), notes.end(), "Combo Brise-glace +40 %") != notes.end());
+}
+
+TEST_CASE("Entangling arrow marks the target for the Mage until the end of its second turn")
+{
+	Arena arena({ { ARCHER, { 2, 2 } }, { MAGE, { 3, 2 } } }, { { GUERRIER, { 2, 7 } } });
+	arena.playUntilTurnOf(0);
+	REQUIRE(arena.engine->cast(0, spellIndex(ARCHER, "fleche_entravante"), { 2, 7 }, arena.now).ok);
+	REQUIRE(arena.fighter(2).hasState("entrave"));
+	// Une marque est négative : la purification d'un allié l'enlève, celle d'un ennemi non.
+	for (const ActiveEffect & effect : arena.fighter(2).effects)
+	{
+		if (effect.type == EffectType::STATE)
+			CHECK_FALSE(effect.positive);
+	}
+
+	// Le Mage en profite à son tour, sans consommer la marque ; elle s'efface après deux tours de la cible.
+	int targetTurnEnds = 0;
+	bool comboChecked = false;
+	for (int guard = 0; arena.fighter(2).hasState("entrave"); guard++)
+	{
+		REQUIRE(guard < 20);
+		int active = arena.active();
+		if (active == 1 && !comboChecked)
+		{
+			arena.eventsOfType("combo");
+			REQUIRE(arena.engine->cast(1, spellIndex(MAGE, "eclair"), { 2, 7 }, arena.now).ok);
+			std::vector<nlohmann::json> combos = arena.eventsOfType("combo");
+			REQUIRE(combos.size() == 1);
+			CHECK(combos[0]["name"] == "Cible immobile");
+			CHECK(arena.fighter(2).hasState("entrave"));
+			comboChecked = true;
+		}
+		if (active == 2)
+			targetTurnEnds++;
+		REQUIRE(arena.engine->endTurn(active, arena.now).ok);
+	}
+	CHECK(comboChecked);
+	CHECK(targetTurnEnds == 2);
+}
+
+TEST_CASE("Fireball marks burned enemies only and the frost glyph freezes until the next turn")
+{
+	Arena arena({ { MAGE, { 2, 7 } }, { GUERRIER, { 6, 6 } } }, { { PROTECTEUR, { 6, 7 } } });
+	arena.playUntilTurnOf(0);
+	REQUIRE(arena.engine->cast(0, spellIndex(MAGE, "boule_de_feu"), { 6, 7 }, arena.now).ok);
+	CHECK(arena.fighter(2).hasState("brule"));
+	// L'allié touché brûle aussi, mais n'est pas marqué.
+	CHECK(arena.fighter(1).effects.size() > 0);
+	CHECK_FALSE(arena.fighter(1).hasState("brule"));
+
+	Arena frost({ { MAGE, { 2, 7 } }, { GUERRIER, { 2, 9 } } }, { { ARCHER, { 6, 7 } } });
+	frost.playUntilTurnOf(0);
+	REQUIRE(frost.engine->cast(0, spellIndex(MAGE, "glyphe_givre"), { 6, 7 }, frost.now).ok);
+	CHECK_FALSE(frost.fighter(2).hasState("gele"));
+	frost.playUntilTurnOf(2);
+	CHECK(frost.fighter(2).hasState("gele"));
+	// Toujours gelé après son tour : le Guerrier peut en profiter.
+	REQUIRE(frost.engine->endTurn(2, frost.now).ok);
+	CHECK(frost.fighter(2).hasState("gele"));
+}
+
+TEST_CASE("Each combo uses a mark set by a spell of another class")
+{
+	std::map<std::string, std::set<int>> producers;
+	std::function<void(int, const EffectDef &)> scan = [&](int classId, const EffectDef & effect) {
+		if (effect.type == EffectType::STATE && effect.negative)
+			producers[effect.state].insert(classId);
+		for (const EffectDef & triggered : effect.glyphEffects)
+			scan(classId, triggered);
+	};
+	for (const ClassDef & classDef : gameData().classes)
+	{
+		for (const SpellDef & spell : classDef.spells)
+		{
+			for (const EffectDef & effect : spell.effects)
+				scan(classDef.id, effect);
+		}
+	}
+
+	int combos = 0;
+	for (const ClassDef & classDef : gameData().classes)
+	{
+		for (const SpellDef & spell : classDef.spells)
+		{
+			for (const EffectDef & effect : spell.effects)
+			{
+				if (effect.comboState.empty())
+					continue;
+				combos++;
+				INFO(spell.id << " : " << effect.comboState);
+				REQUIRE(producers.count(effect.comboState) == 1);
+				bool otherClass = false;
+				for (int producer : producers[effect.comboState])
+					otherClass = otherClass || producer != classDef.id;
+				CHECK(otherClass);
+				CHECK_FALSE(effect.comboName.empty());
+			}
+		}
+	}
+	CHECK(combos >= 4);
+
+	// Une combinaison doit porter sur des dégâts directs, avec un état et un bonus.
+	GameData data;
+	std::string error;
+	CHECK_FALSE(data.loadFromJsonText(R"({ "classes": [ { "id": 1, "name": "T", "stats": { "MAX_HP": 10 }, "spells": [
+		{ "id": "s", "effects": [ { "type": "HEAL", "min": 5, "combo": { "state": "x", "percent": 20 } } ] } ] } ] })", error));
+	CHECK_FALSE(data.loadFromJsonText(R"({ "classes": [ { "id": 1, "name": "T", "stats": { "MAX_HP": 10 }, "spells": [
+		{ "id": "s", "effects": [ { "type": "DAMAGE", "min": 5, "combo": { "state": "x" } } ] } ] } ] })", error));
 }

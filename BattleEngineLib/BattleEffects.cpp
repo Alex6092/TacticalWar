@@ -115,12 +115,16 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 	switch (effect.type)
 	{
 	case EffectType::DAMAGE:
-		dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max)), caster.id, "spell");
+	{
+		int combo = triggerCombo(caster, effect, target);
+		dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max), combo), caster.id, "spell");
 		break;
+	}
 
 	case EffectType::LIFESTEAL:
 	{
-		int dealt = dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max)), caster.id, "spell");
+		int combo = triggerCombo(caster, effect, target);
+		int dealt = dealDamage(target, computeDamage(caster, target, roll(effect.min, effect.max), combo), caster.id, "spell");
 		if (caster.alive && dealt > 0)
 			heal(caster, dealt * effect.percent / 100, caster.id, "lifesteal");
 		break;
@@ -191,7 +195,7 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 		stateEffect.casterId = caster.id;
 		stateEffect.spellId = spellId;
 		stateEffect.name = effect.name.empty() ? effect.state : effect.name;
-		stateEffect.positive = true;
+		stateEffect.positive = !effect.negative;
 		addActiveEffect(target, stateEffect, effect.refresh);
 		break;
 	}
@@ -221,7 +225,22 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 	}
 }
 
-int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, int baseRoll) const
+int BattleEngine::triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target)
+{
+	if (effect.comboState.empty() || effect.comboPercent <= 0 || !target.hasState(effect.comboState))
+		return 0;
+
+	emit({ { "t", "combo" }, { "f", target.id }, { "src", caster.id }, { "name", effect.comboName }, { "percent", effect.comboPercent } });
+	if (effect.comboConsumes)
+	{
+		removeEffects(target, [&](const ActiveEffect & active) {
+			return active.type == EffectType::STATE && active.state == effect.comboState;
+		});
+	}
+	return effect.comboPercent;
+}
+
+int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, int baseRoll, int comboPercent) const
 {
 	int power = effectiveStat(state, data, caster, Stat::POWER);
 
@@ -246,7 +265,7 @@ int BattleEngine::computeDamage(const Fighter & caster, const Fighter & target, 
 	int maxResistance = data.rules.maxResistance;
 	int resistance = std::max(-maxResistance, std::min(maxResistance, effectiveStat(state, data, target, Stat::RESISTANCE)));
 
-	double damage = baseRoll * (100.0 + power) / 100.0 * (100.0 - resistance) / 100.0;
+	double damage = baseRoll * (100.0 + power) / 100.0 * (100.0 + comboPercent) / 100.0 * (100.0 - resistance) / 100.0;
 	return std::max(0, (int)std::lround(damage));
 }
 

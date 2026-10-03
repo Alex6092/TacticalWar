@@ -55,10 +55,15 @@ La section `events` associe un effet aux événements qui ne dépendent pas d'un
 - `death` : un combattant est mis hors combat ;
 - `collision` : un combattant poussé heurte un obstacle ;
 - `push`, `pull`, `dash` : poussée, attraction, bond ;
-- `lifesteal` : vol de vie.
+- `lifesteal` : vol de vie ;
+- `combo` : une combinaison se déclenche (éclat doré sur la cible, avec le son `assets/sound/ui/combo.ogg`).
 
-Le client joue aussi directement `ping` et `ping_arrow` : le signal d'un coéquipier (anneau au sol et
-flèche, dessinés par `tools/fx/import_fx.py`).
+Le client joue aussi directement :
+- `ping` et `ping_arrow` : le signal d'un coéquipier (anneau au sol et flèche) ;
+- `combo_mark` : en boucle sous un combattant qui porte une marque de combinaison (état négatif :
+  gelé, entravé, provoqué, brûlé), à la place du visuel `status` du sort qui l'a posée.
+
+Ces planches sont dessinées par `tools/fx/import_fx.py`.
 
 ## Galerie de réglage
 
