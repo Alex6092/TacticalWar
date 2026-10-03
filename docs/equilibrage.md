@@ -45,3 +45,18 @@ Modifications :
 
 Sans le 4e PM et la Charge améliorée, le Guerrier restait à 34 % : il a besoin de mobilité pour
 rattraper un tireur qui recule.
+
+## Combinaisons entre classes (octobre 2026)
+
+Mesures sur 2000 combats (graine 7), avant et après l'ajout des combinaisons (voir `docs/regles-du-jeu.md`) :
+
+| Classe | Avant | Après |
+|---|---|---|
+| Guerrier | 46,1 % | 46,6 % |
+| Archer | 52,3 % | 52,4 % |
+| Mage | 48,4 % | 51,2 % |
+| Protecteur | 53,3 % | 49,7 % |
+
+Les compositions qui disposent d'une combinaison progressent, sans dépasser 55 % : Guerrier + Mage passe
+de 47 à 52 %. Pour 100 combats, l'IA déclenche Brise-glace 20 fois, Cible immobile 25 fois, Dans le
+mille 32 fois et Jugement ardent 52 fois. Le rapport du simulateur donne ces chiffres à chaque essai.

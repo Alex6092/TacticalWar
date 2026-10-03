@@ -76,6 +76,15 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::vector<int> rounds;
 	double winnerHp = 0;
 	int unfinished = 0;
+	// Combinaisons déclenchées (nom -> nombre).
+	std::map<std::string, int> combos;
+	auto countCombos = [&combos](const nlohmann::json & batch) {
+		for (const nlohmann::json & event : batch["ev"])
+		{
+			if (event.value("t", std::string()) == "combo")
+				combos[event.value("name", std::string())]++;
+		}
+	};
 
 	auto className = [&](int classId) {
 		const ClassDef * classDef = data.findClass(classId);
@@ -121,7 +130,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			// Temps simulé : bien en dessous de la durée d'un tour, aucun tour ne passe par minuteur.
 			now += 100;
 			engine.tick(now);
-			engine.flushEvents();
+			countCombos(engine.flushEvents());
 
 			int active = engine.getState().activeFighterId();
 			if (active < 0 || engine.getState().phase != BattlePhase::FIGHT)
@@ -148,6 +157,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 				engine.endTurn(active, now);
 		}
 
+		countCombos(engine.flushEvents());
 		if (!engine.isOver())
 		{
 			unfinished++;
@@ -224,6 +234,19 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		for (const auto & entry : endReasons)
 			std::cout << "  " << entry.first << " " << percent(100.0 * entry.second / finished);
 		std::cout << "\n";
+	}
+
+	if (finished > 0)
+	{
+		std::cout << "\nCombinaisons déclenchées (pour 100 combats) :";
+		if (combos.empty())
+			std::cout << " aucune";
+		std::cout << "\n";
+		for (const auto & entry : combos)
+		{
+			std::cout << "  " << std::left << std::setw(18) << entry.first << std::right << std::setw(8) << std::fixed << std::setprecision(1)
+				<< 100.0 * entry.second / finished << "   (" << entry.second << " au total)\n";
+		}
 	}
 
 	std::cout << "\nVictoires de l'équipe 1 par carte (50 % = départs équitables) :\n";

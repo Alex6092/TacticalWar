@@ -72,7 +72,21 @@ namespace
 		effect.allowSwap = object.value("allowSwap", false);
 		effect.refresh = object.value("refresh", true);
 		effect.state = object.value("state", std::string());
+		effect.negative = object.value("negative", false);
 		effect.name = object.value("name", std::string());
+
+		if (object.contains("combo"))
+		{
+			const json & combo = object["combo"];
+			effect.comboState = combo.at("state").get<std::string>();
+			effect.comboPercent = combo.value("percent", 0);
+			effect.comboName = combo.value("name", effect.comboState);
+			effect.comboConsumes = combo.value("consumes", false);
+			if (effect.type != EffectType::DAMAGE && effect.type != EffectType::LIFESTEAL)
+				throw std::runtime_error("combinaison sur un effet sans dégâts directs");
+			if (effect.comboState.empty() || effect.comboPercent <= 0)
+				throw std::runtime_error("combinaison sans état ou sans bonus");
+		}
 
 		if (object.contains("glyph"))
 		{

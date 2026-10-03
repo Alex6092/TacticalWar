@@ -77,6 +77,28 @@ namespace tw
 				}
 			}
 
+			// Un coéquipier vivant du lanceur a un sort qui profite de cet état (combinaison).
+			bool teammateExploits(const BattleState & state, const GameData & data, const Fighter & caster, const std::string & stateName)
+			{
+				for (const Fighter & ally : state.fighters)
+				{
+					if (!ally.alive || ally.team != caster.team || ally.id == caster.id)
+						continue;
+					const ClassDef * classDef = data.findClass(ally.classId);
+					if (classDef == nullptr)
+						continue;
+					for (const SpellDef & spell : classDef->spells)
+					{
+						for (const EffectDef & effect : spell.effects)
+						{
+							if (effect.comboState == stateName)
+								return true;
+						}
+					}
+				}
+				return false;
+			}
+
 			// Valeur estimée d'un effet sur une cible (positive si l'effet sert l'équipe du lanceur).
 			int effectValue(const BattleState & state, const GameData & data, const Fighter & caster, const std::string & spellId, const EffectDef & effect, const Fighter & target)
 			{
@@ -88,6 +110,9 @@ namespace tw
 				{
 				case EffectType::DAMAGE:
 				case EffectType::LIFESTEAL:
+					// Combinaison : dégâts augmentés, et un petit bonus pour la rechercher.
+					if (enemy && !effect.comboState.empty() && target.hasState(effect.comboState))
+						average = average * (100 + effect.comboPercent) / 100 + 3;
 					// Bonus pour achever une cible affaiblie ; un allié touché coûte plus cher.
 					return enemy ? average + (target.hp <= average ? 15 : 0) : -average * 3 / 2;
 				case EffectType::DOT:
@@ -131,7 +156,11 @@ namespace tw
 					return 6 * useful;
 				}
 				case EffectType::STATE:
-					return enemy ? 3 : 0;
+					// Un état négatif sert contre un ennemi, un état positif sur un allié ; un état négatif
+					// vaut plus si un coéquipier peut en profiter (combinaison).
+					if (enemy != effect.negative)
+						return -3;
+					return effect.negative && teammateExploits(state, data, caster, effect.state) ? 7 : 3;
 				default:
 					return 0;
 				}

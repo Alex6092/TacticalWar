@@ -25,18 +25,18 @@
       "passive": { "type": "LOW_HP_DAMAGE", "name": "Rage", "description": "+15 % de dégâts sous 50 % des PV, +30 % sous 25 %.", "threshold": 50, "bonus": 15, "threshold2": 25, "bonus2": 30 },
       "spells": [
         {
-          "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps.",
+          "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps. Combo Brise-glace : +40 % sur une cible gelée (Glyphe de givre du Mage), qui dégèle.",
           "icon": "./assets/spellicons/taillade.png", "ap": 3, "range": [1, 1], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 16, "max": 19 } ],
+          "effects": [ { "type": "DAMAGE", "min": 16, "max": 19, "combo": { "state": "gele", "percent": 40, "name": "Brise-glace", "consumes": true } } ],
           "visual": {"impact": "slash_x"},
           "sound": "./assets/sound/spells/punch1.ogg", "animation": "physical"
         },
         {
-          "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour).",
+          "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour). Combo Brise-glace : +40 % sur une cible gelée, qui dégèle.",
           "icon": "./assets/spellicons/charge.png", "ap": 3, "range": [2, 5], "launch": "LINE", "target": "ENEMY", "cooldown": 2,
           "effects": [
             { "type": "DASH", "targets": "CASTER" },
-            { "type": "DAMAGE", "min": 8, "max": 10 },
+            { "type": "DAMAGE", "min": 8, "max": 10, "combo": { "state": "gele", "percent": 40, "name": "Brise-glace", "consumes": true } },
             { "type": "STAT_MOD", "stat": "MP", "min": -1, "duration": 1, "name": "Ralenti" }
           ],
           "visual": {"impact": "claw_red", "status": "aura_slow", "impactSound": "./assets/sound/spells/punch5.ogg"},
@@ -53,10 +53,11 @@
           "sound": "./assets/sound/spells/boost.ogg", "animation": "magical"
         },
         {
-          "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour.",
+          "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour. L'ennemi est provoqué 2 tours : Tir précis de l'Archer lui inflige +30 %.",
           "icon": "./assets/spellicons/provocation.png", "ap": 2, "range": [2, 6], "launch": "LINE", "target": "ENEMY", "cooldown": 3,
           "effects": [
             { "type": "PULL", "min": 3 },
+            { "type": "STATE", "state": "provoque", "negative": true, "duration": 2, "name": "Provoqué" },
             { "type": "STAT_MOD", "targets": "CASTER", "stat": "LOCK", "min": 4, "duration": 1, "name": "Provocation" }
           ],
           "visual": {"cast": "roar"},
@@ -76,9 +77,9 @@
       "passive": { "type": "DISTANCE_DAMAGE", "name": "Tireur d'élite", "description": "+15 % de dégâts si la cible est à 6 cases ou plus.", "distance": 6, "bonus": 15 },
       "spells": [
         {
-          "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée.",
+          "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée. Combo Dans le mille : +30 % sur une cible provoquée (Provocation du Guerrier).",
           "icon": "./assets/spellicons/tir_precis.png", "ap": 3, "range": [4, 9], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "DAMAGE", "min": 11, "max": 13 } ],
+          "effects": [ { "type": "DAMAGE", "min": 11, "max": 13, "combo": { "state": "provoque", "percent": 30, "name": "Dans le mille" } } ],
           "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "hit_red"},
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
@@ -103,11 +104,12 @@
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
         {
-          "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour.",
+          "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour. La cible est entravée 2 tours : Éclair du Mage lui inflige +30 %.",
           "icon": "./assets/spellicons/fleche_entravante.png", "ap": 2, "range": [3, 7], "launch": "CIRCLE", "target": "ENEMY", "cooldown": 3,
           "effects": [
             { "type": "DAMAGE", "min": 4, "max": 5 },
-            { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" }
+            { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" },
+            { "type": "STATE", "state": "entrave", "negative": true, "duration": 2, "name": "Entravé" }
           ],
           "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "root", "status": "aura_slow"},
           "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
@@ -126,24 +128,25 @@
       "passive": { "type": "ON_CAST_POWER", "name": "Surcharge", "description": "Chaque sort lancé donne +10 % de puissance jusqu'à la fin du tour (3 fois maximum).", "bonus": 10, "maxStacks": 3 },
       "spells": [
         {
-          "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide.",
+          "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide. Combo Cible immobile : +30 % sur une cible entravée (Flèche entravante de l'Archer).",
           "icon": "./assets/spellicons/eclair.png", "ap": 2, "range": [1, 6], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 3,
-          "effects": [ { "type": "DAMAGE", "min": 8, "max": 9 } ],
+          "effects": [ { "type": "DAMAGE", "min": 8, "max": 9, "combo": { "state": "entrave", "percent": 30, "name": "Cible immobile" } } ],
           "visual": {"projectile": {"effect": "bolt", "speed": 30, "arc": 0}, "impact": "spark"},
           "sound": "./assets/sound/spells/thunder1.ogg", "animation": "magical"
         },
         {
-          "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours.",
+          "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours. Les ennemis brûlés subissent +30 % du Châtiment du Protecteur.",
           "icon": "./assets/spellicons/boule_de_feu.png", "ap": 4, "range": [2, 6], "rangeModifiable": true, "launch": "CIRCLE", "cooldown": 2, "zone": { "shape": "CROSS", "size": 1 },
           "effects": [
             { "type": "DAMAGE", "targets": "ALL", "min": 12, "max": 15 },
-            { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" }
+            { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" },
+            { "type": "STATE", "state": "brule", "negative": true, "duration": 2, "name": "Brûlé" }
           ],
           "visual": {"projectile": {"effect": "fireball", "speed": 10, "arc": 0.3}, "impact": "explosion", "impactOn": "cells", "status": "burning", "tick": "burn_tick", "impactSound": "./assets/sound/spells/blast1.ogg"},
           "sound": "./assets/sound/spells/fire1.ogg", "animation": "magical"
         },
         {
-          "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts et perd 2 PM.",
+          "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts, perd 2 PM et reste gelé jusqu'à son tour suivant (Taillade et Charge du Guerrier : +40 %).",
           "icon": "./assets/spellicons/glyphe_givre.png", "ap": 3, "range": [1, 5], "lineOfSight": false, "launch": "CIRCLE", "cooldown": 3,
           "effects": [
             {
@@ -152,7 +155,8 @@
                 "shape": "CIRCLE", "size": 1,
                 "effects": [
                   { "type": "DAMAGE", "targets": "ENEMIES", "min": 8, "max": 8 },
-                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -2, "duration": 0, "name": "Gel" }
+                  { "type": "STAT_MOD", "targets": "ENEMIES", "stat": "MP", "min": -2, "duration": 0, "name": "Gel" },
+                  { "type": "STATE", "targets": "ENEMIES", "state": "gele", "negative": true, "duration": 1, "name": "Gelé" }
                 ]
               }
             }
@@ -181,9 +185,9 @@
       "passive": { "type": "ALLY_AURA", "name": "Aura protectrice", "description": "Les alliés à 2 cases ou moins gagnent +10 % de résistance.", "stat": "RESISTANCE", "distance": 2, "bonus": 10 },
       "spells": [
         {
-          "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés.",
+          "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés. Combo Jugement ardent : +30 % sur une cible brûlée (Boule de feu du Mage).",
           "icon": "./assets/spellicons/chatiment.png", "ap": 3, "range": [1, 4], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
-          "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50 } ],
+          "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50, "combo": { "state": "brule", "percent": 30, "name": "Jugement ardent" } } ],
           "visual": {"impact": "hit_holy"},
           "sound": "./assets/sound/spells/impact3.ogg", "animation": "magical"
         },

@@ -95,7 +95,9 @@ namespace tw
 			// Effets (BattleEffects.cpp)
 			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds);
 			void applyEffectToTarget(Fighter & caster, const std::string & spellId, const EffectDef & effect, Fighter & target, const Cell & targetCell);
-			int computeDamage(const Fighter & caster, const Fighter & target, int roll) const;
+			int computeDamage(const Fighter & caster, const Fighter & target, int roll, int comboPercent = 0) const;
+			// Combinaison de l'effet sur la cible : bonus de dégâts en %, 0 sans combinaison.
+			int triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target);
 			int dealDamage(Fighter & target, int amount, int sourceId, const std::string & kind);
 			int heal(Fighter & target, int amount, int sourceId, const std::string & kind);
 			void addActiveEffect(Fighter & target, ActiveEffect effect, bool refresh);

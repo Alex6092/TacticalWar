@@ -116,7 +116,15 @@ namespace tw
 			bool refresh = true;		// Effet non cumulable : la durée est rafraîchie
 			DispelMode dispel = DispelMode::NEGATIVE;
 			std::string state;
+			bool negative = false;		// État négatif (une faiblesse : retiré par une purification des alliés)
 			std::string name;			// Libellé affiché (ex : "Poison")
+
+			// Combinaison (DAMAGE, LIFESTEAL) : sur une cible dans l'état comboState (posé par le sort
+			// d'une autre classe), dégâts augmentés de comboPercent %, puis l'état est retiré si comboConsumes.
+			std::string comboState;
+			int comboPercent = 0;
+			std::string comboName;
+			bool comboConsumes = false;
 
 			// Glyphe : zone, cibles et effets déclenchés au début du tour d'un combattant dedans.
 			ZoneShape glyphShape = ZoneShape::SINGLE;
