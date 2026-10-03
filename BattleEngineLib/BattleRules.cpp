@@ -1,5 +1,6 @@
 ﻿#include "BattleRules.h"
 
+#include <algorithm>
 #include <cmath>
 #include <deque>
 #include <limits>
@@ -53,6 +54,14 @@ int tw::battle::effectiveStat(const BattleState & state, const GameData & data, 
 	}
 
 	return value;
+}
+
+int tw::battle::periodicDamage(const BattleState & state, const GameData & data, const Fighter & bearer, int value, int casterPower)
+{
+	int maxResistance = data.rules.maxResistance;
+	int resistance = std::max(-maxResistance, std::min(maxResistance, effectiveStat(state, data, bearer, Stat::RESISTANCE)));
+	int damage = (int)std::lround(value * (100.0 + casterPower) / 100.0 * (100.0 - resistance) / 100.0);
+	return std::max(0, damage);
 }
 
 bool tw::battle::hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to)

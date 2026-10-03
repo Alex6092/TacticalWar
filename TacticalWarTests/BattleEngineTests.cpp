@@ -5,6 +5,7 @@
 
 #include <BattleEngine.h>
 #include <BattleMirror.h>
+#include <BattlePreview.h>
 
 using namespace tw::battle;
 
@@ -532,4 +533,135 @@ TEST_CASE("Random battles always end and every event serializes")
 		CHECK(arena.state().round <= gameData().rules.maxRounds + 1);
 		CHECK(arena.engine->snapshot(-1, arena.now)["fighters"].size() == 4);
 	}
+}
+
+namespace
+{
+	// Aperçu d'un combattant (le lanceur peut aussi en avoir un : passif à chaque sort, vol de vie…).
+	const TargetPreview * previewOf(const std::vector<TargetPreview> & previews, int fighterId)
+	{
+		for (const TargetPreview & preview : previews)
+		{
+			if (preview.fighterId == fighterId)
+				return &preview;
+		}
+		return nullptr;
+	}
+}
+
+TEST_CASE("Spell preview brackets the damage of real casts")
+{
+	// Éclair du Mage sur un Guerrier : les dégâts réels restent dans la fourchette annoncée.
+	int slot = spellIndex(MAGE, "eclair");
+	for (std::uint32_t seed = 1; seed <= 30; seed++)
+	{
+		CAPTURE(seed);
+		Arena arena({ { MAGE, { 2, 2 } } }, { { GUERRIER, { 2, 6 } } }, openMap(), seed);
+		arena.playUntilTurnOf(0);
+		arena.engine->flushEvents();
+
+		std::vector<TargetPreview> previews = previewSpell(arena.state(), arena.map, gameData(), 0, slot, { 2, 6 });
+		const TargetPreview * preview = previewOf(previews, 1);
+		REQUIRE(preview != nullptr);
+		CHECK(preview->minDamage > 0);
+		CHECK(preview->minDamage <= preview->maxDamage);
+		CHECK_FALSE(preview->koPossible);
+		int minDamage = preview->minDamage;
+		int maxDamage = preview->maxDamage;
+
+		REQUIRE(arena.engine->cast(0, slot, { 2, 6 }, arena.now).ok);
+		std::vector<nlohmann::json> damage = arena.eventsOfType("damage");
+		REQUIRE(damage.size() == 1);
+		int amount = damage[0]["amount"].get<int>();
+		CHECK(amount >= minDamage);
+		CHECK(amount <= maxDamage);
+	}
+}
+
+TEST_CASE("Spell preview reports shields, periodic effects, pushes, collisions and knockouts")
+{
+	const GameData & data = gameData();
+	Arena arena({ { ARCHER, { 2, 2 } }, { PROTECTEUR, { 3, 2 } } }, { { GUERRIER, { 2, 5 } } });
+
+	// Le calcul ne touche pas au combat.
+	std::uint64_t seq = arena.engine->getSeq();
+
+	// Bouclier sacré du Protecteur sur l'Archer : la valeur du bouclier est annoncée.
+	arena.playUntilTurnOf(1);
+	const SpellDef * shieldSpell = spellOf(data, arena.fighter(1), spellIndex(PROTECTEUR, "bouclier_sacre"));
+	int shieldValue = 0;
+	for (const EffectDef & effect : shieldSpell->effects)
+	{
+		if (effect.type == EffectType::SHIELD)
+			shieldValue = effect.min;
+	}
+	std::vector<TargetPreview> shield = previewSpell(arena.state(), arena.map, data, 1, spellIndex(PROTECTEUR, "bouclier_sacre"), { 2, 2 });
+	REQUIRE(shield.size() == 1);
+	CHECK(shield[0].fighterId == 0);
+	CHECK(shield[0].minShield == shieldValue);
+	CHECK(shield[0].maxDamage == 0);
+
+	// Flèche empoisonnée de l'Archer : dégâts et poison par tour.
+	arena.playUntilTurnOf(0);
+	std::vector<TargetPreview> poison = previewSpell(arena.state(), arena.map, data, 0, spellIndex(ARCHER, "fleche_empoisonnee"), { 2, 5 });
+	REQUIRE(poison.size() == 1);
+	CHECK(poison[0].minDamage > 0);
+	bool perTurn = false;
+	for (const std::string & note : poison[0].notes)
+		perTurn = perTurn || note.find("/tour") != std::string::npos;
+	CHECK(perTurn);
+
+	// Flèche de recul : la cible est repoussée.
+	std::vector<TargetPreview> push = previewSpell(arena.state(), arena.map, data, 0, spellIndex(ARCHER, "fleche_recul"), { 2, 5 });
+	REQUIRE(push.size() == 1);
+	CHECK(std::find(push[0].notes.begin(), push[0].notes.end(), std::string("Repoussé")) != push[0].notes.end());
+
+	// Cible presque morte : hors combat certain.
+	BattleState weakened = arena.state();
+	weakened.findFighter(2)->hp = 1;
+	std::vector<TargetPreview> knockout = previewSpell(weakened, arena.map, data, 0, spellIndex(ARCHER, "fleche_empoisonnee"), { 2, 5 });
+	REQUIRE(knockout.size() == 1);
+	CHECK(knockout[0].koCertain);
+	CHECK(knockout[0].koPossible);
+
+	// Cible impossible : aucun aperçu.
+	CHECK(previewSpell(arena.state(), arena.map, data, 0, spellIndex(ARCHER, "tir_precis"), { 2, 5 }).empty());
+
+	CHECK(arena.engine->getSeq() == seq);
+	CHECK(arena.fighter(2).hp == arena.fighter(2).maxHp);
+}
+
+TEST_CASE("Spell preview includes collision damage when a push is blocked")
+{
+	BattleMap map = openMap();
+	map.setCell({ 2, 7 }, false, true);
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 5 } } }, map);
+	arena.playUntilTurnOf(0);
+
+	int slot = spellIndex(ARCHER, "fleche_recul");
+	std::vector<TargetPreview> previews = previewSpell(arena.state(), arena.map, gameData(), 0, slot, { 2, 5 });
+	REQUIRE(previews.size() == 1);
+	CHECK(std::find(previews[0].notes.begin(), previews[0].notes.end(), std::string("Collision")) != previews[0].notes.end());
+
+	arena.engine->flushEvents();
+	REQUIRE(arena.engine->cast(0, slot, { 2, 5 }, arena.now).ok);
+	int total = 0;
+	for (const nlohmann::json & event : arena.eventsOfType("damage"))
+		total += event["amount"].get<int>();
+	CHECK(total >= previews[0].minDamage);
+	CHECK(total <= previews[0].maxDamage);
+}
+
+TEST_CASE("Next-turn reach uses a full turn of movement points")
+{
+	Arena arena({ { ARCHER, { 7, 7 } } }, { { GUERRIER, { 0, 0 } } }, openMap(15));
+	int mp = arena.fighter(0).baseStats.get(Stat::MP);
+	std::size_t expected = (std::size_t)(2 * mp * (mp + 1));
+	CHECK(nextTurnReach(arena.state(), arena.map, gameData(), arena.fighter(0)).size() == expected);
+
+	// Les PM dépensés pendant le tour ne réduisent pas la portée du tour suivant.
+	arena.playUntilTurnOf(0);
+	REQUIRE(arena.engine->move(0, { { 7, 8 }, { 7, 9 } }, arena.now).ok);
+	CHECK(arena.fighter(0).mp == mp - 2);
+	CHECK(nextTurnReach(arena.state(), arena.map, gameData(), arena.fighter(0)).size() == expected);
 }

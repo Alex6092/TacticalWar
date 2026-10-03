@@ -31,7 +31,15 @@ namespace tw
 		class BattleEngine
 		{
 		public:
+			// Jets des effets (dégâts, soins, boucliers…) : au hasard, ou toujours au minimum / au
+			// maximum (aperçu d'un sort).
+			enum class RollMode { RANDOM, MIN, MAX };
+
 			BattleEngine(const GameData & data, const BattleMap & map, std::uint32_t seed);
+			// Moteur repris d'un état existant : simule une action sans toucher au combat en cours.
+			BattleEngine(const GameData & data, const BattleMap & map, const BattleState & state, std::uint32_t seed);
+
+			void setRollMode(RollMode mode) { rollMode = mode; }
 
 			// Ajoute un combattant avant le placement. Retourne son identifiant (ou -1).
 			int addFighter(int team, int classId, const std::string & name);
@@ -105,6 +113,7 @@ namespace tw
 			BattleMap map;
 			BattleState state;
 			std::mt19937 rng;
+			RollMode rollMode = RollMode::RANDOM;
 			std::uint32_t seed;
 			std::uint64_t seq;
 			nlohmann::json pendingEvents;

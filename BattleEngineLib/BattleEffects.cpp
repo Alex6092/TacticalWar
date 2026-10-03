@@ -453,10 +453,7 @@ void BattleEngine::tickEffectsAtTurnStart(Fighter & fighter)
 		int value = roll(effect.minValue, effect.maxValue);
 		if (effect.type == EffectType::DOT)
 		{
-			int maxResistance = data.rules.maxResistance;
-			int resistance = std::max(-maxResistance, std::min(maxResistance, effectiveStat(state, data, fighter, Stat::RESISTANCE)));
-			int damage = (int)std::lround(value * (100.0 + effect.casterPower) / 100.0 * (100.0 - resistance) / 100.0);
-			dealDamage(fighter, std::max(0, damage), effect.casterId, "dot");
+			dealDamage(fighter, periodicDamage(state, data, fighter, value, effect.casterPower), effect.casterId, "dot");
 		}
 		else
 		{
