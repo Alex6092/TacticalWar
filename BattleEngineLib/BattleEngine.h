@@ -118,6 +118,8 @@ namespace tw
 			void moveFighterTo(Fighter & fighter, const Cell & cell, const std::string & kind);
 			void tickEffectsAtTurnStart(Fighter & fighter);
 			void triggerGlyphs(Fighter & fighter);
+			// Case à effet sous le combattant (braises, source), au début de son tour.
+			void applyTerrain(Fighter & fighter);
 			void applyOnCastPassive(Fighter & caster);
 			int roll(int min, int max);
 

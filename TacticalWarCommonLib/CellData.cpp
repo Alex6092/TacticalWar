@@ -8,8 +8,8 @@ CellData::CellData(int x, int y, bool isWalkable, bool isObstacle, int teamStart
 	:
 	Point2D(x, y)
 {
-	this->isWalkable = isWalkable;
-	this->isObstacle = isObstacle;
+	rules.walkable = isWalkable;
+	rules.blocksLineOfSight = isObstacle;
 	this->teamStartPoint = teamStartPoint;
 }
 
@@ -17,5 +17,5 @@ std::string CellData::getDisplayTile() const
 {
 	if (!tile.empty())
 		return tile;
-	return TileRegistry::legacyTile(isWalkable, isObstacle);
+	return TileRegistry::legacyTile(rules.walkable, rules.blocksLineOfSight);
 }

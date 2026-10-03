@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include "Point2D.h"
+#include "TileRegistry.h"
 
 namespace tw
 {
@@ -8,8 +9,7 @@ namespace tw
 	{
 	private:
 		// Règles de jeu de la case, déduites de sa tuile (voir Environment::setTile).
-		bool isWalkable;
-		bool isObstacle;
+		TileRules rules;
 
 		// Valeurs pour teamStartPoint :
 		// - 0 = Pas un point de départ
@@ -28,18 +28,25 @@ namespace tw
 		CellData(int x, int y, bool isWalkable = true, bool isObstacle = false, int teamStartPoint = 0);
 
 
-		inline bool getIsWalkable()
+		inline const TileRules & getRules() const
 		{
-			return isWalkable;
+			return rules;
+		}
+
+		// Praticable : on peut s'y arrêter et la traverser.
+		inline bool getIsWalkable() const
+		{
+			return rules.walkable;
 		}
 
 		inline void setIsWalkable(bool isWalkable) {
-			this->isWalkable = isWalkable;
+			rules.walkable = isWalkable;
 		}
 
-		inline bool getIsObstacle()
+		// Obstacle à la vue : bloque la ligne de vue (une case praticable peut en être un).
+		inline bool getIsObstacle() const
 		{
-			return isObstacle;
+			return rules.blocksLineOfSight;
 		}
 
 		inline int getTeamStartPointNumber()
@@ -48,7 +55,7 @@ namespace tw
 		}
 
 		inline void setIsObstacle(bool isObstacle) {
-			this->isObstacle = isObstacle;
+			rules.blocksLineOfSight = isObstacle;
 		}
 
 		inline bool getIsZone() const
@@ -68,12 +75,12 @@ namespace tw
 
 		inline bool isTeam1StartPoint()
 		{
-			return !isObstacle && isWalkable && teamStartPoint == 1;
+			return rules.walkable && teamStartPoint == 1;
 		}
 
 		inline bool isTeam2StartPoint()
 		{
-			return !isObstacle && isWalkable && teamStartPoint == 2;
+			return rules.walkable && teamStartPoint == 2;
 		}
 
 		inline const std::string & getTile() const
@@ -85,11 +92,10 @@ namespace tw
 		std::string getDisplayTile() const;
 
 		// Change la tuile et les règles de jeu de la case.
-		inline void setTile(const std::string & tile, bool walkable, bool obstacle)
+		inline void setTile(const std::string & tile, const TileRules & rules)
 		{
 			this->tile = tile;
-			this->isWalkable = walkable;
-			this->isObstacle = obstacle;
+			this->rules = rules;
 		}
 	};
 }

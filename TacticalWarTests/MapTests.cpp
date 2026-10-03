@@ -6,6 +6,7 @@
 #include <EditorController.h>
 #include <Environment.h>
 #include <EnvironmentManager.h>
+#include <EnvironmentMap.h>
 #include <TileRegistry.h>
 
 using namespace tw;
@@ -20,7 +21,10 @@ namespace
 			{ "id": "stone", "name": "Rocher", "category": "obstacle" },
 			{ "id": "water", "name": "Eau", "category": "liquid", "shader": "water" },
 			{ "id": "bridge", "name": "Pont", "category": "liquid", "walkable": true },
-			{ "id": "hole", "name": "Vide", "category": "empty" }
+			{ "id": "hole", "name": "Vide", "category": "empty" },
+			{ "id": "embers", "name": "Braises", "category": "ground", "turnStart": { "damage": 8 } },
+			{ "id": "spring", "name": "Source", "category": "ground", "turnStart": { "heal": 6 } },
+			{ "id": "tall_grass", "name": "Hautes herbes", "category": "ground", "blocksLineOfSight": true }
 		]
 	})";
 
@@ -60,22 +64,22 @@ TEST_CASE("Registre de tuiles : catégories, règles par défaut et surcharges")
 
 	const TileDef * grass = registry.find("grass");
 	REQUIRE(grass != nullptr);
-	CHECK(grass->walkable);
-	CHECK_FALSE(grass->blocksLineOfSight);
+	CHECK(grass->rules.walkable);
+	CHECK_FALSE(grass->rules.blocksLineOfSight);
 	CHECK(grass->anchorX == 66);
 
 	const TileDef * stone = registry.find("stone");
 	REQUIRE(stone != nullptr);
-	CHECK_FALSE(stone->walkable);
-	CHECK(stone->blocksLineOfSight);
+	CHECK_FALSE(stone->rules.walkable);
+	CHECK(stone->rules.blocksLineOfSight);
 
 	const TileDef * water = registry.find("water");
 	REQUIRE(water != nullptr);
-	CHECK_FALSE(water->walkable);
-	CHECK_FALSE(water->blocksLineOfSight);
+	CHECK_FALSE(water->rules.walkable);
+	CHECK_FALSE(water->rules.blocksLineOfSight);
 	CHECK(water->shader == "water");
 
-	CHECK(registry.find("bridge")->walkable);
+	CHECK(registry.find("bridge")->rules.walkable);
 	CHECK((registry.find("hole")->category == TileCategory::EMPTY));
 	CHECK(registry.find("lava") == nullptr);
 
@@ -149,6 +153,44 @@ TEST_CASE("Carte v2 : les règles envoyées par le serveur priment sur le regist
 	std::unique_ptr<Environment> withoutRules(EnvironmentManager::fromJson(EnvironmentManager::toJson(&environment)));
 	CHECK(withoutRules->getMapData(2, 2)->getIsObstacle());
 	useTestTiles();
+}
+
+TEST_CASE("Cases spéciales : règles de la tuile, carte envoyée aux clients et carte du combat")
+{
+	useTestTiles();
+	const TileRegistry & registry = TileRegistry::get();
+	CHECK(registry.find("embers")->rules.turnDamage == 8);
+	CHECK(registry.find("spring")->rules.turnHeal == 6);
+	CHECK(registry.find("tall_grass")->rules.walkable);
+	CHECK(registry.find("tall_grass")->rules.blocksLineOfSight);
+	CHECK_FALSE(registry.find("grass")->rules.hasTurnEffect());
+
+	Environment environment(5, 5, 4, "grass");
+	environment.setTile(1, 1, "embers");
+	environment.setTile(2, 2, "spring");
+	environment.setTile(3, 3, "tall_grass");
+	environment.setTile(4, 4, "stone");
+	std::string withRules = EnvironmentManager::toJson(&environment, true, true);
+
+	// Un client qui ne connaît pas ces tuiles applique les règles reçues avec la carte.
+	REQUIRE(TileRegistry::get().loadFromString(R"({"tiles": [{ "id": "grass", "category": "ground" }]})"));
+	std::unique_ptr<Environment> client(EnvironmentManager::fromJson(withRules));
+	useTestTiles();
+	REQUIRE(client != nullptr);
+	CHECK(client->getMapData(1, 1)->getRules().turnDamage == 8);
+	CHECK(client->getMapData(2, 2)->getRules().turnHeal == 6);
+	CHECK(client->getMapData(3, 3)->getIsWalkable());
+	CHECK(client->getMapData(3, 3)->getIsObstacle());
+
+	// Carte du combat : les hautes herbes sont praticables et cachent, le rocher ne laisse rien passer.
+	battle::BattleMap map = battle::battleMapFromEnvironment(client.get());
+	CHECK(map.turnDamage({ 1, 1 }) == 8);
+	CHECK(map.turnHeal({ 2, 2 }) == 6);
+	CHECK(map.turnDamage({ 0, 0 }) == 0);
+	CHECK(map.isWalkable({ 3, 3 }));
+	CHECK(map.blocksSight({ 3, 3 }));
+	CHECK_FALSE(map.isWalkable({ 4, 4 }));
+	CHECK(map.blocksSight({ 4, 4 }));
 }
 
 TEST_CASE("Carte v1 : lecture de l'ancien format")
@@ -302,6 +344,13 @@ TEST_CASE("Éditeur : validation de la carte")
 	editor.pointerDown(3, 2);
 	editor.pointerUp();
 	CHECK_FALSE(hasBlocking(editor.validate()));
+
+	// Un départ dans les hautes herbes est accepté : elles sont praticables.
+	editor.setTile("tall_grass");
+	editor.pointerDown(0, 1);
+	editor.pointerUp();
+	CHECK_FALSE(hasBlocking(editor.validate()));
+	editor.undo();
 
 	// Un départ sur un rocher est refusé.
 	editor.setTile("stone");

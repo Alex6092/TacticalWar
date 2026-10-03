@@ -40,18 +40,16 @@ CellData* Environment::getMapData(int x, int y)
 void Environment::setTile(int x, int y, const std::string & tile)
 {
 	const TileDef * def = TileRegistry::get().find(tile);
-	bool walkable = def != nullptr && def->walkable;
-	bool obstacle = def == nullptr || def->blocksLineOfSight;
-	setTile(x, y, tile, walkable, obstacle);
+	setTile(x, y, tile, def != nullptr ? def->rules : TileRules::unknown());
 }
 
-void Environment::setTile(int x, int y, const std::string & tile, bool walkable, bool obstacle)
+void Environment::setTile(int x, int y, const std::string & tile, const TileRules & rules)
 {
 	CellData * cell = getMapData(x, y);
 	if (cell == NULL)
 		return;
 
-	cell->setTile(tile, walkable, obstacle);
+	cell->setTile(tile, rules);
 	obstacleCacheInitDone = false;
 	staticObstacles.clear();
 }

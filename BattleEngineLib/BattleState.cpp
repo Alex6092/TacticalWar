@@ -32,6 +32,29 @@ void BattleMap::setCell(const Cell & cell, bool walkable, bool blocksSight)
 	flags[cell.y * width + cell.x] = (walkable ? WALKABLE : 0) | (blocksSight ? BLOCKS_SIGHT : 0);
 }
 
+int BattleMap::turnDamage(const Cell & cell) const
+{
+	auto it = contains(cell) ? turnEffects.find(cell.y * width + cell.x) : turnEffects.end();
+	return it != turnEffects.end() ? it->second.first : 0;
+}
+
+int BattleMap::turnHeal(const Cell & cell) const
+{
+	auto it = contains(cell) ? turnEffects.find(cell.y * width + cell.x) : turnEffects.end();
+	return it != turnEffects.end() ? it->second.second : 0;
+}
+
+void BattleMap::setTurnEffect(const Cell & cell, int damage, int heal)
+{
+	if (!contains(cell))
+		return;
+	int index = cell.y * width + cell.x;
+	if (damage > 0 || heal > 0)
+		turnEffects[index] = { std::max(0, damage), std::max(0, heal) };
+	else
+		turnEffects.erase(index);
+}
+
 bool ZoneState::contains(const Cell & cell) const
 {
 	return std::find(cells.begin(), cells.end(), cell) != cells.end();

@@ -45,6 +45,12 @@ namespace tw
 			bool blocksSight(const Cell & cell) const;
 			void setCell(const Cell & cell, bool walkable, bool blocksSight);
 
+			// Effet de la case au début du tour de qui s'y trouve (braises, source) : 0 si aucun.
+			int turnDamage(const Cell & cell) const;
+			int turnHeal(const Cell & cell) const;
+			void setTurnEffect(const Cell & cell, int damage, int heal);
+			bool hasTurnEffects() const { return !turnEffects.empty(); }
+
 			// Cellules de départ de chaque équipe (1 et 2).
 			std::vector<Cell> startCells[3];
 			// Zone à tenir peinte dans l'éditeur (vide : zone calculée, voir objectiveZone).
@@ -54,6 +60,7 @@ namespace tw
 			int width = 0;
 			int height = 0;
 			std::vector<std::uint8_t> flags;
+			std::map<int, std::pair<int, int>> turnEffects;	// Index de case -> dégâts, soins
 		};
 
 		struct ActiveEffect

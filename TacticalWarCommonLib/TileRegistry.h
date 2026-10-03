@@ -16,6 +16,26 @@ namespace tw
 	const char * toString(TileCategory category);
 	TileCategory tileCategoryFromString(const std::string & text);
 
+	// Règles de jeu d'une case, tirées de sa tuile. C'est la seule définition : le moteur de combat,
+	// les cartes envoyées aux clients, l'éditeur et la recherche de chemin s'en servent.
+	// Praticable et bloque la vue sont indépendants : les hautes herbes sont praticables et cachent,
+	// l'eau n'est pas praticable et ne cache pas, un rocher ne laisse rien passer.
+	struct TileRules
+	{
+		bool walkable = true;
+		bool blocksLineOfSight = false;
+		// Effet au début du tour du combattant qui s'y trouve : dégâts (braises), soins (source).
+		int turnDamage = 0;
+		int turnHeal = 0;
+
+		bool hasTurnEffect() const { return turnDamage > 0 || turnHeal > 0; }
+
+		// Règles par défaut d'une catégorie de tuile.
+		static TileRules forCategory(TileCategory category);
+		// Tuile inconnue : ni praticable, ni transparente.
+		static TileRules unknown();
+	};
+
 	struct TileDef
 	{
 		std::string id;
@@ -24,8 +44,7 @@ namespace tw
 		std::string texture;		// Chemin relatif au dossier du jeu
 		float anchorX = 0;			// Pixel de la texture placé au centre de la case
 		float anchorY = 0;
-		bool walkable = true;
-		bool blocksLineOfSight = false;
+		TileRules rules;
 		std::string group;			// Groupe de la palette de l'éditeur (UTF-8)
 		std::string shader;			// "water", "lava" ou vide
 	};

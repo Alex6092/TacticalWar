@@ -258,6 +258,9 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 		tickEffectsAtTurnStart(fighter);
 		if (fighter.alive)
 			triggerGlyphs(fighter);
+		// Case à effet, après les effets périodiques et les glyphes ; la mort subite reste en dernier.
+		if (fighter.alive)
+			applyTerrain(fighter);
 
 		// Mort subite : des dégâts croissants empêchent les combats sans fin.
 		if (fighter.alive && state.round >= data.rules.suddenDeathRound)

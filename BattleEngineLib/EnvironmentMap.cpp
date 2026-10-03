@@ -13,9 +13,11 @@ tw::battle::BattleMap tw::battle::battleMapFromEnvironment(tw::Environment * env
 			if (cell == nullptr)
 				continue;
 
-			bool obstacle = cell->getIsObstacle();
-			bool walkable = cell->getIsWalkable() && !obstacle;
-			map.setCell({ x, y }, walkable, obstacle);
+			const tw::TileRules & rules = cell->getRules();
+			bool walkable = rules.walkable;
+			map.setCell({ x, y }, walkable, rules.blocksLineOfSight);
+			if (walkable)
+				map.setTurnEffect({ x, y }, rules.turnDamage, rules.turnHeal);
 
 			int team = cell->getTeamStartPointNumber();
 			if (walkable && (team == 1 || team == 2))

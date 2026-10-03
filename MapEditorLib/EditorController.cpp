@@ -353,7 +353,7 @@ std::vector<ValidationMessage> EditorController::validate() const
 
 	auto walkable = [this](int x, int y) {
 		CellData * cell = environment->getMapData(x, y);
-		return cell != nullptr && cell->getIsWalkable() && !cell->getIsObstacle();
+		return cell != nullptr && cell->getIsWalkable();
 	};
 
 	std::vector<std::pair<int, int>> starts[3];

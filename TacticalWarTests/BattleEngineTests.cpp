@@ -771,6 +771,90 @@ TEST_CASE("Battle records credit damage, shields, casts and knockouts to the rig
 	CHECK(mirror.findFighter(0)->record.badges == badges);
 }
 
+TEST_CASE("Special cells hurt or heal the fighter standing on them at the start of its turn")
+{
+	BattleMap map = openMap();
+	map.setTurnEffect({ 2, 2 }, 8, 0);	// Braises sous l'Archer
+	map.setTurnEffect({ 2, 8 }, 0, 6);	// Source sous le Guerrier
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } }, map);
+
+	// Braises : 8 dégâts fixes au début du tour (le premier tour commence au lancement du combat).
+	int hp = arena.fighter(0).hp;
+	arena.playUntilTurnOf(1);
+	arena.playUntilTurnOf(0);
+	std::vector<nlohmann::json> damage = arena.eventsOfType("damage");
+	REQUIRE(damage.size() >= 1);
+	CHECK(damage.back()["kind"] == "terrain");
+	CHECK(damage.back()["amount"].get<int>() == 8);
+	CHECK(damage.back()["src"].get<int>() == -1);
+	CHECK(arena.fighter(0).hp < hp);
+
+	// Source : soigne un combattant blessé (6 PV), rien s'il a tous ses PV.
+	BattleState wounded = arena.state();
+	wounded.findFighter(1)->hp -= 20;
+	BattleEngine engine(gameData(), arena.map, wounded, 1);
+	REQUIRE(engine.endTurn(0, arena.now).ok);
+	CHECK(engine.getState().findFighter(1)->hp == wounded.findFighter(1)->hp + 6);
+	nlohmann::json batch = engine.flushEvents();
+	bool healed = false;
+	for (const nlohmann::json & event : batch["ev"])
+		healed = healed || (event["t"] == "heal" && event["kind"] == "terrain" && event["amount"].get<int>() == 6);
+	CHECK(healed);
+}
+
+TEST_CASE("Tall grass can be walked through but hides what is behind it")
+{
+	BattleMap map = openMap(9);
+	map.setCell({ 4, 2 }, true, true);
+	Arena arena({ { ARCHER, { 4, 0 } } }, { { GUERRIER, { 4, 4 } } }, map);
+	CHECK_FALSE(hasLineOfSight(arena.state(), arena.map, { 4, 0 }, { 4, 4 }));
+	CHECK(hasLineOfSight(arena.state(), arena.map, { 4, 0 }, { 4, 2 }));
+	arena.playUntilTurnOf(0);
+	std::vector<Cell> path = findPath(arena.state(), arena.map, arena.fighter(0), { 4, 2 });
+	REQUIRE(path.size() == 2);
+	CHECK(arena.engine->move(0, path, arena.now).ok);
+	CHECK(arena.fighter(0).position == Cell{ 4, 2 });
+}
+
+TEST_CASE("The AI keeps off embers and heads for a spring when wounded")
+{
+	// Destination du premier déplacement de l'IA ce tour-ci (après ses éventuels sorts).
+	auto destination = [](const BattleMap & map, const BattleState & state) {
+		BattleEngine engine(gameData(), map, state, 1);
+		std::mt19937 rng(3);
+		for (int i = 0; i < 6; i++)
+		{
+			BotAction action = chooseBotAction(engine.getState(), engine.getMap(), gameData(), 0, rng);
+			if (action.kind == BotAction::Kind::MOVE)
+				return action.path.back();
+			if (action.kind != BotAction::Kind::CAST || !engine.cast(0, action.slot, action.target, 0).ok)
+				break;
+		}
+		return Cell{ -1, -1 };
+	};
+
+	// Guerrier loin de l'Archer : sans case à effet, il avance vers lui.
+	BattleMap plain = openMap();
+	Arena arena({ { GUERRIER, { 2, 2 } } }, { { ARCHER, { 2, 13 } } }, plain);
+	arena.playUntilTurnOf(0);
+	Cell usual = destination(plain, arena.state());
+	REQUIRE(usual != Cell{ -1, -1 });
+
+	BattleMap embers = plain;
+	embers.setTurnEffect(usual, 8, 0);
+	Cell avoided = destination(embers, arena.state());
+	CHECK(avoided != Cell{ -1, -1 });
+	CHECK(avoided != usual);
+
+	// Blessé, il fait un détour par une source ; en pleine forme, il l'ignore.
+	BattleMap spring = plain;
+	spring.setTurnEffect({ 3, 3 }, 0, 6);
+	CHECK(destination(spring, arena.state()) != Cell{ 3, 3 });
+	BattleState hurt = arena.state();
+	hurt.findFighter(0)->hp = hurt.findFighter(0)->maxHp / 2;
+	CHECK(destination(spring, hurt) == Cell{ 3, 3 });
+}
+
 TEST_CASE("Achievements reward each feat at the end of the battle")
 {
 	BattleState state;

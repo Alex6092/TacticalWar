@@ -524,6 +524,17 @@ void BattleEngine::triggerGlyphs(Fighter & fighter)
 	}
 }
 
+void BattleEngine::applyTerrain(Fighter & fighter)
+{
+	// Valeurs fixes (ni puissance ni résistance) ; le bouclier absorbe les dégâts comme d'habitude.
+	int damage = map.turnDamage(fighter.position);
+	if (damage > 0)
+		dealDamage(fighter, damage, -1, "terrain");
+	int healing = map.turnHeal(fighter.position);
+	if (healing > 0 && fighter.alive)
+		heal(fighter, healing, -1, "terrain");
+}
+
 void BattleEngine::applyOnCastPassive(Fighter & caster)
 {
 	const ClassDef * classDef = data.findClass(caster.classId);

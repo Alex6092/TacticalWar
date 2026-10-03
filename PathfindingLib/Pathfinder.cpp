@@ -59,7 +59,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 			d[cell] = std::numeric_limits<float>::max(); //sommet à +infini
 			
 
-			if (cell->getIsObstacle() || !cell->getIsWalkable() || !isNotDynamicObstacle(cell, obstacles))
+			if (!cell->getIsWalkable() || !isNotDynamicObstacle(cell, obstacles))
 			{
 				P.push_back(cell);
 			}
@@ -100,7 +100,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 			if (a->getX() + 1 < environment->getWidth()) //adjacent droit
 			{
 				CellData * voisinDroite = environment->getMapData(a->getX() + 1, a->getY());
-				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && !voisinDroite->getIsObstacle() && isNotDynamicObstacle(voisinDroite, obstacles))
+				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && isNotDynamicObstacle(voisinDroite, obstacles))
 				{
 					Voisins.push_back(voisinDroite);
 				}
@@ -109,7 +109,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 			if (a->getX() - 1 >= 0) //adjacent gauche
 			{
 				CellData * voisinDroite = environment->getMapData(a->getX() - 1, a->getY());
-				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && !voisinDroite->getIsObstacle() && isNotDynamicObstacle(voisinDroite, obstacles))
+				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && isNotDynamicObstacle(voisinDroite, obstacles))
 				{
 					Voisins.push_back(voisinDroite);
 				}
@@ -118,7 +118,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 			if (a->getY() + 1 < environment->getHeight()) //adjacent bas
 			{
 				CellData * voisinDroite = environment->getMapData(a->getX(), a->getY() + 1);
-				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && !voisinDroite->getIsObstacle() && isNotDynamicObstacle(voisinDroite, obstacles))
+				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && isNotDynamicObstacle(voisinDroite, obstacles))
 				{
 					Voisins.push_back(voisinDroite);
 				}
@@ -127,7 +127,7 @@ std::vector<Point2D> Pathfinder::getPath(Point2D startPosition, Point2D endPosit
 			if (a->getY() - 1 >= 0) //adjacent haut
 			{
 				CellData * voisinDroite = environment->getMapData(a->getX(), a->getY() - 1);
-				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && !voisinDroite->getIsObstacle() && isNotDynamicObstacle(voisinDroite, obstacles))
+				if (voisinDroite != NULL && voisinDroite->getIsWalkable() && isNotDynamicObstacle(voisinDroite, obstacles))
 				{
 					Voisins.push_back(voisinDroite);
 				}

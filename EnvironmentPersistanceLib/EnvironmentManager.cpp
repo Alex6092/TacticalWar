@@ -141,6 +141,31 @@ bool tw::EnvironmentManager::saveEnvironmentTo(Environment * environment, const 
 	return true;
 }
 
+namespace
+{
+	// Règles d'une tuile dans une carte : "obstacle" = bloque la vue ; "damage" et "heal" : effet au
+	// début du tour (absents : aucun).
+	json rulesJson(const tw::TileRules & rules)
+	{
+		json value = { { "walkable", rules.walkable }, { "obstacle", rules.blocksLineOfSight } };
+		if (rules.turnDamage > 0)
+			value["damage"] = rules.turnDamage;
+		if (rules.turnHeal > 0)
+			value["heal"] = rules.turnHeal;
+		return value;
+	}
+
+	tw::TileRules rulesFromJson(const json & value)
+	{
+		tw::TileRules rules = tw::TileRules::unknown();
+		rules.walkable = value.value("walkable", rules.walkable);
+		rules.blocksLineOfSight = value.value("obstacle", rules.blocksLineOfSight);
+		rules.turnDamage = std::max(0, value.value("damage", 0));
+		rules.turnHeal = std::max(0, value.value("heal", 0));
+		return rules;
+	}
+}
+
 std::string tw::EnvironmentManager::toJson(Environment * environment, bool withRules, bool compact)
 {
 	int width = environment->getWidth();
@@ -163,7 +188,7 @@ std::string tw::EnvironmentManager::toJson(Environment * environment, bool withR
 			{
 				paletteIndex[tile] = (int)palette.size();
 				palette.push_back(tile);
-				rules[tile] = { { "walkable", cell->getIsWalkable() && !cell->getIsObstacle() }, { "obstacle", cell->getIsObstacle() } };
+				rules[tile] = rulesJson(cell->getRules());
 			}
 
 			int team = cell->getTeamStartPointNumber();
@@ -260,7 +285,7 @@ tw::Environment * tw::EnvironmentManager::fromJson(const std::string & text, std
 				int index = row[x].get<int>();
 				std::string tile = index >= 0 && index < (int)palette.size() ? palette[index] : TileRegistry::LEGACY_GROUND;
 				if (rules.contains(tile))
-					environment->setTile(x, y, tile, rules[tile].value("walkable", false), rules[tile].value("obstacle", true));
+					environment->setTile(x, y, tile, rulesFromJson(rules[tile]));
 				else
 					environment->setTile(x, y, tile);
 			}

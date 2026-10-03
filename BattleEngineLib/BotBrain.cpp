@@ -333,6 +333,10 @@ namespace tw
 						}
 					}
 
+					// Cases à effet : éviter les braises, rejoindre une source quand on est blessé.
+					score -= map.turnDamage(cell) * 8;
+					score += std::min(map.turnHeal(cell), std::max(0, me.maxHp - me.hp)) * 5;
+
 					if (score > bestScore)
 					{
 						bestScore = score;
