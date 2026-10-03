@@ -12,6 +12,7 @@
 #include <TeamStore.h>
 #include <TournamentService.h>
 #include <ReplayStore.h>
+#include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -121,6 +122,9 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void sendGameData(ClientState * client);
 	void handlePickClass(ClientState * client, tw::Player * player, int classId);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
+	// Signal d'un joueur à ses coéquipiers (CG -> BG), limité en cadence.
+	void handlePing(ClientState * client, const nlohmann::json & body);
+	std::map<tw::Player*, std::deque<std::int64_t>> recentPings;
 	void startBattle(BattleSession * session);
 	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
 	void broadcastBattleEvents(BattleSession * session);

@@ -2,6 +2,7 @@
 #include "LinkToServer.h"
 
 #include <BattleRules.h>
+#include <Emotes.h>
 #include <algorithm>
 
 using namespace tw::battle;
@@ -183,6 +184,32 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	});
 	gui->add(endTurnButton);
 
+	// Émotes prédéfinies : le bouton ouvre la liste (aussi au clavier, touches F1 à F6).
+	emoteButton = tgui::Button::create(L"Émotes");
+	emoteButton->setInheritedFont(font);
+	emoteButton->setTextSize(16);
+	emoteButton->connect("pressed", [this]() { emotePanel->setVisible(!emotePanel->isVisible()); });
+	gui->add(emoteButton);
+
+	emotePanel = tgui::Panel::create();
+	emotePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 225));
+	emotePanel->setVisible(false);
+	for (int i = 0; i < EMOTE_COUNT; i++)
+	{
+		tgui::Button::Ptr button = tgui::Button::create(L"F" + num(i + 1) + L"   " + fromServerText(EMOTE_TEXTS[i]));
+		button->setInheritedFont(font);
+		button->setTextSize(15);
+		button->setPosition(6, 6 + i * 38.f);
+		button->setSize(208, 34);
+		button->connect("pressed", [this, i]() {
+			emotePanel->setVisible(false);
+			if (onEmote)
+				onEmote(i);
+		});
+		emotePanel->add(button);
+	}
+	gui->add(emotePanel);
+
 	readyButton = tgui::Button::create(L"Prêt !");
 	readyButton->setInheritedFont(font);
 	readyButton->setTextSize(20);
@@ -264,7 +291,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 	logBox->setPosition(15, height - 215);
 	logBox->setSize(440, 200);
 
-	float barWidth = 4 * (SPELL_SIZE + 10) + 190;
+	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120;
 	float barX = (width - barWidth) / 2;
 	float barY = height - SPELL_SIZE - 18;
 	for (int i = 0; i < (int)spells.size(); i++)
@@ -279,6 +306,10 @@ void BattleHud::layout(const sf::Vector2u & size)
 
 	endTurnButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 10, barY + 8);
 	endTurnButton->setSize(170, SPELL_SIZE - 16);
+	emoteButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 190, barY + 8);
+	emoteButton->setSize(110, SPELL_SIZE - 16);
+	emotePanel->setSize(220, EMOTE_COUNT * 38.f + 8);
+	emotePanel->setPosition(barX + 4 * (SPELL_SIZE + 10) + 300 - 220, barY - (EMOTE_COUNT * 38.f + 8) - 8);
 	readyButton->setSize(220, 60);
 	readyButton->setPosition((width - 220) / 2, height - 90);
 
@@ -521,6 +552,10 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	}
 
 	endTurnButton->setVisible(fighting && myTurn);
+	bool canEmote = me != nullptr && !spectator && state.phase != BattlePhase::ENDED;
+	emoteButton->setVisible(canEmote);
+	if (!canEmote)
+		emotePanel->setVisible(false);
 	readyButton->setVisible(state.phase == BattlePhase::PLACEMENT && me != nullptr);
 	if (me != nullptr && me->ready != readyState)
 	{
@@ -557,6 +592,8 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 
 	endPanel->setVisible(true);
 	endTurnButton->setVisible(false);
+	emoteButton->setVisible(false);
+	emotePanel->setVisible(false);
 	for (SpellButton & button : spells)
 		button.icon->setVisible(false);
 }

@@ -35,7 +35,9 @@
     "shield_bubble": { "sheet": "assets/spellsprites/bubble", "fps": 8, "loop": true, "scale": 0.8, "offsetY": -42, "color": [140, 200, 255, 200] },
     "aura_rampart": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [255, 120, 60] },
     "aura_slow": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [140, 170, 255] },
-    "aura_poison": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [120, 255, 120] }
+    "aura_poison": { "sheet": "assets/spellsprites/aura", "fps": 10, "loop": true, "layer": "ground", "scale": 0.85, "color": [120, 255, 120] },
+    "ping": { "sheet": "assets/spellsprites/ping_ring", "fps": 10, "loop": true, "duration": 2.4, "layer": "ground", "scale": 1.0, "color": [255, 215, 70] },
+    "ping_arrow": { "sheet": "assets/spellsprites/ping_arrow", "fps": 12, "loop": true, "duration": 2.4, "anchor": [0.5, 1.0], "offsetY": -150, "color": [255, 215, 70] }
   },
   "events": {
     "death": "death_smoke",

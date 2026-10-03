@@ -188,10 +188,32 @@ void FxGalleryScreen::onCellHover(int cellX, int cellY)
 		BattleScreen::onCellHover(cellX, cellY);
 }
 
-void FxGalleryScreen::sendAction(const std::string & op, const json & body)
+void FxGalleryScreen::sendToServer(const std::string & op, const json & body)
 {
 	if (!engine)
 		return;
+
+	// Signal d'équipe : montré tout de suite (pas de coéquipier humain), resynchronisation : état
+	// complet du moteur local.
+	if (op == "CG")
+	{
+		onMessageReceived("BG" + json({ { "f", you }, { "x", body.value("x", -1) }, { "y", body.value("y", -1) } }).dump());
+		return;
+	}
+	if (op == "BR")
+	{
+		deliver();
+		onMessageReceived("BI" + engine->snapshot(you, nowMs).dump());
+		return;
+	}
+	if (op == "CE")
+	{
+		battle::ActionResult emoted = engine->emote(you, body.value("id", -1), nowMs);
+		if (!emoted.ok)
+			onMessageReceived("ER" + json({ { "message", emoted.error } }).dump());
+		deliver();
+		return;
+	}
 
 	// Action à la souris : la démonstration automatique s'arrête (R pour la reprendre).
 	step = Step::MANUAL;

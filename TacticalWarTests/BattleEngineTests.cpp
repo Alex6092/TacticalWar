@@ -6,6 +6,7 @@
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
+#include <Emotes.h>
 
 using namespace tw::battle;
 
@@ -664,4 +665,32 @@ TEST_CASE("Next-turn reach uses a full turn of movement points")
 	REQUIRE(arena.engine->move(0, { { 7, 8 }, { 7, 9 } }, arena.now).ok);
 	CHECK(arena.fighter(0).mp == mp - 2);
 	CHECK(nextTurnReach(arena.state(), arena.map, gameData(), arena.fighter(0)).size() == expected);
+}
+
+TEST_CASE("Emotes are broadcast as events and rate limited per fighter")
+{
+	Arena arena({ { MAGE, { 2, 2 } } }, { { GUERRIER, { 2, 6 } } });
+	BattleState before = arena.state();
+
+	REQUIRE(arena.engine->emote(0, 2, 1000).ok);
+	std::vector<nlohmann::json> events = arena.eventsOfType("emote");
+	REQUIRE(events.size() == 1);
+	CHECK(events[0]["f"].get<int>() == 0);
+	CHECK(events[0]["id"].get<int>() == 2);
+
+	// Une émote toutes les EMOTE_COOLDOWN_MS par combattant, à n'importe quel moment.
+	CHECK_FALSE(arena.engine->emote(0, 1, 2000).ok);
+	CHECK(arena.engine->emote(1, 1, 2000).ok);
+	CHECK(arena.engine->emote(0, 1, 1000 + EMOTE_COOLDOWN_MS).ok);
+
+	CHECK_FALSE(arena.engine->emote(0, EMOTE_COUNT, 99999).ok);
+	CHECK_FALSE(arena.engine->emote(0, -1, 99999).ok);
+	CHECK_FALSE(arena.engine->emote(9, 0, 99999).ok);
+
+	// Les émotes ne touchent pas au combat ; le miroir des clients les ignore.
+	CHECK(arena.state().activeFighterId() == before.activeFighterId());
+	CHECK(arena.fighter(0).ap == before.findFighter(0)->ap);
+	BattleState mirror = before;
+	BattleMirror::applyEvent(mirror, { { "t", "emote" }, { "f", 0 }, { "id", 1 } });
+	CHECK(mirror.fighters.size() == before.fighters.size());
 }

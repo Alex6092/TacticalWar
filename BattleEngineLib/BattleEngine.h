@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <random>
 #include <string>
 #include <vector>
@@ -52,6 +53,9 @@ namespace tw
 			ActionResult move(int fighterId, const std::vector<Cell> & path, std::int64_t nowMs);
 			ActionResult cast(int fighterId, int spellIndex, const Cell & target, std::int64_t nowMs);
 			ActionResult endTurn(int fighterId, std::int64_t nowMs);
+			// Émote prédéfinie (Emotes.h), visible de tous et enregistrée dans les rediffusions. À tout
+			// moment du combat, au plus une toutes les EMOTE_COOLDOWN_MS par combattant.
+			ActionResult emote(int fighterId, int emoteId, std::int64_t nowMs);
 
 			// Minuteurs (placement, tour). À appeler régulièrement.
 			void tick(std::int64_t nowMs);
@@ -117,6 +121,7 @@ namespace tw
 			std::uint32_t seed;
 			std::uint64_t seq;
 			nlohmann::json pendingEvents;
+			std::map<int, std::int64_t> lastEmoteMs;
 		};
 	}
 }

@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **2**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **3**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -117,3 +117,6 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `Cm` | C → S | joueur | Déplacement {path:[[x,y]...]} (sans la cellule de départ) |
 | `CL` | C → S | joueur | Lancer de sort {slot (0 à 3), x, y} |
 | `Ct` | C → S | joueur | Fin de tour |
+| `CE` | C → S | joueur | Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote |
+| `CG` | C → S | joueur | Signal à son équipe sur une case {x, y} (3 au plus toutes les 5 s) |
+| `BG` | S → C | tous | Signal d'un coéquipier {f, x, y} : jamais envoyé aux adversaires ni aux spectateurs |

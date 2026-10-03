@@ -42,6 +42,7 @@
     <ClInclude Include="BattleRules.h" />
     <ClInclude Include="BattleState.h" />
     <ClInclude Include="BotBrain.h" />
+    <ClInclude Include="Emotes.h" />
     <ClInclude Include="EnvironmentMap.h" />
     <ClInclude Include="GameData.h" />
   </ItemGroup>

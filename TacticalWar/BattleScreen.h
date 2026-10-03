@@ -77,8 +77,15 @@ namespace tw
 		bool isInteractive() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
-		// Action du joueur : envoyée au serveur.
-		virtual void sendAction(const std::string & op, const nlohmann::json & body);
+		// Action de jeu du joueur (une seule à la fois, en attendant la réponse du serveur).
+		void sendAction(const std::string & op, const nlohmann::json & body);
+		// Message au serveur. La galerie des effets (et l'entraînement) le traitent en local.
+		virtual void sendToServer(const std::string & op, const nlohmann::json & body);
+		// Émote prédéfinie, et signal pour son équipe sur une case (Alt+clic ou clic molette).
+		void sendEmote(int emoteId);
+		void sendPing(const battle::Cell & cell);
+		void showPing(int fighterId, const battle::Cell & cell);
+		void drawBubbles(sf::RenderWindow * window);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
@@ -119,6 +126,15 @@ namespace tw
 
 		std::map<int, BaseCharacterModel*> views;
 		std::vector<FloatingText> floatingTexts;
+		struct SpeechBubble
+		{
+			int fighterId = -1;
+			sf::String text;
+			float age = 0;
+		};
+		std::vector<SpeechBubble> bubbles;
+		float emoteCooldown = 0;
+		float pingCooldown = 0;
 		std::vector<battle::TargetPreview> aimPreviews;
 		battle::Cell aimPreviewCell = { -1, -1 };
 		int aimPreviewSpell = -1;

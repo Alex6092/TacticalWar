@@ -98,6 +98,12 @@ TEST_CASE("Visuels des sorts : catalogue d'effets, planches et sons présents")
 		CHECK((layer == "top" || layer == "ground"));
 	}
 
+	// Effets joués directement par le client : signal d'équipe, et ses sons.
+	for (const char * name : { "ping", "ping_arrow" })
+		CHECK_MESSAGE(effects.contains(name), "effet manquant : " << name);
+	for (const char * sound : { "assets/sound/ui/ping.ogg", "assets/sound/ui/emote.ogg" })
+		CHECK_MESSAGE(std::filesystem::exists(root + sound), "son manquant : " << sound);
+
 	// Effets génériques (mort, collision, poussée…).
 	json events = catalog.value("events", json::object());
 	for (auto it = events.begin(); it != events.end(); ++it)

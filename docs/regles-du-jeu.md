@@ -35,3 +35,16 @@ Survoler un combattant montre où il pourra aller à son prochain tour, sans com
 
 Ça marche aussi pendant le tour des autres et en mode spectateur. Pendant son propre tour, les déplacements
 possibles du joueur sont en vert.
+
+## Communiquer avec son équipe
+
+- **Signal** : Alt+clic (ou clic molette) sur une case. Un anneau doré et une flèche apparaissent sur la
+  case, avec un son, et le journal indique « Léa signale une case » ou « Léa désigne Cible ».
+  - Seuls les coéquipiers le voient : ni les adversaires ni les spectateurs (l'écran projeté est
+    visible des joueurs), et il n'est pas enregistré dans les rediffusions.
+  - Au plus un signal par seconde (trois toutes les cinq secondes côté serveur).
+- **Émotes** : bouton « Émotes » à côté de « Passer le tour », ou touches F1 à F6 :
+  « Bien joué ! », « Merci ! », « GG », « Oups ! », « Attention ! », « À l'attaque ! ».
+  - Une bulle s'affiche à côté du personnage, pour tout le monde, spectateurs et rediffusions compris.
+  - Pas de texte libre ; une émote toutes les trois secondes au plus.
+  - L'organisateur peut les couper : `"emotes": false` dans `server.json`.

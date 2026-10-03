@@ -164,6 +164,11 @@ void TWParser::handleBattleAction(ClientState * client, const std::string & op, 
 		{
 			result = engine->endTurn(fighterId, now);
 		}
+		else if (op == "CE")
+		{
+			result = config.emotesEnabled ? engine->emote(fighterId, body.at("id").get<int>(), now)
+				: tw::battle::ActionResult::failure("Les émotes sont désactivées par l'organisateur.");
+		}
 	}
 	catch (const nlohmann::json::exception &)
 	{
@@ -174,6 +179,39 @@ void TWParser::handleBattleAction(ClientState * client, const std::string & op, 
 		send(client, encode("ER", { { "op", op }, { "message", result.error } }));
 
 	broadcastBattleEvents(session);
+}
+
+void TWParser::handlePing(ClientState * client, const nlohmann::json & body)
+{
+	// Signal d'un joueur à son équipe : relayé à ses seuls coéquipiers. Ni les adversaires ni les
+	// spectateurs ne le reçoivent (l'écran projeté est visible des joueurs), et il n'est pas enregistré.
+	tw::Player * player = getPlayerFromClientState(client);
+	BattleSession * session = player != NULL ? sessionOfPlayer(player) : NULL;
+	if (session == NULL || session->getPhase() != BattleSession::Phase::BATTLE)
+		return;
+
+	const tw::battle::BattleState & state = session->getEngine()->getState();
+	const tw::battle::Fighter * fighter = state.findFighter(session->fighterIdOf(player));
+	tw::battle::Cell cell = { body.value("x", -1), body.value("y", -1) };
+	if (fighter == nullptr || !session->getEngine()->getMap().contains(cell))
+		return;
+
+	std::int64_t now = nowMs();
+	std::deque<std::int64_t> & recent = recentPings[player];
+	while (!recent.empty() && now - recent.front() > 5000)
+		recent.pop_front();
+	if (recent.size() >= 3)
+		return;
+	recent.push_back(now);
+
+	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y } });
+	for (tw::Player * mate : session->getParticipants())
+	{
+		const tw::battle::Fighter * other = state.findFighter(session->fighterIdOf(mate));
+		ClientState * mateClient = getClientStateFromPlayer(mate);
+		if (other != nullptr && other->team == fighter->team && mateClient != NULL && mate->getHasJoinBattle())
+			send(mateClient, message);
+	}
 }
 
 void TWParser::broadcastBattleEvents(BattleSession * session)

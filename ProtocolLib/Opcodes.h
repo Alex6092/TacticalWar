@@ -7,7 +7,7 @@ namespace tw
 	namespace protocol
 	{
 		// Version du protocole : le client et le serveur doivent être mis à jour ensemble.
-		const int PROTOCOL_VERSION = 2;
+		const int PROTOCOL_VERSION = 3;
 
 		const int DEFAULT_GAME_PORT = 12345;
 		const int DEFAULT_HTTP_PORT = 8080;
@@ -115,6 +115,9 @@ namespace tw
 			{ "Cm", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Déplacement {path:[[x,y]...]} (sans la cellule de départ)" },
 			{ "CL", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Lancer de sort {slot (0 à 3), x, y}" },
 			{ "Ct", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Fin de tour" },
+			{ "CE", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote" },
+			{ "CG", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Signal à son équipe sur une case {x, y} (3 au plus toutes les 5 s)" },
+			{ "BG", Direction::SERVER_TO_CLIENT, Role::ANY, "Signal d'un coéquipier {f, x, y} : jamais envoyé aux adversaires ni aux spectateurs" },
 		};
 
 		inline const OpcodeInfo * findOpcode(const char * op)

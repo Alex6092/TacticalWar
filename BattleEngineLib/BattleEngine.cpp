@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "Emotes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -307,6 +308,22 @@ ActionResult BattleEngine::endTurn(int fighterId, std::int64_t nowMs)
 		return ActionResult::failure("Ce n'est pas votre tour.");
 
 	finishTurn(nowMs);
+	return ActionResult::success();
+}
+
+ActionResult BattleEngine::emote(int fighterId, int emoteId, std::int64_t nowMs)
+{
+	if (state.findFighter(fighterId) == nullptr || state.phase == BattlePhase::ENDED)
+		return ActionResult::failure("Aucun combat en cours.");
+	if (emoteId < 0 || emoteId >= EMOTE_COUNT)
+		return ActionResult::failure("Émote inconnue.");
+
+	auto last = lastEmoteMs.find(fighterId);
+	if (last != lastEmoteMs.end() && nowMs - last->second < EMOTE_COOLDOWN_MS)
+		return ActionResult::failure("Attendez un peu avant la prochaine émote.");
+	lastEmoteMs[fighterId] = nowMs;
+
+	emit({ { "t", "emote" }, { "f", fighterId }, { "id", emoteId } });
 	return ActionResult::success();
 }
 
