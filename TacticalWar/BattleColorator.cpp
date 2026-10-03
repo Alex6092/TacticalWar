@@ -45,6 +45,8 @@ sf::Color BattleColorator::getOverlayForCell(tw::CellData * data)
 		return sf::Color(40, 130, 255, 140);
 	if (range.count(cell) > 0)
 		return sf::Color(150, 205, 255, 75);
+	if (threat.count(cell) > 0)
+		return threatEnemy ? sf::Color(255, 140, 40, 85) : sf::Color(60, 200, 230, 85);
 	return sf::Color::Transparent;
 }
 
@@ -56,6 +58,7 @@ void BattleColorator::clearPreview()
 	castable.clear();
 	impact.clear();
 	hovered = { -1, -1 };
+	threat.clear();
 }
 
 void BattleColorator::setStartCells(const std::vector<Cell> & team1, const std::vector<Cell> & team2)
@@ -89,6 +92,12 @@ void BattleColorator::setHovered(const Cell & cell, bool valid)
 {
 	hovered = cell;
 	hoveredValid = valid;
+}
+
+void BattleColorator::setThreat(const std::vector<Cell> & cells, bool enemy)
+{
+	threat = toSet(cells);
+	threatEnemy = enemy;
 }
 
 void BattleColorator::setImpact(const std::vector<Cell> & cells)

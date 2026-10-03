@@ -23,6 +23,8 @@ public:
 	void setRange(const std::vector<tw::battle::Cell> & cells);
 	void setCastable(const std::vector<tw::battle::Cell> & cells);
 	void setHovered(const tw::battle::Cell & cell, bool valid);
+	// Cases qu'un combattant survolé pourra atteindre à son prochain tour (orange : ennemi, turquoise : allié).
+	void setThreat(const std::vector<tw::battle::Cell> & cells, bool enemy);
 	void setImpact(const std::vector<tw::battle::Cell> & cells);
 	void setGlyphs(const std::vector<tw::battle::Glyph> & glyphs, int viewerTeam);
 
@@ -41,6 +43,8 @@ private:
 	std::set<tw::battle::Cell> castable;
 	tw::battle::Cell hovered = { -1, -1 };
 	bool hoveredValid = false;
+	std::set<tw::battle::Cell> threat;
+	bool threatEnemy = true;
 	std::set<tw::battle::Cell> impact;
 	std::map<tw::battle::Cell, sf::Color> glyphColors;
 };

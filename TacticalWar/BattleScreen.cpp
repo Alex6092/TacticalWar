@@ -64,6 +64,14 @@ namespace
 		return cells;
 	}
 
+	// Fourchette « 12 » ou « 12 à 15 ».
+	sf::String spanText(int a, int b)
+	{
+		int low = std::min(a, b);
+		int high = std::max(a, b);
+		return low == high ? num(low) : num(low) + L" à " + num(high);
+	}
+
 	sf::String reasonLabel(battle::EndReason reason)
 	{
 		switch (reason)
@@ -268,6 +276,54 @@ void BattleScreen::render(sf::RenderWindow * window)
 		float isoY = (floating.x * 60 + floating.y * 60) / 2 + 30 - 110 - floating.age * 45;
 		text.setPosition(isoX - text.getLocalBounds().width / 2, isoY);
 		window->draw(text);
+	}
+
+	drawAimPreview(window);
+}
+
+void BattleScreen::drawAimPreview(sf::RenderWindow * window)
+{
+	// À droite de chaque combattant touché par le sort visé, à hauteur de tête : dégâts, soins,
+	// bouclier et effets (au-dessus des PV, ils passeraient sous les panneaux du haut de l'écran).
+	for (const battle::TargetPreview & preview : aimPreviews)
+	{
+		BaseCharacterModel * view = viewOf(preview.fighterId);
+		if (view == NULL)
+			continue;
+
+		std::vector<std::pair<sf::String, sf::Color>> lines;
+		if (preview.koCertain)
+			lines.push_back({ L"KO !", sf::Color(255, 215, 60) });
+		else if (preview.koPossible)
+			lines.push_back({ L"KO possible", sf::Color(255, 175, 60) });
+		if (preview.maxDamage > 0)
+			lines.push_back({ L"-" + spanText(preview.minDamage, preview.maxDamage), sf::Color(255, 95, 80) });
+		if (preview.maxHeal > 0)
+			lines.push_back({ L"+" + spanText(preview.minHeal, preview.maxHeal), sf::Color(110, 255, 110) });
+		if (preview.maxShield > 0)
+			lines.push_back({ L"Bouclier +" + spanText(preview.minShield, preview.maxShield), sf::Color(150, 210, 255) });
+		for (const std::string & note : preview.notes)
+			lines.push_back({ fromServerText(note), sf::Color(235, 235, 235) });
+
+		float x = (view->getInterpolatedX() - view->getInterpolatedY()) * 60.f + 60.f + 52.f;
+		float y = (view->getInterpolatedX() + view->getInterpolatedY()) * 30.f + 30.f - 100.f;
+		for (auto line = lines.begin(); line != lines.end(); ++line)
+		{
+			sf::Text text(line->first, font, line->second == sf::Color(235, 235, 235) ? 15 : 19);
+			text.setFillColor(line->second);
+			text.setOutlineColor(sf::Color::Black);
+			text.setOutlineThickness(2);
+			sf::FloatRect bounds = text.getLocalBounds();
+
+			sf::RectangleShape back(sf::Vector2f(bounds.width + 14, bounds.height + 8));
+			back.setPosition(std::round(x - 7), std::round(y - 4));
+			back.setFillColor(sf::Color(15, 15, 25, 175));
+			window->draw(back);
+
+			text.setPosition(std::round(x - bounds.left), std::round(y - bounds.top));
+			window->draw(text);
+			y += bounds.height + 10;
+		}
 	}
 }
 
@@ -869,11 +925,26 @@ void BattleScreen::refreshPreview()
 	const battle::Fighter * me = truth.findFighter(you);
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
 	hud->setHint("");
+	const tw::battle::GameData & data = ClientGameData::get().data();
+
+	bool aiming = isInteractive() && me != NULL && selectedSpell >= 0;
+	if (!aiming)
+	{
+		aimPreviews.clear();
+
+		// Combattant survolé : où il pourra aller à son prochain tour (orange pour un ennemi, turquoise
+		// pour un allié). Pendant son propre tour, le joueur voit déjà ses déplacements possibles.
+		const battle::Fighter * hovered = truth.findFighter(hoveredFighter);
+		if (hovered != NULL && hovered->alive && truth.phase == battle::BattlePhase::FIGHT && (hovered->id != you || !isInteractive()))
+		{
+			bool enemy = me == NULL || hovered->team != me->team;
+			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
+			hud->setHint(fromServerText(hovered->name) + (enemy ? L" : déplacement possible au prochain tour en orange" : L" : déplacement possible au prochain tour en turquoise"));
+		}
+	}
 
 	if (!isInteractive() || me == NULL)
 		return;
-
-	const tw::battle::GameData & data = ClientGameData::get().data();
 
 	if (selectedSpell >= 0)
 	{
@@ -900,26 +971,31 @@ void BattleScreen::refreshPreview()
 			// Sort lancé sur soi : sa zone est montrée tout de suite.
 			colorator->setImpact(previewImpact(map, me->position, me->position, *spell));
 			colorator->setHovered(me->position, true);
+			updateAimPreview(*me, me->position);
 			hud->setHint(name + L" : cliquez sur votre personnage (Échap pour annuler)");
 		}
 		else if (colorator->isCastable(hoveredCell))
 		{
 			colorator->setImpact(previewImpact(map, me->position, hoveredCell, *spell));
 			colorator->setHovered(hoveredCell, true);
+			updateAimPreview(*me, hoveredCell);
 			hud->setHint(name + L" : cliquez pour lancer le sort (Échap pour annuler)");
 		}
 		else if (colorator->isInRange(hoveredCell))
 		{
+			aimPreviews.clear();
 			// À portée mais pas ciblable : la raison est donnée (ligne de vue, type de cible…).
 			colorator->setHovered(hoveredCell, false);
 			hud->setHint(name + L" : " + fromServerText(battle::checkTarget(truth, map, data, *me, *spell, hoveredCell)));
 		}
 		else if (castable.empty())
 		{
+			aimPreviews.clear();
 			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en bleu clair (Échap pour annuler)");
 		}
 		else
 		{
+			aimPreviews.clear();
 			hud->setHint(name + L" : cliquez sur une case bleue (Échap pour annuler)");
 		}
 		return;
@@ -944,6 +1020,17 @@ void BattleScreen::refreshPreview()
 			hud->setHint(L"Tacle : -" + num(lostMp) + L" PM, -" + num(lostAp) + L" PA");
 		}
 	}
+}
+
+void BattleScreen::updateAimPreview(const battle::Fighter & me, const battle::Cell & cell)
+{
+	// Le moteur rejoue le sort sur une copie de l'état : seulement quand la visée ou l'état changent.
+	if (cell == aimPreviewCell && selectedSpell == aimPreviewSpell && lastSeq == aimPreviewSeq && !aimPreviews.empty())
+		return;
+	aimPreviews = battle::previewSpell(truth, map, ClientGameData::get().data(), me.id, selectedSpell, cell);
+	aimPreviewCell = cell;
+	aimPreviewSpell = selectedSpell;
+	aimPreviewSeq = lastSeq;
 }
 
 void BattleScreen::onCellClicked(int cellX, int cellY)
