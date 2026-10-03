@@ -141,4 +141,12 @@
     <ClCompile Include="FxGalleryScreen.cpp" />
     <ClInclude Include="FxGalleryScreen.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LocalBattleScreen.cpp" />
+    <ClCompile Include="TrainingScreen.cpp" />
+    <ClCompile Include="TrainingSetupScreen.cpp" />
+    <ClInclude Include="LocalBattleScreen.h" />
+    <ClInclude Include="TrainingScreen.h" />
+    <ClInclude Include="TrainingSetupScreen.h" />
+  </ItemGroup>
 </Project>

@@ -95,11 +95,15 @@ Remove-Item -Recurse -Force (Join-Path $client "assets\web")
 Get-ChildItem (Join-Path $client "assets\tiles") -File -Filter *.png | Remove-Item -Force
 Write-Utf8 (Join-Path $client "client.json") (@{ serverHost = $ServerHost; serverPort = 12345; sound = $true } | ConvertTo-Json)
 Write-Utf8 (Join-Path $client "Spectateur-realisateur.bat") "@echo off`ncd /d %~dp0`nstart """" TacticalWar.exe --director`n"
+Write-Utf8 (Join-Path $client "Demonstration.bat") "@echo off`ncd /d %~dp0`nstart """" TacticalWar.exe --training-autoplay`n"
 Write-Utf8 (Join-Path $client "LISEZMOI.txt") @"
 Tactical War - client
 
 Lancer TacticalWar.exe, puis se connecter avec les identifiants de la fiche de l'équipe.
 L'adresse du serveur est demandée sur l'écran de connexion (ou dans client.json).
+
+Entraînement sans serveur : bouton "Entraînement" de l'écran de connexion (combat contre
+l'ordinateur). Demonstration.bat enchaîne des combats entre ordinateurs (écran d'accueil).
 
 Écran projeté : Spectateur-realisateur.bat suit automatiquement le combat le plus serré
 (caméra sur le personnage actif). Pour choisir soi-même le combat à regarder : laisser

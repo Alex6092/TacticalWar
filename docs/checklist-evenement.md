@@ -13,6 +13,8 @@
       d'identifiants générées dans `data\exports\fiches-equipes.html`.
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
+- [ ] Proposer aux élèves de s'entraîner avant le jour J : bouton « Entraînement » de l'écran de
+      connexion, sans serveur (voir `docs/regles-du-jeu.md`).
 
 ## Test grandeur nature sans joueurs
 
@@ -33,6 +35,8 @@
      spectateur, onglet « Rediffusions » (client connecté sans identifiants).
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres.
+5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
+   match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 
 ## En cas de problème
 

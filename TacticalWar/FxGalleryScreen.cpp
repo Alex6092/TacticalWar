@@ -57,9 +57,11 @@ namespace
 }
 
 FxGalleryScreen::FxGalleryScreen(tgui::Gui * gui, const std::string & spellId, int environmentId)
-	: BattleScreen(gui, existingEnvironment(environmentId), Mode::PLAYER),
-	nowMs(0), current(0), shownClass(-1), focusPending(true), step(Step::PAUSE), wait(0), command(Command::NONE)
+	: LocalBattleScreen(gui, existingEnvironment(environmentId)),
+	current(0), shownClass(-1), focusPending(true), step(Step::PAUSE), wait(0), command(Command::NONE)
 {
+	// La scène est rejouée au lieu d'afficher l'écran de fin ; pas de minuteurs de tour.
+	hideEnd = true;
 	// Pas de musique : on écoute les sons des sorts.
 	MusicManager::getInstance()->stopMusic();
 	// La caméra est placée sur les personnages plutôt que sur toute la carte.
@@ -138,9 +140,6 @@ void FxGalleryScreen::update(float deltatime)
 	default: break;
 	}
 
-	// Le moteur local suit le temps réel ; ses minuteurs de tour ne sont jamais appliqués.
-	nowMs += (std::int64_t)(deltatime * 1000);
-
 	// Étape suivante de la démonstration quand les animations en cours sont terminées.
 	if (engine && idle())
 	{
@@ -149,7 +148,7 @@ void FxGalleryScreen::update(float deltatime)
 			advance();
 	}
 
-	BattleScreen::update(deltatime);
+	LocalBattleScreen::update(deltatime);
 }
 
 void FxGalleryScreen::onEvent(void * e)
@@ -188,61 +187,17 @@ void FxGalleryScreen::onCellHover(int cellX, int cellY)
 		BattleScreen::onCellHover(cellX, cellY);
 }
 
-void FxGalleryScreen::sendToServer(const std::string & op, const json & body)
+void FxGalleryScreen::onPlayerAction()
 {
-	if (!engine)
-		return;
-
-	// Signal d'équipe : montré tout de suite (pas de coéquipier humain), resynchronisation : état
-	// complet du moteur local.
-	if (op == "CG")
-	{
-		onMessageReceived("BG" + json({ { "f", you }, { "x", body.value("x", -1) }, { "y", body.value("y", -1) } }).dump());
-		return;
-	}
-	if (op == "BR")
-	{
-		deliver();
-		onMessageReceived("BI" + engine->snapshot(you, nowMs).dump());
-		return;
-	}
-	if (op == "CE")
-	{
-		battle::ActionResult emoted = engine->emote(you, body.value("id", -1), nowMs);
-		if (!emoted.ok)
-			onMessageReceived("ER" + json({ { "message", emoted.error } }).dump());
-		deliver();
-		return;
-	}
-
-	// Action à la souris : la démonstration automatique s'arrête (R pour la reprendre).
 	step = Step::MANUAL;
 	wait = 0.8f;
+}
 
-	battle::ActionResult result = battle::ActionResult::failure("Action inconnue.");
-	if (op == "CL")
-	{
-		result = engine->cast(you, body.value("slot", -1), { body.value("x", 0), body.value("y", 0) }, nowMs);
-	}
-	else if (op == "Cm")
-	{
-		std::vector<battle::Cell> path;
-		for (const json & cell : body.value("path", json::array()))
-			path.push_back({ cell.at(0).get<int>(), cell.at(1).get<int>() });
-		result = engine->move(you, path, nowMs);
-	}
-	else if (op == "Ct")
-	{
-		result = engine->endTurn(you, nowMs);
-	}
-
-	if (!result.ok)
-		onMessageReceived("ER" + json({ { "message", result.error } }).dump());
-	if (deliver())
-	{
-		step = Step::PAUSE;
-		wait = 2.f;
-	}
+void FxGalleryScreen::onLocalEnd()
+{
+	// Combat fini (à la souris) : la scène est rejouée.
+	step = Step::PAUSE;
+	wait = 2.f;
 }
 
 //----------------------------------------------------------
@@ -336,9 +291,10 @@ void FxGalleryScreen::restart()
 		chosen = known->second;
 	else
 		found = findLayout(*classDef, *spell, chosen, error);
+	std::unique_ptr<battle::BattleEngine> created;
 	if (found)
-		engine = createEngine(*classDef, *spell, chosen, error);
-	if (!engine)
+		created = createEngine(*classDef, *spell, chosen, error);
+	if (!created)
 	{
 		hud->showMessage(L"Impossible de lancer " + fromServerText(spell->name) + L" sur cette carte : " + fromServerText(error),
 			sf::Color(255, 110, 90), 5.f);
@@ -359,7 +315,7 @@ void FxGalleryScreen::restart()
 		shownClass = classDef->id;
 	}
 
-	onMessageReceived("BI" + engine->snapshot(CASTER, nowMs).dump());
+	startLocal(std::move(created), CASTER);
 	step = Step::AIM_ZONE;
 	wait = 0.4f;
 }
@@ -469,37 +425,6 @@ void FxGalleryScreen::aimAt(const battle::Cell & cell)
 	hoveredCell = cell;
 	const battle::Fighter * fighter = truth.fighterAt(cell);
 	hoveredFighter = fighter != NULL ? fighter->id : -1;
-}
-
-bool FxGalleryScreen::deliver()
-{
-	if (!engine || !engine->hasPendingEvents())
-		return false;
-
-	// Pas de fin de combat dans la galerie (écran de fin, retour à l'attente) : la scène est rejouée.
-	json batch = engine->flushEvents();
-	json & events = batch["ev"];
-	bool ended = false;
-	for (auto it = events.begin(); it != events.end();)
-	{
-		if (it->value("t", std::string()) == "end")
-		{
-			ended = true;
-			it = events.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-	}
-
-	onMessageReceived("BV" + batch.dump());
-	return ended;
-}
-
-bool FxGalleryScreen::idle() const
-{
-	return visualQueue.empty() && stepRemaining <= 0 && !waitingMove;
 }
 
 bool FxGalleryScreen::findLayout(const battle::ClassDef & classDef, const battle::SpellDef & spell, Layout & result, std::string & error)

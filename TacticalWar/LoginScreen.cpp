@@ -8,6 +8,7 @@
 #include "WaitMatchScreen.h"
 #include "MusicManager.h"
 #include "ClientConfig.h"
+#include "TrainingSetupScreen.h"
 
 using namespace tw;
 
@@ -18,6 +19,7 @@ float formElementHeight = 25;
 LoginScreen::LoginScreen(tgui::Gui * gui)
 {
 	readyForConnect = false;
+	trainingRequested = false;
 	this->gui = gui;
 	gui->removeAllWidgets();
 	
@@ -80,6 +82,17 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 		readyForConnect = true;
 	});
 
+	// Entraînement contre l'ordinateur, sans serveur.
+	tgui::Button::Ptr trainingButton = tgui::Button::create();
+	trainingButton->setInheritedFont(font);
+	trainingButton->setTextSize(formFontSize);
+	trainingButton->setText(L"Entraînement");
+	trainingButton->setSize(login->getSize().x, trainingButton->getSize().y);
+	trainingButton->getRenderer()->setBackgroundColor(sf::Color(255, 215, 0, 180));
+	trainingButton->connect("pressed", [this]() {
+		trainingRequested = true;
+	});
+
 	errorMsg = tgui::Label::create();
 	errorMsg->setInheritedFont(font);
 	errorMsg->setTextSize(formFontSize);
@@ -93,6 +106,7 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	gui->add(server, "serverEdit");
 
 	gui->add(button, "connectBtn");
+	gui->add(trainingButton, "trainingBtn");
 
 	gui->add(errorMsg, "errorMsg");
 
@@ -127,6 +141,7 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	tgui::Label::Ptr serverLabel = gui->get<tgui::Label>("serverLabel");
 	tgui::EditBox::Ptr server = gui->get<tgui::EditBox>("serverEdit");
 	tgui::Button::Ptr btn = gui->get<tgui::Button>("connectBtn");
+	tgui::Button::Ptr trainingBtn = gui->get<tgui::Button>("trainingBtn");
 
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
 
@@ -143,9 +158,10 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	server->setPosition(formX, formY + 5 * formElementHeight + 20);
 
 	btn->setPosition(formX, formY + 6 * formElementHeight + 30);
+	trainingBtn->setPosition(formX, formY + 7 * formElementHeight + 50);
 
 	errorMsg->setSize(window->getSize().x, 40);
-	errorMsg->setPosition(0, formY + 7 * formElementHeight + 40);
+	errorMsg->setPosition(0, formY + 8 * formElementHeight + 60);
 	
 
 	sf::Event event;
@@ -190,6 +206,13 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 		}
 
 		readyForConnect = false;
+	}
+
+	if (trainingRequested)
+	{
+		gui->removeAllWidgets();
+		ScreenManager::getInstance()->setCurrentScreen(new TrainingSetupScreen(gui));
+		delete this;
 	}
 }
 

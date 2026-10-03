@@ -878,13 +878,17 @@ void BattleScreen::showEnd()
 	}
 
 	sf::String winners;
+	int winnerCount = 0;
 	for (const battle::Fighter & fighter : shown.fighters)
 	{
 		if (fighter.team == shown.winnerTeam)
+		{
 			winners += (winners.isEmpty() ? sf::String() : sf::String(L" et ")) + fromServerText(fighter.name);
+			winnerCount++;
+		}
 	}
 
-	sf::String details = winners + L" remportent le combat.\n" + reasonLabel(shown.endReason)
+	sf::String details = winners + (winnerCount > 1 ? L" remportent" : L" remporte") + L" le combat.\n" + reasonLabel(shown.endReason)
 		+ L"\nTours joués : " + num(shown.round);
 
 	// Bilan de chaque combattant, l'équipe gagnante d'abord.

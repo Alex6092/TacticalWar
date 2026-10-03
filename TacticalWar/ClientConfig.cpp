@@ -114,6 +114,34 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 			fxGallery = true;
 			fxMap = std::atoi(argv[++i]);
 		}
+		else if (arg == "--training")
+		{
+			training = true;
+		}
+		else if (arg == "--training-start")
+		{
+			training = trainingStart = true;
+		}
+		else if (arg == "--training-class" && hasValue)
+		{
+			training = trainingStart = true;
+			trainingClass = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-map" && hasValue)
+		{
+			training = trainingStart = true;
+			trainingMap = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-1v1")
+		{
+			training = trainingStart = true;
+			trainingDuel = true;
+		}
+		else if (arg == "--training-autoplay")
+		{
+			training = trainingStart = true;
+			trainingAutoplay = true;
+		}
 		else if (arg == "--spectator")
 		{
 			autoLogin.clear();

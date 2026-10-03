@@ -2,6 +2,8 @@
 #include "BattleScreen.h"
 #include "FxGalleryScreen.h"
 #include "LoginScreen.h"
+#include "TrainingScreen.h"
+#include "TrainingSetupScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
@@ -19,7 +21,21 @@ int main(int argc, char** argv)
 	tgui::Gui gui{ window };
 	window.setVerticalSyncEnabled(true);
 	if (config.fxGallery)
+	{
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::FxGalleryScreen(&gui, config.fxSpell, config.fxMap));
+	}
+	else if (config.training)
+	{
+		tw::TrainingSettings & settings = tw::TrainingSettings::current();
+		settings.duo = !config.trainingDuel;
+		settings.playerClass = config.trainingClass;
+		settings.mapId = config.trainingMap;
+		settings.autoplay = config.trainingAutoplay;
+		if (config.trainingStart)
+			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));
+		else
+			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingSetupScreen(&gui));
+	}
 	else
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::LoginScreen(&gui));
 	sf::Clock deltaClock;

@@ -90,7 +90,8 @@ namespace tw
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
 		void showEnd();
-		void leave();
+		// Quitte l'écran de combat (l'objet est détruit).
+		virtual void leave();
 		sf::String teamLabel(int team) const;
 
 		tgui::Gui * gui;
