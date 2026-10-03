@@ -138,9 +138,12 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	mode->connect("ItemSelected", [this]() { refreshFormatOptions(); });
 	zonePointsLabel = createLabel(L"Points");
 	zonePoints = createNumberBox("5");
+	// Talents de tournoi : un par match joué, au plus ce nombre (0 : désactivés).
+	talentsLabel = createLabel(L"Talents par joueur (max, 0 = aucun)");
+	maxTalents = createNumberBox("3");
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents })
 		form->add(widget);
 
 	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -345,6 +348,10 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	zonePoints->setPosition(x + 318, y);
 	zonePoints->setSize(42, 26);
 	y += 34;
+	talentsLabel->setPosition(x, y + 4);
+	maxTalents->setPosition(x + 318, y);
+	maxTalents->setSize(42, 26);
+	y += 34;
 
 	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
 	teamList->setPosition(x, y + 20);
@@ -512,6 +519,7 @@ void TournamentAdminPanel::refreshForm()
 		topCut->setText(num(settings.value("swissTopCut", 0)));
 		mode->setSelectedItemById(settings.value("mode", std::string("KO")) == "ZONE" ? "ZONE" : "KO");
 		zonePoints->setText(num(settings.value("zonePoints", 5)));
+		maxTalents->setText(num(settings.value("maxTalents", 3)));
 	}
 	refreshFormatOptions();
 
@@ -558,6 +566,7 @@ void TournamentAdminPanel::refreshForm()
 	format->setEnabled(draft);
 	mode->setEnabled(draft);
 	zonePoints->setEnabled(draft);
+	maxTalents->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -658,7 +667,8 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "swissRounds", number(swissRounds) },
 		{ "swissTopCut", number(topCut) },
 		{ "mode", mode->getSelectedItemId().toAnsiString() },
-		{ "zonePoints", number(zonePoints) }
+		{ "zonePoints", number(zonePoints) },
+		{ "maxTalents", number(maxTalents) }
 	};
 }
 

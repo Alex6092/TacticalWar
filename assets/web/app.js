@@ -281,6 +281,7 @@ function renderLive(tournament) {
         return `<div class="fighter ${f.alive ? "" : "dead"} ${f.id === battle.active ? "active" : ""}">
           <div class="fighter-name"><span>${esc(f.name)} <small>${esc(f.className)}</small></span><span>${f.alive ? f.hp : "KO"}${f.alive && f.shield > 0 ? ` <span class="shield-num">+${f.shield}</span>` : ""}</span></div>
           <div class="bar"><span class="hp" style="width:${hp}%"></span><span class="shield" style="left:${hp}%;width:${shield}%"></span></div>
+          ${f.talents && f.talents.length ? `<div class="talents">${f.talents.map(esc).join(" · ")}</div>` : ""}
         </div>`;
       }).join("");
       body = `<div class="battle-teams">

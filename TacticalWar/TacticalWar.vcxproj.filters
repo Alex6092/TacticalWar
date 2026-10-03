@@ -153,4 +153,10 @@
     <ClCompile Include="BattleEventView.cpp" />
     <ClInclude Include="BattleEventView.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="SpellPicker.cpp" />
+    <ClCompile Include="TalentPicker.cpp" />
+    <ClInclude Include="SpellPicker.h" />
+    <ClInclude Include="TalentPicker.h" />
+  </ItemGroup>
 </Project>

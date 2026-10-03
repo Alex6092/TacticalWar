@@ -268,7 +268,7 @@ void LoginScreen::onMessageReceived(std::string msg)
 	{
 		readyForConnect = false;
 		gui->removeAllWidgets();
-		ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui));
+		ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui, msg.substr(2)));
 		delete this;
 	}
 	else if (sentence.substring(0, 2) == "HS")

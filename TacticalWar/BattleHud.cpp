@@ -417,6 +417,16 @@ sf::String BattleHud::fighterSummary(const BattleState & state, const GameData &
 	if (classDef != nullptr && classDef->passive.type != PassiveType::NONE)
 		text += L"\nPassif : " + fromServerText(classDef->passive.name);
 
+	// Talents de tournoi (visibles de tous : adversaires et spectateurs compris).
+	sf::String talents;
+	for (const std::string & id : fighter.talents)
+	{
+		const TalentDef * talent = data.findTalent(id);
+		talents += (talents.isEmpty() ? sf::String() : sf::String(L", ")) + fromServerText(talent != nullptr ? talent->name : id);
+	}
+	if (!talents.isEmpty())
+		text += L"\nTalents : " + talents;
+
 	for (const ActiveEffect & effect : fighter.effects)
 		text += L"\n- " + effectDescription(effect);
 

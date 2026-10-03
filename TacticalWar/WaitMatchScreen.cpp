@@ -108,7 +108,7 @@ void WaitMatchScreen::onMessageReceived(std::string msg)
 	if (m.substring(0, 2) == "HC")
 	{
 		gui->removeAllWidgets();
-		ClassSelectionScreen * classScreen = new ClassSelectionScreen(gui);
+		ClassSelectionScreen * classScreen = new ClassSelectionScreen(gui, msg.substr(2));
 		classScreen->setShaderEllapsedTime(getShaderEllapsedTime());
 		tw::ScreenManager::getInstance()->setCurrentScreen(classScreen);
 		delete this;

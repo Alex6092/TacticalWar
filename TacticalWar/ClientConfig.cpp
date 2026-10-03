@@ -45,6 +45,12 @@ void ClientConfig::load()
 	soundInFile = json.value("sound", soundInFile);
 	soundEnabled = soundInFile;
 
+	for (const nlohmann::json & talent : json.value("talents", nlohmann::json::array()))
+	{
+		if (talent.is_string())
+			talentChoice.push_back(talent.get<std::string>());
+	}
+
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
 	{
@@ -69,6 +75,8 @@ void ClientConfig::save() const
 		{ "serverPort", serverPort },
 		{ "sound", soundInFile }
 	};
+	if (!talentChoice.empty())
+		json["talents"] = talentChoice;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -160,6 +168,15 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			training = trainingStart = true;
 			trainingDuel = true;
+		}
+		else if (arg == "--training-talents" && hasValue)
+		{
+			training = trainingStart = true;
+			trainingTalents = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen" && hasValue)
+		{
+			classScreenTalents = std::atoi(argv[++i]);
 		}
 		else if (arg == "--training-zone")
 		{

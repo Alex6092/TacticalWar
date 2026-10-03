@@ -438,7 +438,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 		gui->removeAllWidgets();
 		if (window != NULL)
 			window->setView(window->getDefaultView());
-		ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui));
+		ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(gui, message.payload));
 		MusicManager::getInstance()->setMenuMusic();
 		delete this;
 	}

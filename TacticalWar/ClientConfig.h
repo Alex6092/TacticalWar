@@ -15,6 +15,8 @@ public:
 	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
 	// proposés à nouveau au choix suivant et à l'entraînement.
 	std::map<int, std::vector<int>> spellChoices;
+	// Derniers talents de tournoi choisis (proposés à nouveau au match suivant et à l'entraînement).
+	std::vector<std::string> talentChoice;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -40,7 +42,7 @@ public:
 	std::string fxSpell;
 	int fxMap = 4;
 	// Entraînement hors ligne : --training ouvre ses réglages ; --training-start (ou l'une des options
-	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-autoplay) lance directement
+	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-talents <n>, --training-autoplay) lance directement
 	// un combat. --training-autoplay : le personnage du joueur est aussi joué par l'IA et les combats
 	// s'enchaînent (démonstration sur l'écran projeté, captures).
 	bool training = false;
@@ -50,6 +52,10 @@ public:
 	bool trainingDuel = false;
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
+	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
+	// (--class-screen N), pour les captures. -1 : désactivé.
+	int classScreenTalents = -1;
+	int trainingTalents = 0;
 
 	static ClientConfig & get();
 

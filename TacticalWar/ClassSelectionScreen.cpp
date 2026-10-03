@@ -1,418 +1,293 @@
 ﻿#include "ClassSelectionScreen.h"
-#include "LinkToServer.h"
-#include <Match.h>
-#include "MatchView.h"
-#include "PlayerStatusView.h"
-#include "ScreenManager.h"
-#include "LoginScreen.h"
+
+#include <algorithm>
+
+#include <BattleRules.h>
 #include <CharacterFactory.h>
-#include "PictureCharacterView.h"
+#include <nlohmann/json.hpp>
+
 #include "BattleScreen.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
-#include <BattleRules.h>
-#include <algorithm>
+#include "LinkToServer.h"
+#include "LoginScreen.h"
+#include "PictureCharacterView.h"
+#include "PlayerStatusView.h"
+#include "ScreenManager.h"
 #include "WaitMatchScreen.h"
 
-
-
-ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
-	: Screen()
+namespace
 {
-	readyToLock = false;
-	locked = false;
-	ellapsedTime = 0;
-	orientation = 0;
-	this->gui = gui;
+	// Dimensions d'origine de la carte de classe (assets/classpreview).
+	const float CARD_WIDTH = 400;
+	const float CARD_HEIGHT = 450;
+
+	sf::String num(int value)
+	{
+		return sf::String(std::to_string(value));
+	}
+
+	tgui::Button::Ptr createButton(const sf::Font & font, const sf::String & text, unsigned int size)
+	{
+		tgui::Button::Ptr button = tgui::Button::create(text);
+		button->setInheritedFont(font);
+		button->setTextSize(size);
+		return button;
+	}
+
+	tgui::Panel::Ptr createPanel()
+	{
+		tgui::Panel::Ptr panel = tgui::Panel::create();
+		panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 0, 200));
+		panel->getRenderer()->setBorders(1);
+		panel->getRenderer()->setBorderColor(sf::Color(255, 215, 0, 160));
+		return panel;
+	}
+}
+
+ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & selection)
+	: Screen(), gui(gui), characterView(NULL), indexClass(0), orientationTime(0), orientation(0), readyToLock(false), locked(false)
+{
 	gui->removeAllWidgets();
 	font.loadFromFile("./assets/font/neuropol_x_rg.ttf");
-	font2.loadFromFile("./assets/font/OpenSans-Regular.ttf");
+	textFont.loadFromFile("./assets/font/OpenSans-Regular.ttf");
 
 	title.setFont(font);
-	title.setCharacterSize(128);
 	title.setString("Tactical War");
 	title.setFillColor(sf::Color::White);
-	//title.setStyle(sf::Text::Bold);
 	title.setOutlineColor(sf::Color(255, 215, 0));
 	title.setOutlineThickness(3);
 
 	subtitle.setFont(font);
-	subtitle.setCharacterSize(32);
-	subtitle.setString("Sélection de la classe");
+	subtitle.setCharacterSize(28);
+	subtitle.setString(L"Sélection de la classe");
 	subtitle.setFillColor(sf::Color::Red);
 	subtitle.setOutlineColor(sf::Color(255, 215, 0));
 	subtitle.setOutlineThickness(1.5);
 
-/*
-	stats.setFont(font2);
-	stats.setCharacterSize(100);
-	stats.setString("STATS");
-	stats.setFillColor(sf::Color(0, 255, 255));
-	*/
-	/*
-	matchPanelTitle = tgui::Label::create();
-	matchPanelTitle->setInheritedFont(font);
-	matchPanelTitle->setTextSize(20);
-	matchPanelTitle->setText("Match(s) en cours :");
-	m_matchListpanel = tgui::ScrollablePanel::create();
-	m_matchListpanel->setSize(1000, 600);
-	m_matchListpanel->setInheritedFont(font);
-	m_matchListpanel->getRenderer()->setBackgroundColor(sf::Color(128, 128, 128));
-	gui->add(matchPanelTitle);
-	gui->add(m_matchListpanel);
-	*/
-
 	gui->add(PlayerStatusView::getInstance());
-
 	LinkToServer::getInstance()->addListener(this);
-
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
 
+	for (int classId : CharacterFactory::getInstance()->getClassesIds())
+		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classId, 1, 0, 0));
 
-	std::vector<int> classesIds = CharacterFactory::getInstance()->getClassesIds();
+	// Centre : carte de la classe, nom, icône, personnage animé, flèches.
+	className = tgui::Label::create();
+	className->setInheritedFont(font);
+	className->setTextSize(26);
+	className->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Center);
+	className->getRenderer()->setTextColor(sf::Color(255, 215, 0));
+	className->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	className->getRenderer()->setTextOutlineThickness(2);
+	gui->add(className);
 
-	
-	for (int i = 0; i < classesIds.size(); i++)
-	{
-		classesInstances.push_back(CharacterFactory::getInstance()->constructCharacter(NULL, classesIds[i], 1, 0, 0));
-	}
+	preview = tgui::Picture::create();
+	gui->add(preview);
+	classIcon = tgui::Picture::create();
+	gui->add(classIcon);
+	characterPicture = std::make_shared<PictureCharacterView>();
+	gui->add(characterPicture);
 
-	indexClass = 0;
-	characterView = NULL;
-	
-	
-	tgui::Picture::Ptr Icon = tgui::Picture::create();
+	previousButton = createButton(font, L"<", 30);
+	previousButton->connect("pressed", [this]() { showClass(indexClass - 1); });
+	gui->add(previousButton);
+	nextButton = createButton(font, L">", 30);
+	nextButton->connect("pressed", [this]() { showClass(indexClass + 1); });
+	gui->add(nextButton);
 
-	tgui::Picture::Ptr card = tgui::Picture::create();
-	std::shared_ptr<PictureCharacterView> classCharacterView = std::make_shared<PictureCharacterView>();
-
-
-	
-	
-	tgui::Button::Ptr buttonSuivant = tgui::Button::create();
-	buttonSuivant->setInheritedFont(font);
-	buttonSuivant->setText("suivant");
-	buttonSuivant->setSize(200, 100);
-
-	tgui::Button::Ptr buttonPrecedent = tgui::Button::create();
-	buttonPrecedent->setInheritedFont(font);
-	buttonPrecedent->setText("precedent");
-	buttonPrecedent->setSize(200, 100);
-
-	tgui::Button::Ptr buttonLock = tgui::Button::create();
-	buttonLock->setInheritedFont(font);
-	buttonLock->setText("Verrouiller mon choix");
-	buttonLock->setSize(200, 50);
-
-	buttonSuivant->connect("pressed", [&]() {
-		int currentValue = this->getIdxClass();
-		currentValue++;
-		this->setIdxClass(currentValue);
-	});
-
-
-	buttonPrecedent->connect("pressed", [&]() {
-		int currentValue = this->getIdxClass();
-		currentValue--;
-		this->setIdxClass(currentValue);
-	});
-
-	buttonLock->connect("pressed", [&]() {
-		readyToLock = true;
-	});
-
-/*	m_matchListpanel = tgui::ScrollablePanel::create();
-	m_matchListpanel->setSize(1500, 700);
-	m_matchListpanel->setPosition(230, 250);
-	m_matchListpanel->setInheritedFont(font);
-	m_matchListpanel->getRenderer()->setBackgroundColor(sf::Color(128, 128, 128, 128));
-*/
-	statsPanel = tgui::ScrollablePanel::create();
-	statsPanel->setSize(500, 300);
-	statsPanel->setPosition(PositionOfCardX + 500, PositionOfCardY-20);
-	statsPanel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 0));
-
-	descriptionPanel = tgui::ScrollablePanel::create();
-	descriptionPanel->setSize(500, 300);
-	descriptionPanel->setPosition(DescriptionX, DescriptionY);
-	descriptionPanel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 0));
-
-	tgui::Label::Ptr stats = tgui::Label::create();
-	stats->setInheritedFont(font2);
-
-	tgui::Label::Ptr classNameLabel = tgui::Label::create();
-	classNameLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr atkLabel = tgui::Label::create();
-	atkLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr atk = tgui::Label::create();
-	atk->setInheritedFont(font2);
-
-	tgui::Label::Ptr pmLabel = tgui::Label::create();
-	pmLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr paLabel = tgui::Label::create();
-	paLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr lifeLabel = tgui::Label::create();
-	lifeLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr defLabel = tgui::Label::create();
-	defLabel->setInheritedFont(font2);
-
-	tgui::Label::Ptr description = tgui::Label::create();
-	description->setInheritedFont(font2);
-
-
-
+	// Droite : caractéristiques, puis description et passif.
+	statsPanel = createPanel();
+	statsLabel = tgui::Label::create();
+	statsLabel->setInheritedFont(textFont);
+	statsLabel->setTextSize(19);
+	statsLabel->getRenderer()->setTextColor(sf::Color::White);
+	statsLabel->setPosition(14, 10);
+	statsPanel->add(statsLabel);
 	gui->add(statsPanel);
-	gui->add(descriptionPanel);
-	gui->add(card, "classPreview");
-/*
-	gui->add(m_matchListpanel);
-	gui->add(warriorpanel);
-	gui->add(statsPanel);
-	*/
-	gui->add(Icon, "classIcon");
-	gui->add(classCharacterView, "classCharacterView");	
-	gui->add(buttonSuivant, "buttonSuivant");
-	gui->add(buttonPrecedent, "buttonPrecedent");
 
-	gui->add(stats, "stats");
-	gui->add(classNameLabel, "classNameLabel");
-	gui->add(atkLabel, "atkLabel");
-	gui->add(atk, "atk");
-	gui->add(pmLabel, "pmLabel");
-	gui->add(paLabel, "paLabel");
-	gui->add(lifeLabel, "lifeLabel");
-	gui->add(defLabel, "defLabel");
-	gui->add(description, "description");
-	// Les 6 sorts de la classe : un clic (sur l'icône ou le texte) ajoute ou retire le sort.
-	for (int i = 0; i < 6; i++)
-	{
-		std::string index = std::to_string(i + 1);
-		tgui::Picture::Ptr spell = tgui::Picture::create();
-		spell->connect("Clicked", [this, i]() { toggleSpell(i); });
-		gui->add(spell, "spell" + index);
-		tgui::Label::Ptr spellDescription = tgui::Label::create();
-		spellDescription->setInheritedFont(font2);
-		spellDescription->connect("Clicked", [this, i]() { toggleSpell(i); });
-		gui->add(spellDescription, "spell" + index + "Description");
-	}
-	tgui::Label::Ptr spellCounter = tgui::Label::create();
-	spellCounter->setInheritedFont(font2);
-	spellCounter->setTextSize(18);
-	spellCounter->getRenderer()->setTextColor(sf::Color(255, 215, 0));
-	spellCounter->setPosition(215, 868);
-	gui->add(spellCounter, "spellCounter");
-	
-	gui->add(buttonLock, "buttonLock");
-
-
-
-	setClassView();
-}
-
-void ClassSelectionScreen::setClassView()
-{
-	auto num = [](int value) { return sf::String(std::to_string(value)); };
-	tw::BaseCharacterModel * model = classesInstances[indexClass];
-
-	// Textes et chiffres : données de jeu envoyées par le serveur (assets/data/gamedata.json).
-	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(model->getClassId());
-
-	std::string pathClassPreview = classDef != NULL ? classDef->preview : std::string();
-	sf::Texture TextureClassPreview;
-	TextureClassPreview.loadFromFile(pathClassPreview);
-	TextureClassPreview.setSmooth(true);
-	tgui::Picture::Ptr previewClass = gui->get<tgui::Picture>("classPreview");
-	previewClass->setPosition(PositionOfCardX, PositionOfCardY);
-	previewClass->getRenderer()->setTexture(TextureClassPreview);
-
-	std::string path = classDef != NULL ? classDef->icon : std::string();
-	sf::Texture TextureIconClass;
-	TextureIconClass.loadFromFile(path);
-	TextureIconClass.setSmooth(true);
-	tgui::Picture::Ptr IconClass = gui->get<tgui::Picture>("classIcon");
-	IconClass->getRenderer()->setTexture(TextureIconClass);
-	IconClass->setSize(70, 75);
-	IconClass->setPosition(PositionOfCardX, PositionOfCardY);
-
-	tgui::Label::Ptr stats= gui->get<tgui::Label>("stats");
-	stats->setText("STATS");
-	stats->setPosition(PositionOfCardX + 700, PositionOfCardY);
-	stats->setTextSize(35);
-
-	tgui::Label::Ptr classNameLabel = gui->get<tgui::Label>("classNameLabel");
-	classNameLabel->setText(classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(model->getClassId()));
-	classNameLabel->setPosition(PositionOfCardX + 700, PositionOfCardY + 300);
-	classNameLabel->setTextSize(25);
-
-	// Caractéristiques regroupées dans un seul bloc de texte.
-	sf::String statsText;
-	if (classDef != NULL)
-	{
-		const tw::battle::Stats & s = classDef->baseStats;
-		statsText = L"Points de vie : " + num(s.get(tw::battle::Stat::MAX_HP))
-			+ L"\nPA : " + num(s.get(tw::battle::Stat::AP)) + L"     PM : " + num(s.get(tw::battle::Stat::MP))
-			+ L"\nInitiative : " + num(s.get(tw::battle::Stat::INITIATIVE))
-			+ L"\nPuissance : " + num(s.get(tw::battle::Stat::POWER)) + L" %"
-			+ L"\nRésistance : " + num(s.get(tw::battle::Stat::RESISTANCE)) + L" %"
-			+ L"\nTacle : " + num(s.get(tw::battle::Stat::LOCK)) + L"     Fuite : " + num(s.get(tw::battle::Stat::DODGE));
-	}
-	tgui::Label::Ptr atkLabel = gui->get<tgui::Label>("atkLabel");
-	atkLabel->setText(statsText);
-	atkLabel->setTextSize(frontsize2);
-	atkLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Left);
-
-	for (const char * unused : { "pmLabel", "lifeLabel", "paLabel", "defLabel" })
-		gui->get<tgui::Label>(unused)->setText("");
-
-	sf::String description;
-	if (classDef != NULL)
-	{
-		description = fromServerText(classDef->description);
-		if (classDef->passive.type != tw::battle::PassiveType::NONE)
-			description += L"\n\nPassif - " + fromServerText(classDef->passive.name) + L" : " + fromServerText(classDef->passive.description);
-	}
-	tgui::Label::Ptr descriptionLabel = gui->get<tgui::Label>("description");
-	descriptionLabel->setText(description);
-	descriptionLabel->setSize(500, 260);
+	descriptionPanel = createPanel();
+	descriptionLabel = tgui::Label::create();
+	descriptionLabel->setInheritedFont(textFont);
 	descriptionLabel->setTextSize(18);
+	descriptionLabel->getRenderer()->setTextColor(sf::Color(235, 235, 235));
+	descriptionLabel->setPosition(14, 10);
+	descriptionPanel->add(descriptionLabel);
+	gui->add(descriptionPanel);
 
-	// Sorts proposés : le dernier choix fait pour cette classe, à défaut les 4 premiers.
-	chosenSpells.clear();
-	if (classDef != NULL)
-		chosenSpells = tw::battle::validSpellChoice(*classDef, ClientConfig::get().spellChoice(classDef->id));
+	// Gauche : sorts (sur un fond sombre, pour la lisibilité) et talents.
+	spellsPanel = createPanel();
+	gui->add(spellsPanel);
+	spellPicker.reset(new tw::SpellPicker(textFont, tw::SpellPicker::Layout::LIST));
+	spellPicker->onChange = [this]() { refreshLock(); };
+	gui->add(spellPicker->getWidget());
 
-	for (int i = 0; i < 6; i++)
-	{
-		std::string index = std::to_string(i + 1);
-		tgui::Picture::Ptr icon = gui->get<tgui::Picture>("spell" + index);
-		tgui::Label::Ptr label = gui->get<tgui::Label>("spell" + index + "Description");
+	nlohmann::json message = nlohmann::json::parse(selection, nullptr, false);
+	talentPicker.reset(new tw::TalentPicker(gui, font));
+	talentPicker->setSlots(message.is_object() ? message.value("talents", 0) : 0);
+	talentPicker->setChosen(ClientConfig::get().talentChoice);
+	talentPicker->onChange = [this]() { refreshLock(); };
+	gui->add(talentPicker->getButton());
 
-		sf::String text;
-		bool exists = classDef != NULL && i < (int)classDef->spells.size();
-		if (exists)
-		{
-			const tw::battle::SpellDef & spell = classDef->spells[i];
-			sf::Texture texture;
-			if (texture.loadFromFile(spell.icon))
-				icon->getRenderer()->setTexture(texture);
+	lockButton = createButton(font, L"Verrouiller mon choix", 20);
+	lockButton->connect("pressed", [this]() { readyToLock = true; });
+	gui->add(lockButton);
 
-			text = fromServerText(spell.name) + L" - " + num(spell.apCost) + L" PA";
-			if (spell.launch != tw::battle::LaunchShape::SELF)
-				text += L", portée " + num(spell.minRange) + L"-" + num(spell.maxRange);
-			if (spell.cooldown > 0)
-				text += L", relance " + num(spell.cooldown);
-			text += L"\n" + fromServerText(spell.description);
-		}
-
-		icon->setVisible(exists);
-		label->setVisible(exists);
-		icon->setSize(tgui::Layout2d(72, 72));
-		icon->setPosition(tgui::Layout2d(215, 290 + i * 95));
-		label->setText(text);
-		label->setSize(sizeTextX + 100, 90);
-		label->setTextSize(15);
-		label->getRenderer()->setTextStyle(sf::Text::Bold);
-		label->getRenderer()->setTextOutlineColor(sf::Color::Black);
-		label->getRenderer()->setTextOutlineThickness(1);
-		label->setPosition(300, 290 + i * 95);
-	}
-	refreshSpells();
-
-	atkLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 60);
-	descriptionLabel->setPosition(DescriptionX, DescriptionY + 60);
-
-	std::shared_ptr<tgui::Picture> classCharacterView = gui->get<tgui::Picture>("classCharacterView");
-	std::shared_ptr<PictureCharacterView> convertedCharacterView = std::dynamic_pointer_cast<PictureCharacterView>(classCharacterView);
-
-	if (characterView != NULL)
-	{
-		delete characterView;
-	}
-
-	characterView = new tw::CharacterView(model);
-	characterView->setOrientation((tw::Orientation)((orientation) % 4));
-
-	if (convertedCharacterView != NULL)
-	{
-		convertedCharacterView->setCharacterView(characterView);
-		sf::FloatRect size = convertedCharacterView->getSize();
-		convertedCharacterView->setSize(size.width, size.height);
-		convertedCharacterView->setPosition(600, 2000);
-	}
-}
-
-void ClassSelectionScreen::toggleSpell(int index)
-{
-	if (locked)
-		return;
-	auto it = std::find(chosenSpells.begin(), chosenSpells.end(), index);
-	if (it != chosenSpells.end())
-		chosenSpells.erase(it);
-	else if ((int)chosenSpells.size() < tw::battle::SPELL_SLOTS)
-		chosenSpells.push_back(index);
-	// Barre de sorts dans l'ordre de la classe.
-	std::sort(chosenSpells.begin(), chosenSpells.end());
-	refreshSpells();
-}
-
-void ClassSelectionScreen::refreshSpells()
-{
-	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(classesInstances[indexClass]->getClassId());
-	int needed = classDef != NULL ? (int)tw::battle::defaultSpells(*classDef).size() : 0;
-	for (int i = 0; i < 6; i++)
-	{
-		std::string index = std::to_string(i + 1);
-		bool chosen = std::find(chosenSpells.begin(), chosenSpells.end(), i) != chosenSpells.end();
-		gui->get<tgui::Picture>("spell" + index)->getRenderer()->setOpacity(chosen ? 1.f : 0.35f);
-		gui->get<tgui::Label>("spell" + index + "Description")->getRenderer()->setTextColor(chosen ? sf::Color(255, 240, 200) : sf::Color(150, 150, 150));
-	}
-
-	sf::String counter = L"Sorts emportés : " + sf::String(std::to_string(chosenSpells.size())) + L"/" + sf::String(std::to_string(needed));
-	if (!locked)
-		counter += (int)chosenSpells.size() < needed ? L" - cliquez sur un sort pour l'ajouter" : L" - cliquez sur un sort pour le retirer";
-	tgui::Label::Ptr counterLabel = gui->get<tgui::Label>("spellCounter");
-	counterLabel->setText(counter);
-	counterLabel->getRenderer()->setTextColor((int)chosenSpells.size() == needed ? sf::Color(255, 215, 0) : sf::Color(255, 120, 100));
-
-	tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
-	if (lockButton != nullptr && !locked)
-		lockButton->setEnabled((int)chosenSpells.size() == needed);
+	showClass(0);
 }
 
 ClassSelectionScreen::~ClassSelectionScreen()
 {
 	LinkToServer::getInstance()->removeListener(this);
+	delete characterView;
+}
+
+int ClassSelectionScreen::currentClassId() const
+{
+	return classesInstances.empty() ? 0 : classesInstances[indexClass]->getClassId();
+}
+
+void ClassSelectionScreen::showClass(int index)
+{
+	if (classesInstances.empty())
+		return;
+	int count = (int)classesInstances.size();
+	indexClass = (index % count + count) % count;
+	tw::BaseCharacterModel * model = classesInstances[indexClass];
+
+	// Textes et chiffres : données de jeu envoyées par le serveur (assets/data/gamedata.json).
+	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(model->getClassId());
+	className->setText(classDef != NULL ? fromServerText(classDef->name) : L"Classe " + num(model->getClassId()));
+
+	sf::Texture texture;
+	if (classDef != NULL && texture.loadFromFile(classDef->preview))
+	{
+		texture.setSmooth(true);
+		preview->getRenderer()->setTexture(texture);
+	}
+	sf::Texture icon;
+	if (classDef != NULL && icon.loadFromFile(classDef->icon))
+	{
+		icon.setSmooth(true);
+		classIcon->getRenderer()->setTexture(icon);
+	}
+
+	sf::String stats;
+	sf::String description;
+	if (classDef != NULL)
+	{
+		const tw::battle::Stats & s = classDef->baseStats;
+		stats = L"Points de vie : " + num(s.get(tw::battle::Stat::MAX_HP))
+			+ L"\nPA : " + num(s.get(tw::battle::Stat::AP)) + L"     PM : " + num(s.get(tw::battle::Stat::MP))
+			+ L"\nInitiative : " + num(s.get(tw::battle::Stat::INITIATIVE))
+			+ L"\nPuissance : " + num(s.get(tw::battle::Stat::POWER)) + L" %"
+			+ L"\nRésistance : " + num(s.get(tw::battle::Stat::RESISTANCE)) + L" %"
+			+ L"\nTacle : " + num(s.get(tw::battle::Stat::LOCK)) + L"     Fuite : " + num(s.get(tw::battle::Stat::DODGE));
+		description = fromServerText(classDef->description);
+		if (classDef->passive.type != tw::battle::PassiveType::NONE)
+			description += L"\n\nPassif - " + fromServerText(classDef->passive.name) + L" : " + fromServerText(classDef->passive.description);
+	}
+	statsLabel->setText(stats);
+	descriptionLabel->setText(description);
+
+	// Sorts proposés : le dernier choix fait pour cette classe, à défaut les 4 premiers.
+	spellPicker->setClass(classDef, classDef != NULL ? ClientConfig::get().spellChoice(classDef->id) : std::vector<int>());
+
+	delete characterView;
+	characterView = new tw::CharacterView(model);
+	characterView->setOrientation((tw::Orientation)(orientation % 4));
+	characterPicture->setCharacterView(characterView);
+
+	refreshLock();
+	if (windowSize.x > 0)
+		layout(windowSize);
+}
+
+void ClassSelectionScreen::refreshLock()
+{
+	bool complete = spellPicker->isComplete() && talentPicker->isComplete();
+	lockButton->setEnabled(!locked && complete);
+	lockButton->setText(locked ? L"Choix verrouillé" : complete ? L"Verrouiller mon choix"
+		: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez vos talents");
+}
+
+void ClassSelectionScreen::layout(const sf::Vector2u & size)
+{
+	float width = (float)size.x;
+	float height = (float)size.y;
+	unsigned int titleSize = height > 1000 ? 110 : 80;
+	title.setCharacterSize(titleSize);
+	title.setPosition(width / 2 - title.getLocalBounds().width / 2, 6);
+	subtitle.setPosition(width / 2 - subtitle.getLocalBounds().width / 2, 10.f + titleSize);
+
+	float top = titleSize + 64.f;
+	float margin = width * 0.03f;
+	float lockY = height - 76;
+
+	// Gauche : sorts (lignes ajustées à la hauteur disponible), puis talents.
+	float leftWidth = width * 0.36f;
+	float rowHeight = std::max(56.f, std::min(82.f, (lockY - 60 - top - 30) / 6));
+	spellPicker->setGeometry(leftWidth, rowHeight);
+	spellPicker->getWidget()->setPosition(margin, top);
+	spellsPanel->setPosition(margin - 10, top - 8);
+	spellsPanel->setSize(leftWidth + 20, spellPicker->getHeight() + 12);
+	tgui::Button::Ptr talents = talentPicker->getButton();
+	talents->setSize(std::min(leftWidth, 380.f), 40);
+	talents->setPosition(margin, top + spellPicker->getHeight() + 8);
+
+	// Centre : carte de la classe, à la taille disponible.
+	float centerX = margin + leftWidth + width * 0.03f;
+	float centerWidth = width * 0.24f;
+	float scale = std::min(1.f, std::min(centerWidth / CARD_WIDTH, (lockY - top - 230) / CARD_HEIGHT));
+	float cardWidth = CARD_WIDTH * scale;
+	float cardHeight = CARD_HEIGHT * scale;
+	float cardX = centerX + (centerWidth - cardWidth) / 2;
+	float cardY = top + 36;
+	className->setSize(centerWidth, 34);
+	className->setPosition(centerX, top);
+	preview->setSize(cardWidth, cardHeight);
+	preview->setPosition(cardX, cardY);
+	classIcon->setSize(70 * scale, 75 * scale);
+	classIcon->setPosition(cardX, cardY);
+	previousButton->setSize(48, 64);
+	previousButton->setPosition(cardX - 56, cardY + cardHeight / 2 - 32);
+	nextButton->setSize(48, 64);
+	nextButton->setPosition(cardX + cardWidth + 8, cardY + cardHeight / 2 - 32);
+	characterPicture->setPosition(centerX + centerWidth / 2 - 40, cardY + cardHeight + 12);
+
+	// Droite : caractéristiques et description.
+	float rightX = centerX + centerWidth + width * 0.03f;
+	float rightWidth = width - rightX - margin;
+	statsPanel->setPosition(rightX, top);
+	statsPanel->setSize(rightWidth, 200);
+	descriptionPanel->setPosition(rightX, top + 214);
+	descriptionPanel->setSize(rightWidth, std::max(120.f, lockY - 16 - (top + 214)));
+	descriptionLabel->setMaximumTextWidth(rightWidth - 28);
+
+	lockButton->setSize(400, 54);
+	lockButton->setPosition(width / 2 - 200, lockY);
 }
 
 void ClassSelectionScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 {
-	windowSize = window->getSize();
-
-	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
-	subtitle.setPosition(window->getSize().x / 2 - subtitle.getLocalBounds().width / 2, 10 + 128 + 10);
-	stats.setPosition(400+700, 450);
-	//matchPanelTitle->setPosition(window->getSize().x / 2.0 - m_matchListpanel->getSize().x / 2.0, 270);
-	//m_matchListpanel->setPosition(window->getSize().x / 2.0 - m_matchListpanel->getSize().x / 2.0, 300);
+	if (window->getSize() != windowSize)
+	{
+		windowSize = window->getSize();
+		layout(windowSize);
+	}
 
 	sf::Event event;
 	while (window->pollEvent(event))
 	{
 		if (event.type == sf::Event::Closed)
+		{
 			window->close();
+		}
 		else if (event.type == sf::Event::Resized)
 		{
-			int sizeX = event.size.width;
-			int sizeY = event.size.height;
-			sf::View view = window->getView();
-			view.setSize(event.size.width, event.size.height);
-			window->setView(view);
+			window->setView(sf::View(sf::FloatRect(0.f, 0.f, (float)event.size.width, (float)event.size.height)));
+			gui->setView(window->getView());
 		}
-
 		gui->handleEvent(event);
 	}
 }
@@ -420,33 +295,29 @@ void ClassSelectionScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * g
 void ClassSelectionScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
-	ellapsedTime += deltatime;
 
-	bool changeOrientation = false;
-	if (ellapsedTime > 1)
+	// Le personnage tourne sur lui-même (une orientation par seconde).
+	orientationTime += deltatime;
+	if (orientationTime > 1 && characterView != NULL)
 	{
-		changeOrientation = true;
-		ellapsedTime = 0;
-	}
-
-	if (changeOrientation)
-	{
+		orientationTime = 0;
 		characterView->setOrientation((tw::Orientation)((++orientation) % 4));
 	}
-
 	if (characterView != NULL)
-	{
 		characterView->update(deltatime);
-	}
-		
+
 	if (readyToLock)
 	{
-		// Classe et sorts choisis, retenus pour la prochaine fois (client.json).
-		int classId = classesInstances[indexClass]->getClassId();
-		ClientConfig::get().spellChoices[classId] = chosenSpells;
-		ClientConfig::get().save();
-		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", classId }, { "spells", chosenSpells } }).dump());
 		readyToLock = false;
+		// Classe, sorts et talents choisis, retenus pour la prochaine fois (client.json).
+		int classId = currentClassId();
+		ClientConfig & config = ClientConfig::get();
+		config.spellChoices[classId] = spellPicker->getChosen();
+		if (talentPicker->getSlots() > 0)
+			config.talentChoice = talentPicker->getChosen();
+		config.save();
+		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", classId }, { "spells", spellPicker->getChosen() },
+			{ "talents", talentPicker->getChosen() } }).dump());
 	}
 
 	LinkToServer::getInstance()->UpdateReceivedData();
@@ -459,7 +330,6 @@ void ClassSelectionScreen::render(sf::RenderWindow * window)
 
 	sf::Shader::bind(&shader);
 	sf::RectangleShape rect;
-	rect.setPosition(0, 0);
 	rect.setSize(sf::Vector2f(window->getSize()));
 	rect.setFillColor(sf::Color::Black);
 	window->draw(rect);
@@ -467,59 +337,28 @@ void ClassSelectionScreen::render(sf::RenderWindow * window)
 
 	window->draw(title);
 	window->draw(subtitle);
-
-	tgui::Button::Ptr btnSuivant = gui->get<tgui::Button>("buttonSuivant");
-	btnSuivant->setPosition(windowSize.x- 200, windowSize.y/2);
-
-	tgui::Button::Ptr btnPrecedent = gui->get<tgui::Button>("buttonPrecedent");
-	btnPrecedent->setPosition(0, windowSize.y/2);
-
-	tgui::Button::Ptr btnLock = gui->get<tgui::Button>("buttonLock");
-	btnLock->setPosition(window->getSize().x / 2. - btnLock->getSize().x / 2, 900);
-	
-	std::shared_ptr<tgui::Picture> classCharacterView = gui->get<tgui::Picture>("classCharacterView");
-	std::shared_ptr<PictureCharacterView> convertedCharacterView = std::dynamic_pointer_cast<PictureCharacterView>(classCharacterView);
-
-	if (convertedCharacterView != NULL)
-	{
-		convertedCharacterView->setCharacterView(characterView);
-		sf::FloatRect size = convertedCharacterView->getSize();
-		convertedCharacterView->setSize(size.width, size.height);
-		convertedCharacterView->setPosition(/*windowSize.x / 2. - 600, windowSize.y / 2. - convertedCharacterView->getSize().height / 2. + 80*/500,750);
-	}
-
 }
 
 void ClassSelectionScreen::onMessageReceived(std::string msg)
 {
 	sf::String m = msg;
 
-	// Le status des joueurs est géré dans PlayerStatusView (widget autonome)
-
-	// Choix classe verrouillé :
+	// L'état des joueurs est géré par PlayerStatusView (widget autonome).
 	if (m.substring(0, 2) == "PO")
 	{
-		locked = true;
-		tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
-		lockButton->setEnabled(false);
-		lockButton->setText("Choix verrouillé");
-		tgui::Button::Ptr previousButton = gui->get<tgui::Button>("buttonPrecedent");
-		previousButton->setEnabled(false);
-		previousButton->setVisible(false);
-		tgui::Button::Ptr nextButton = gui->get<tgui::Button>("buttonSuivant");
-		nextButton->setEnabled(false);
-		nextButton->setVisible(false);
-
-		int idClass = std::atoi(m.substring(2).toAnsiString().c_str());
-		for (int i = 0; i < classesInstances.size(); i++)
+		// Choix verrouillé (aussi au retour après une déconnexion) : la classe retenue est montrée.
+		int classId = std::atoi(m.substring(2).toAnsiString().c_str());
+		for (int i = 0; i < (int)classesInstances.size(); i++)
 		{
-			if (classesInstances[i]->getClassId() == idClass)
-			{
-				indexClass = i;
-				setClassView();
-				break;
-			}
+			if (classesInstances[i]->getClassId() == classId)
+				showClass(i);
 		}
+		locked = true;
+		spellPicker->setLocked(true);
+		talentPicker->setLocked(true);
+		previousButton->setVisible(false);
+		nextButton->setVisible(false);
+		refreshLock();
 	}
 	else if (m.substring(0, 2) == "HG")
 	{

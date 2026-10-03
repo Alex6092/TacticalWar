@@ -62,6 +62,8 @@ private:
 	tgui::ComboBox::Ptr mode;
 	tgui::Label::Ptr zonePointsLabel;
 	tgui::EditBox::Ptr zonePoints;
+	tgui::Label::Ptr talentsLabel;
+	tgui::EditBox::Ptr maxTalents;
 	tgui::ListView::Ptr teamList;
 	tgui::Button::Ptr saveButton;
 	tgui::Button::Ptr startButton;

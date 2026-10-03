@@ -1,5 +1,6 @@
 ﻿#include "IsometricRenderer.h"
 #include "BattleScreen.h"
+#include "ClassSelectionScreen.h"
 #include "FxGalleryScreen.h"
 #include "LoginScreen.h"
 #include "TrainingScreen.h"
@@ -24,6 +25,10 @@ int main(int argc, char** argv)
 	{
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::FxGalleryScreen(&gui, config.fxSpell, config.fxMap));
 	}
+	else if (config.classScreenTalents >= 0)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new ClassSelectionScreen(&gui, "{\"talents\": " + std::to_string(config.classScreenTalents) + "}"));
+	}
 	else if (config.training)
 	{
 		tw::TrainingSettings & settings = tw::TrainingSettings::current();
@@ -32,6 +37,8 @@ int main(int argc, char** argv)
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;
 		settings.zone = config.trainingZone;
+		settings.talentCount = config.trainingTalents;
+		settings.talents = config.talentChoice;
 		if (config.trainingStart)
 			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));
 		else
