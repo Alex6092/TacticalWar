@@ -45,6 +45,9 @@ namespace tw
 			// Ajoute un combattant avant le placement. Retourne son identifiant (ou -1).
 			int addFighter(int team, int classId, const std::string & name);
 
+			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
+			void enableZone(int pointsToWin);
+
 			void startPlacement(std::int64_t nowMs);
 
 			ActionResult place(int fighterId, const Cell & cell, std::int64_t nowMs);
@@ -91,6 +94,10 @@ namespace tw
 			void finishTurn(std::int64_t nowMs);
 			bool checkEnd(int actingFighterId);
 			void endBattle(int winnerTeam, EndReason reason);
+			// Fin d'un tour complet : point de la zone à tenir.
+			void scoreZone();
+			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.
+			int decideWinner() const;
 
 			// Effets (BattleEffects.cpp)
 			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds);
@@ -113,6 +120,7 @@ namespace tw
 			nlohmann::json effectJson(const ActiveEffect & effect) const;
 			nlohmann::json glyphJson(const Glyph & glyph) const;
 			static nlohmann::json recordJson(const FighterRecord & record);
+			static nlohmann::json zoneJson(const ZoneState & zone);
 			void emit(const nlohmann::json & event);
 			void emitStats(const Fighter & fighter);
 

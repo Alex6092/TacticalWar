@@ -50,6 +50,15 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name)
 	return fighter.id;
 }
 
+void BattleEngine::enableZone(int pointsToWin)
+{
+	if (state.phase != BattlePhase::PLACEMENT || state.round > 0)
+		return;
+	state.zone.enabled = true;
+	state.zone.cells = objectiveZone(map);
+	state.zone.pointsToWin = std::max(1, pointsToWin);
+}
+
 void BattleEngine::startPlacement(std::int64_t nowMs)
 {
 	// Chaque combattant est placé sur une cellule de départ libre de son équipe
@@ -281,6 +290,7 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		return;
 	}
 
+	int round = state.round;
 	do
 	{
 		state.turnIndex++;
@@ -291,11 +301,16 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		}
 	} while (!state.findFighter(state.activeFighterId())->alive);
 
+	if (state.round != round)
+	{
+		scoreZone();
+		if (state.phase == BattlePhase::ENDED)
+			return;
+	}
+
 	if (state.round > data.rules.maxRounds)
 	{
-		double hp1 = teamHpPercent(1);
-		double hp2 = teamHpPercent(2);
-		endBattle(hp1 >= hp2 ? 1 : 2, EndReason::ROUND_LIMIT);
+		endBattle(decideWinner(), EndReason::ROUND_LIMIT);
 		return;
 	}
 
@@ -476,9 +491,7 @@ void BattleEngine::stopByDecision(std::int64_t nowMs)
 {
 	if (state.phase == BattlePhase::ENDED)
 		return;
-	double hp1 = teamHpPercent(1);
-	double hp2 = teamHpPercent(2);
-	endBattle(hp1 >= hp2 ? 1 : 2, EndReason::ADMIN);
+	endBattle(decideWinner(), EndReason::ADMIN);
 }
 
 void BattleEngine::declareWinner(int winnerTeam, std::int64_t nowMs)
@@ -500,6 +513,31 @@ double BattleEngine::teamHpPercent(int team) const
 		max += fighter.initialMaxHp();
 	}
 	return max > 0 ? 100.0 * hp / max : 0;
+}
+
+void BattleEngine::scoreZone()
+{
+	if (!state.zone.enabled)
+		return;
+
+	bool present[3];
+	zonePresence(state, present);
+	int holder = present[1] && !present[2] ? 1 : present[2] && !present[1] ? 2 : 0;
+	if (holder != 0)
+		state.zone.scores[holder]++;
+	state.zone.holder = holder;
+	emit({ { "t", "score" }, { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "holder", holder },
+		{ "contested", present[1] && present[2] } });
+
+	if (holder != 0 && state.zone.scores[holder] >= state.zone.pointsToWin)
+		endBattle(holder, EndReason::OBJECTIVE);
+}
+
+int BattleEngine::decideWinner() const
+{
+	if (state.zone.enabled && state.zone.scores[1] != state.zone.scores[2])
+		return state.zone.scores[1] > state.zone.scores[2] ? 1 : 2;
+	return teamHpPercent(1) >= teamHpPercent(2) ? 1 : 2;
 }
 
 bool BattleEngine::checkEnd(int actingFighterId)
@@ -738,6 +776,17 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 		{ "startCells", startCells },
 		{ "winner", state.winnerTeam },
 		{ "reason", toString(state.endReason) },
-		{ "mvp", state.mvpFighterId }
+		{ "mvp", state.mvpFighterId },
+		{ "zone", zoneJson(state.zone) }
 	};
+}
+
+json BattleEngine::zoneJson(const ZoneState & zone)
+{
+	if (!zone.enabled)
+		return nullptr;
+	json cells = json::array();
+	for (const Cell & cell : zone.cells)
+		cells.push_back(cellJson(cell));
+	return { { "cells", cells }, { "points", zone.pointsToWin }, { "scores", { zone.scores[1], zone.scores[2] } }, { "holder", zone.holder } };
 }

@@ -60,3 +60,21 @@ Mesures sur 2000 combats (graine 7), avant et après l'ajout des combinaisons (v
 Les compositions qui disposent d'une combinaison progressent, sans dépasser 55 % : Guerrier + Mage passe
 de 47 à 52 %. Pour 100 combats, l'IA déclenche Brise-glace 20 fois, Cible immobile 25 fois, Dans le
 mille 32 fois et Jugement ardent 52 fois. Le rapport du simulateur donne ces chiffres à chaque essai.
+
+## Mode « zone à tenir » (octobre 2026)
+
+Mesures sur 2000 combats (graine 7, `--mode zone`, 5 points) :
+
+| Classe | Taux de victoire |
+|---|---|
+| Guerrier | 48,7 % |
+| Archer | 42,2 % |
+| Mage | 56,6 % |
+| Protecteur | 52,9 % |
+
+- 29 % des combats se terminent par la zone, les autres par KO.
+- Victoires de l'équipe 1 par carte entre 49 et 56 %.
+- La zone calculée est symétrique sur les cartes symétriques. Avant cela, une zone placée d'un seul côté
+  de la carte 2 donnait 72 % de victoires à l'équipe 1.
+- L'IA des tireurs laisse la zone à un coéquipier qui la tient déjà et évite le contact. Sans ce
+  réglage, les tireurs allaient se faire battre dans la zone (Archer à 33 %).

@@ -151,6 +151,7 @@ std::string tw::EnvironmentManager::toJson(Environment * environment, bool withR
 	std::map<std::string, int> paletteIndex;
 	json rules = json::object();
 	json starts = { { "1", json::array() }, { "2", json::array() } };
+	json zone = json::array();
 
 	for (int y = 0; y < height; y++)
 	{
@@ -168,6 +169,8 @@ std::string tw::EnvironmentManager::toJson(Environment * environment, bool withR
 			int team = cell->getTeamStartPointNumber();
 			if (team == 1 || team == 2)
 				starts[std::to_string(team)].push_back(json::array({ x, y }));
+			if (cell->getIsZone())
+				zone.push_back(json::array({ x, y }));
 		}
 	}
 
@@ -183,6 +186,9 @@ std::string tw::EnvironmentManager::toJson(Environment * environment, bool withR
 	if (withRules)
 		root["rules"] = rules;
 	root["start"] = starts;
+	// Zone à tenir peinte (absente : zone calculée au centre de la carte).
+	if (!zone.empty())
+		root["zone"] = zone;
 
 	json rows = json::array();
 	for (int y = 0; y < height; y++)
@@ -269,6 +275,12 @@ tw::Environment * tw::EnvironmentManager::fromJson(const std::string & text, std
 				if (data != NULL)
 					data->setTeamStartPoint(team);
 			}
+		}
+		for (const json & cell : root.value("zone", json::array()))
+		{
+			CellData * data = environment->getMapData(cell.at(0).get<int>(), cell.at(1).get<int>());
+			if (data != NULL)
+				data->setIsZone(true);
 		}
 		return environment;
 	}

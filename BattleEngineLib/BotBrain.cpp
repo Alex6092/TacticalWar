@@ -289,6 +289,16 @@ namespace tw
 					anyHit = anyHit || hits.back();
 				}
 
+				// Zone à tenir : y entrer ou y rester (surtout pour la disputer), sinon s'en rapprocher.
+				bool zone = state.zone.enabled && !state.zone.cells.empty();
+				bool present[3] = { false, false, false };
+				if (zone)
+					zonePresence(state, present);
+				int holdBonus = present[3 - me.team] ? 90 : 60;
+				bool allyHolds = false;
+				for (const Fighter & ally : state.fighters)
+					allyHolds = allyHolds || (zone && ally.alive && ally.team == me.team && ally.id != me.id && state.zone.contains(ally.position));
+
 				Cell best = me.position;
 				int bestScore = -1000000;
 				for (std::size_t i = 0; i < candidates.size(); i++)
@@ -302,6 +312,24 @@ namespace tw
 						score += (hits[i] ? 100 : 0) + std::min(distance, range) * 4 - (distance <= 1 ? 60 : 0);
 					else
 						score += (hits[i] ? 100 : 0) - distance * 4;
+
+					if (zone)
+					{
+						int toZone = 1000;
+						for (const Cell & zoneCell : state.zone.cells)
+							toZone = std::min(toZone, manhattan(zoneCell, cell));
+						if (ranged)
+						{
+							// Un tireur laisse la zone à un coéquipier qui la tient, et ne s'y expose pas au contact.
+							score += toZone == 0 ? (allyHolds ? 10 : holdBonus * 2 / 3) : -toZone * 3;
+							if (distance <= 1)
+								score -= 60;
+						}
+						else
+						{
+							score += toZone == 0 ? holdBonus : -toZone * 5;
+						}
+					}
 
 					if (score > bestScore)
 					{

@@ -36,7 +36,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints)
 {
 	GameData data;
 	std::string error;
@@ -105,6 +105,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		// Placement au hasard sur les cases de départ (le placement automatique prend les cases
 		// dans l'ordre de la carte, ce qui peut grouper une équipe et disperser l'autre).
 		std::int64_t now = 0;
+		if (zonePoints > 0)
+			engine.enableZone(zonePoints);
 		engine.startPlacement(now);
 		for (int team = 1; team <= 2; team++)
 		{
@@ -200,7 +202,10 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::cout << "\n=== Simulation : " << finished << " combats terminés sur " << battles;
 	if (unfinished > 0)
 		std::cout << " (" << unfinished << " interrompus)";
-	std::cout << ", " << maps.size() << " carte(s) ===\n";
+	std::cout << ", " << maps.size() << " carte(s)";
+	if (zonePoints > 0)
+		std::cout << ", zone à tenir (" << zonePoints << " points)";
+	std::cout << " ===\n";
 	std::cout << "IA simple (BotBrain) : les écarts importants signalent un déséquilibre,\n"
 		<< "les petits écarts ne disent rien du jeu entre humains.\n";
 
@@ -253,7 +258,24 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	for (const auto & entry : byMapTeam1)
 	{
 		std::cout << "  carte " << std::setw(3) << entry.first << " : " << std::setw(8) << percent(entry.second.rate())
-			<< "   (" << entry.second.games << " combats)\n";
+			<< "   (" << entry.second.games << " combats)";
+		if (zonePoints > 0)
+		{
+			// Zone de la carte : nombre de cases et distance de marche de chaque équipe.
+			for (const auto & map : maps)
+			{
+				if (map.first != entry.first)
+					continue;
+				std::vector<Cell> zone = objectiveZone(map.second);
+				int distances[3];
+				zoneDistances(map.second, zone, distances);
+				std::cout << "   zone " << (map.second.zoneCells.empty() ? "calculée" : "peinte") << " de " << zone.size()
+					<< " cases, à " << distances[1] << " / " << distances[2] << " pas";
+				if (!zone.empty())
+					std::cout << ", centre (" << zone[0].x << ", " << zone[0].y << ")";
+			}
+		}
+		std::cout << "\n";
 	}
 	return 0;
 }
