@@ -14,10 +14,9 @@ sf::Color BattleColorator::getColorForCell(tw::CellData * data)
 {
 	Cell cell = { data->getX(), data->getY() };
 
-	if (impact.count(cell) > 0)
-		return sf::Color(255, 70, 60);
-	if (castable.count(cell) > 0)
-		return sf::Color(70, 170, 255);
+	// La visée d'un sort est dessinée par-dessus la case (getOverlayForCell) : la tuile reste claire.
+	if (cell == hovered || impact.count(cell) > 0 || castable.count(cell) > 0 || range.count(cell) > 0)
+		return sf::Color::White;
 	if (path.count(cell) > 0)
 		return pathTruncated ? sf::Color(255, 160, 40) : sf::Color(80, 230, 90);
 	if (reachable.count(cell) > 0)
@@ -34,12 +33,29 @@ sf::Color BattleColorator::getColorForCell(tw::CellData * data)
 	return sf::Color::White;
 }
 
+sf::Color BattleColorator::getOverlayForCell(tw::CellData * data)
+{
+	Cell cell = { data->getX(), data->getY() };
+
+	if (cell == hovered)
+		return hoveredValid ? sf::Color(255, 205, 40, 175) : sf::Color(45, 45, 55, 150);
+	if (impact.count(cell) > 0)
+		return sf::Color(255, 60, 40, 140);
+	if (castable.count(cell) > 0)
+		return sf::Color(40, 130, 255, 140);
+	if (range.count(cell) > 0)
+		return sf::Color(150, 205, 255, 75);
+	return sf::Color::Transparent;
+}
+
 void BattleColorator::clearPreview()
 {
 	reachable.clear();
 	path.clear();
+	range.clear();
 	castable.clear();
 	impact.clear();
+	hovered = { -1, -1 };
 }
 
 void BattleColorator::setStartCells(const std::vector<Cell> & team1, const std::vector<Cell> & team2)
@@ -59,9 +75,20 @@ void BattleColorator::setPath(const std::vector<Cell> & cells, bool truncated)
 	pathTruncated = truncated;
 }
 
+void BattleColorator::setRange(const std::vector<Cell> & cells)
+{
+	range = toSet(cells);
+}
+
 void BattleColorator::setCastable(const std::vector<Cell> & cells)
 {
 	castable = toSet(cells);
+}
+
+void BattleColorator::setHovered(const Cell & cell, bool valid)
+{
+	hovered = cell;
+	hoveredValid = valid;
 }
 
 void BattleColorator::setImpact(const std::vector<Cell> & cells)

@@ -11,16 +11,23 @@ class BattleColorator : public tw::CellColorator
 {
 public:
 	virtual sf::Color getColorForCell(tw::CellData * cell);
+	// Visée d'un sort (portée, cases ciblables, zone d'impact, case survolée) : par-dessus les cases.
+	virtual sf::Color getOverlayForCell(tw::CellData * cell);
 
 	void clearPreview();
 	void setStartCells(const std::vector<tw::battle::Cell> & team1, const std::vector<tw::battle::Cell> & team2);
 	void setReachable(const std::vector<tw::battle::Cell> & cells);
 	void setPath(const std::vector<tw::battle::Cell> & cells, bool truncated);
+	// Visée d'un sort : sa portée (forme et distance, sans la ligne de vue), les cases où il peut
+	// être lancé, et la case survolée (cible valable ou non).
+	void setRange(const std::vector<tw::battle::Cell> & cells);
 	void setCastable(const std::vector<tw::battle::Cell> & cells);
+	void setHovered(const tw::battle::Cell & cell, bool valid);
 	void setImpact(const std::vector<tw::battle::Cell> & cells);
 	void setGlyphs(const std::vector<tw::battle::Glyph> & glyphs, int viewerTeam);
 
 	bool isReachable(const tw::battle::Cell & cell) const { return reachable.count(cell) > 0; }
+	bool isInRange(const tw::battle::Cell & cell) const { return range.count(cell) > 0; }
 	bool isCastable(const tw::battle::Cell & cell) const { return castable.count(cell) > 0; }
 	bool hasCastable() const { return !castable.empty(); }
 
@@ -30,7 +37,10 @@ private:
 	std::set<tw::battle::Cell> reachable;
 	std::set<tw::battle::Cell> path;
 	bool pathTruncated = false;
+	std::set<tw::battle::Cell> range;
 	std::set<tw::battle::Cell> castable;
+	tw::battle::Cell hovered = { -1, -1 };
+	bool hoveredValid = false;
 	std::set<tw::battle::Cell> impact;
 	std::map<tw::battle::Cell, sf::Color> glyphColors;
 };

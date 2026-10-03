@@ -15,7 +15,8 @@ namespace tw
 	// objet "visual" des sorts dans assets/data/gamedata.json). L'écran de combat est alimenté par
 	// un moteur de combat local, sans serveur : chaque sort est lancé en boucle par un personnage de
 	// sa classe sur une cible (ennemie) ou un allié, avec les vrais événements du combat (effets
-	// durables, glyphes, poussées, dégâts périodiques au tour suivant).
+	// durables, glyphes, poussées, dégâts périodiques au tour suivant). Avant chaque lancer, la visée
+	// est montrée : portée du sort, cases ciblables, une case non ciblable puis la cible survolées.
 	//   TacticalWar.exe --fx-gallery [--fx-spell <id du sort>] [--fx-map <id de la carte>]
 	// Gauche / droite : sort précédent / suivant, R : rejouer, F5 : relire les fichiers, Échap : quitter.
 	// Les sorts de la barre restent utilisables à la souris : la boucle s'arrête jusqu'au prochain R.
@@ -27,6 +28,7 @@ namespace tw
 		virtual void handleEvents(sf::RenderWindow * window, tgui::Gui * gui);
 		virtual void update(float deltatime);
 		virtual void onEvent(void * e);
+		virtual void onCellHover(int cellX, int cellY);
 
 	protected:
 		virtual void sendAction(const std::string & op, const nlohmann::json & body);
@@ -37,6 +39,8 @@ namespace tw
 
 		enum class Step
 		{
+			AIM_ZONE,		// Sort sélectionné : portée, cases ciblables, une case non ciblable survolée
+			AIM_TARGET,		// Cible survolée : zone d'impact
 			CAST,			// Lancer le sort
 			AFTER_CAST,		// Fin du tour du lanceur (effets durables)
 			ROUND,			// Tours des autres personnages (dégâts périodiques, glyphes)
@@ -75,6 +79,7 @@ namespace tw
 		void restart();
 		void reload(bool announce);
 		void advance();
+		void aimAt(const battle::Cell & cell);
 		// Transmet les événements du moteur à l'écran de combat. Retourne true si le combat est fini.
 		bool deliver();
 		bool idle() const;

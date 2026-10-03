@@ -48,6 +48,22 @@ namespace
 		return legacy;
 	}
 
+	// Cases touchées par un sort lancé sur "target" : sa zone d'effet, et celle des glyphes qu'il pose
+	// (même calcul que le moteur).
+	std::vector<battle::Cell> previewImpact(const battle::BattleMap & map, const battle::Cell & caster, const battle::Cell & target,
+		const battle::SpellDef & spell)
+	{
+		std::vector<battle::Cell> cells = battle::impactCells(map, caster, target, spell.impact);
+		for (const battle::EffectDef & effect : spell.effects)
+		{
+			if (effect.type != battle::EffectType::GLYPH)
+				continue;
+			for (const battle::Cell & cell : battle::impactCells(map, caster, target, { effect.glyphShape, effect.glyphSize }))
+				cells.push_back(cell);
+		}
+		return cells;
+	}
+
 	sf::String reasonLabel(battle::EndReason reason)
 	{
 		switch (reason)
@@ -865,11 +881,47 @@ void BattleScreen::refreshPreview()
 		if (spell == NULL)
 			return;
 
+		// Portée du sort (forme et distance, sans la ligne de vue ni la cible) en bleu clair, et cases
+		// où il peut être lancé en bleu : le joueur voit jusqu'où porte le sort, même quand aucune
+		// case n'est ciblable d'ici.
+		std::vector<battle::Cell> range;
+		for (const battle::Cell & cell : battle::launchCells(truth, map, data, *me, *spell))
+		{
+			if (map.isWalkable(cell) || truth.fighterAt(cell) != NULL)
+				range.push_back(cell);
+		}
+		colorator->setRange(range);
 		std::vector<battle::Cell> castable = battle::castableCells(truth, map, data, *me, *spell);
 		colorator->setCastable(castable);
-		if (colorator->isCastable(hoveredCell))
-			colorator->setImpact(battle::impactCells(map, me->position, hoveredCell, spell->impact));
-		hud->setHint(fromServerText(spell->name) + L" : cliquez sur une case bleue (Échap pour annuler)");
+
+		sf::String name = fromServerText(spell->name);
+		if (spell->launch == battle::LaunchShape::SELF && !castable.empty())
+		{
+			// Sort lancé sur soi : sa zone est montrée tout de suite.
+			colorator->setImpact(previewImpact(map, me->position, me->position, *spell));
+			colorator->setHovered(me->position, true);
+			hud->setHint(name + L" : cliquez sur votre personnage (Échap pour annuler)");
+		}
+		else if (colorator->isCastable(hoveredCell))
+		{
+			colorator->setImpact(previewImpact(map, me->position, hoveredCell, *spell));
+			colorator->setHovered(hoveredCell, true);
+			hud->setHint(name + L" : cliquez pour lancer le sort (Échap pour annuler)");
+		}
+		else if (colorator->isInRange(hoveredCell))
+		{
+			// À portée mais pas ciblable : la raison est donnée (ligne de vue, type de cible…).
+			colorator->setHovered(hoveredCell, false);
+			hud->setHint(name + L" : " + fromServerText(battle::checkTarget(truth, map, data, *me, *spell, hoveredCell)));
+		}
+		else if (castable.empty())
+		{
+			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en bleu clair (Échap pour annuler)");
+		}
+		else
+		{
+			hud->setHint(name + L" : cliquez sur une case bleue (Échap pour annuler)");
+		}
 		return;
 	}
 
