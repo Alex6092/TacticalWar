@@ -68,7 +68,11 @@ TacticalWar.exe --fx-gallery --fx-spell boule_de_feu --fx-map 5
 La galerie fonctionne sans serveur. Elle rejoue chaque sort en boucle :
 - le lanceur appartient à la classe du sort ; il fait face à une cible (Archer) et à un allié (Guerrier) ;
 - un vrai moteur de combat produit les événements : effets durables, glyphes, poussées, dégâts
-  périodiques au tour suivant.
+  périodiques au tour suivant ;
+- avant chaque lancer, la visée est montrée comme en combat :
+  - la portée du sort en bleu clair et les cases ciblables en bleu ;
+  - une case non ciblable en gris, avec la raison dans la ligne d'aide ;
+  - puis la cible en orange, avec la zone d'impact en rouge.
 
 | Touche | Action |
 |---|---|

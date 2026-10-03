@@ -241,6 +241,21 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 	{
 		window->draw(tileSprite);
 	}
+
+	// Surbrillance par-dessus la case (visée d'un sort…) : losange semi-transparent et liseré.
+	sf::Color overlay = colorator != NULL ? colorator->getOverlayForCell(cell) : sf::Color::Transparent;
+	if (overlay.a > 0)
+	{
+		sf::ConvexShape diamond(4);
+		diamond.setPoint(0, sf::Vector2f(centerX, centerY - 30.f));
+		diamond.setPoint(1, sf::Vector2f(centerX + 60.f, centerY));
+		diamond.setPoint(2, sf::Vector2f(centerX, centerY + 30.f));
+		diamond.setPoint(3, sf::Vector2f(centerX - 60.f, centerY));
+		diamond.setFillColor(overlay);
+		diamond.setOutlineColor(sf::Color(overlay.r, overlay.g, overlay.b, (sf::Uint8)std::min(255, overlay.a * 2)));
+		diamond.setOutlineThickness(-1.5f);
+		window->draw(diamond);
+	}
 }
 
 void IsometricRenderer::render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime)

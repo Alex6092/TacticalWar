@@ -1,6 +1,7 @@
 ﻿#include "FxGalleryScreen.h"
 
 #include <algorithm>
+#include <climits>
 #include <fstream>
 #include <iostream>
 
@@ -179,6 +180,14 @@ void FxGalleryScreen::onEvent(void * e)
 	BattleScreen::onEvent(e);
 }
 
+void FxGalleryScreen::onCellHover(int cellX, int cellY)
+{
+	// Pendant la visée montrée par la galerie (sort sélectionné hors du mode manuel), la souris ne
+	// déplace pas la case survolée.
+	if (step == Step::MANUAL || selectedSpell < 0)
+		BattleScreen::onCellHover(cellX, cellY);
+}
+
 void FxGalleryScreen::sendAction(const std::string & op, const json & body)
 {
 	if (!engine)
@@ -329,8 +338,8 @@ void FxGalleryScreen::restart()
 	}
 
 	onMessageReceived("BI" + engine->snapshot(CASTER, nowMs).dump());
-	step = Step::CAST;
-	wait = 0.6f;
+	step = Step::AIM_ZONE;
+	wait = 0.4f;
 }
 
 void FxGalleryScreen::advance()
@@ -341,8 +350,43 @@ void FxGalleryScreen::advance()
 
 	switch (step)
 	{
+	case Step::AIM_ZONE:
+	{
+		selectSpell(entries[current].slot);
+		const battle::Fighter * caster = truth.findFighter(CASTER);
+		const battle::SpellDef * spell = currentSpell();
+		battle::Cell aim = { -1, -1 };
+		if (selectedSpell >= 0 && caster != NULL && spell != nullptr)
+		{
+			// Case à portée mais pas ciblable, la plus proche de la cible : la raison s'affiche.
+			const battle::GameData & data = ClientGameData::get().data();
+			std::vector<battle::Cell> castable = battle::castableCells(truth, map, data, *caster, *spell);
+			int best = INT_MAX;
+			for (const battle::Cell & cell : battle::launchCells(truth, map, data, *caster, *spell))
+			{
+				bool shown = map.isWalkable(cell) || truth.fighterAt(cell) != NULL;
+				bool valid = std::find(castable.begin(), castable.end(), cell) != castable.end();
+				if (shown && !valid && battle::manhattan(cell, layout.target) < best)
+				{
+					best = battle::manhattan(cell, layout.target);
+					aim = cell;
+				}
+			}
+		}
+		aimAt(aim);
+		step = Step::AIM_TARGET;
+		wait = aim.x >= 0 ? 1.f : 0.6f;
+		break;
+	}
+	case Step::AIM_TARGET:
+		aimAt(layout.target);
+		step = Step::CAST;
+		wait = 1.f;
+		break;
 	case Step::CAST:
 	{
+		selectSpell(-1);
+		aimAt({ -1, -1 });
 		const battle::SpellDef * spell = currentSpell();
 		battle::ActionResult result = spell != nullptr ? engine->cast(CASTER, entries[current].slot, layout.target, nowMs)
 			: battle::ActionResult::failure("Sort introuvable.");
@@ -396,6 +440,13 @@ void FxGalleryScreen::advance()
 		wait = 0.8f;
 		break;
 	}
+}
+
+void FxGalleryScreen::aimAt(const battle::Cell & cell)
+{
+	hoveredCell = cell;
+	const battle::Fighter * fighter = truth.fighterAt(cell);
+	hoveredFighter = fighter != NULL ? fighter->id : -1;
 }
 
 bool FxGalleryScreen::deliver()
