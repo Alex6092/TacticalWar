@@ -75,6 +75,19 @@ namespace tw
 			static SlotRef bye() { return { Kind::BYE, 0 }; }
 		};
 
+		// Bilan d'un joueur dans un match (meilleurs joueurs du tournoi sur la page projetée).
+		struct PlayerRecord
+		{
+			std::string name;			// Nom affiché du joueur
+			std::string className;
+			int side = 0;				// 1 : équipe A du match, 2 : équipe B
+			int dealt = 0;
+			int healed = 0;
+			int shielded = 0;
+			int kills = 0;
+			bool mvp = false;
+		};
+
 		struct MatchResult
 		{
 			int winnerTeamId = UNKNOWN_TEAM;
@@ -83,6 +96,8 @@ namespace tw
 			double hpPercentA = 0;
 			double hpPercentB = 0;
 			int rounds = 0;
+			// Bilan des joueurs (vide pour un match sans combat : forfait, exempt).
+			std::vector<PlayerRecord> players;
 		};
 
 		struct TMatch

@@ -48,3 +48,17 @@ possibles du joueur sont en vert.
   - Une bulle s'affiche à côté du personnage, pour tout le monde, spectateurs et rediffusions compris.
   - Pas de texte libre ; une émote toutes les trois secondes au plus.
   - L'organisateur peut les couper : `"emotes": false` dans `server.json`.
+
+## Bilan de fin de combat
+
+À la fin du combat, chaque combattant a son bilan : dégâts infligés, soins, boucliers donnés et ennemis mis
+hors combat.
+- Les dégâts d'un poison ou d'une brûlure reviennent à son lanceur, ceux d'une collision au pousseur.
+- Le **MVP** a le meilleur score : dégâts + soins + boucliers / 2 + 25 par KO. En cas d'égalité, c'est le
+  joueur de l'équipe gagnante.
+
+Le bilan s'affiche sur l'écran de fin (joueurs, spectateurs, rediffusions). Les bilans des matchs de
+tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
+- **les derniers combats**, avec le vainqueur et le MVP ;
+- **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
+  titres de MVP.

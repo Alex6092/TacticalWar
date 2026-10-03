@@ -170,7 +170,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	BattleSession * sessionOfTournamentMatch(int tournamentId, int matchId);
 	void handleTournamentAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void dispatchTournamentMatches();
-	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds);
+	void reportTournamentResult(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason, double hpPercent1, double hpPercent2, int rounds,
+		const std::vector<tw::tournament::PlayerRecord> & players = std::vector<tw::tournament::PlayerRecord>());
 	void finishWithoutBattle(BattleSession * session, int winnerSide, tw::tournament::ResultReason reason);
 	void cancelSession(BattleSession * session);
 
@@ -180,6 +181,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::int64_t lastPublicPublish;
 	std::string displayNameOf(tw::Player * player);
 	nlohmann::json publicStateJson();
+	// Derniers combats terminés (bilan et MVP), du plus récent au plus ancien.
+	std::deque<nlohmann::json> recentBattles;
 	void publishPublicState(bool force = false);
 
 	// Mode spectateur (TWParserSpectator.cpp) :

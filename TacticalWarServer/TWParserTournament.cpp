@@ -111,6 +111,57 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 		ranking.push_back({ { "rank", entry.rank }, { "team", entry.teamId } });
 	state["ranking"] = ranking;
 
+	// Meilleurs joueurs : bilan cumulé de chaque joueur sur les matchs joués.
+	struct Leader
+	{
+		std::string name;
+		std::string className;
+		int team = 0;
+		int matches = 0;
+		int dealt = 0;
+		int healed = 0;
+		int shielded = 0;
+		int kills = 0;
+		int mvp = 0;
+		int score() const { return dealt + healed + shielded / 2 + 25 * kills; }
+	};
+	std::map<std::pair<int, std::string>, Leader> leaders;
+	for (const auto & entry : tournament.matches)
+	{
+		const TMatch & match = entry.second;
+		if (!match.result)
+			continue;
+		for (const PlayerRecord & player : match.result->players)
+		{
+			int team = player.side == 1 ? match.teamA : match.teamB;
+			Leader & leader = leaders[{ team, player.name }];
+			leader.name = player.name;
+			leader.className = player.className;
+			leader.team = team;
+			leader.matches++;
+			leader.dealt += player.dealt;
+			leader.healed += player.healed;
+			leader.shielded += player.shielded;
+			leader.kills += player.kills;
+			leader.mvp += player.mvp ? 1 : 0;
+		}
+	}
+	std::vector<Leader> sorted;
+	for (const auto & entry : leaders)
+		sorted.push_back(entry.second);
+	std::stable_sort(sorted.begin(), sorted.end(), [](const Leader & a, const Leader & b) { return a.score() > b.score(); });
+	nlohmann::json leaderRows = nlohmann::json::array();
+	for (std::size_t i = 0; i < sorted.size() && i < 10; i++)
+	{
+		const Leader & leader = sorted[i];
+		leaderRows.push_back({
+			{ "name", leader.name }, { "class", leader.className }, { "team", leader.team }, { "matches", leader.matches },
+			{ "dealt", leader.dealt }, { "healed", leader.healed }, { "shielded", leader.shielded }, { "kills", leader.kills },
+			{ "mvp", leader.mvp }, { "score", leader.score() }
+		});
+	}
+	state["leaders"] = leaderRows;
+
 	return state;
 }
 
@@ -320,7 +371,8 @@ void TWParser::dispatchTournamentMatches()
 	}
 }
 
-void TWParser::reportTournamentResult(BattleSession * session, int winnerSide, ResultReason reason, double hpPercent1, double hpPercent2, int rounds)
+void TWParser::reportTournamentResult(BattleSession * session, int winnerSide, ResultReason reason, double hpPercent1, double hpPercent2, int rounds,
+	const std::vector<PlayerRecord> & players)
 {
 	if (session->getTournamentId() == 0)
 		return;
@@ -337,6 +389,7 @@ void TWParser::reportTournamentResult(BattleSession * session, int winnerSide, R
 	result.hpPercentA = hpPercent1;
 	result.hpPercentB = hpPercent2;
 	result.rounds = rounds;
+	result.players = players;
 
 	int teamA = match->teamA;
 	int teamB = match->teamB;

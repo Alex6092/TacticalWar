@@ -143,6 +143,7 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 		shield.spellId = spellId;
 		shield.name = effect.name;
 		shield.positive = true;
+		caster.record.shielded += shield.value;
 		addActiveEffect(target, shield, effect.refresh);
 		break;
 	}
@@ -269,6 +270,13 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 	int hpLoss = amount - absorbed;
 	target.hp -= hpLoss;
 
+	// Bilan : dégâts subis, et infligés par un ennemi (le lanceur d'un poison, le pousseur d'une collision).
+	Fighter * source = state.findFighter(sourceId);
+	bool byEnemy = source != nullptr && source->team != target.team;
+	target.record.taken += amount;
+	if (byEnemy)
+		source->record.dealt += amount;
+
 	// Érosion : une partie des PV perdus est retirée des PV max.
 	int erosion = effectiveStat(state, data, target, Stat::EROSION);
 	if (erosion > 0 && hpLoss > 0)
@@ -284,6 +292,8 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 	{
 		target.hp = 0;
 		target.alive = false;
+		if (byEnemy)
+			source->record.kills++;
 	}
 
 	emit({
@@ -330,6 +340,9 @@ int BattleEngine::heal(Fighter & target, int amount, int sourceId, const std::st
 
 	int healed = std::min(amount, target.maxHp - target.hp);
 	target.hp += healed;
+	Fighter * source = state.findFighter(sourceId);
+	if (source != nullptr)
+		source->record.healed += healed;
 	emit({ { "t", "heal" }, { "f", target.id }, { "src", sourceId }, { "kind", kind }, { "amount", healed }, { "hp", target.hp }, { "maxHp", target.maxHp } });
 	return healed;
 }

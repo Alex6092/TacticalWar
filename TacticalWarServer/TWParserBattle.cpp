@@ -256,7 +256,42 @@ void TWParser::finishBattle(BattleSession * session)
 		reason = tw::tournament::ResultReason::FORFEIT;
 	else if (state.endReason == tw::battle::EndReason::ADMIN)
 		reason = tw::tournament::ResultReason::ADMIN;
-	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round);
+	// Bilan des joueurs : enregistré avec le résultat du tournoi, et affiché sur la page projetée.
+	std::vector<tw::tournament::PlayerRecord> players;
+	nlohmann::json mvp;
+	for (const tw::battle::Fighter & fighter : state.fighters)
+	{
+		const tw::battle::ClassDef * classDef = gameData.findClass(fighter.classId);
+		tw::tournament::PlayerRecord player;
+		player.name = fighter.name;
+		player.className = classDef != nullptr ? classDef->name : std::string();
+		player.side = fighter.team;
+		player.dealt = fighter.record.dealt;
+		player.healed = fighter.record.healed;
+		player.shielded = fighter.record.shielded;
+		player.kills = fighter.record.kills;
+		player.mvp = fighter.id == state.mvpFighterId;
+		players.push_back(player);
+		if (player.mvp)
+		{
+			mvp = { { "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
+				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills } };
+		}
+	}
+	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round, players);
+
+	recentBattles.push_front({
+		{ "name", match->getMatchName() },
+		{ "tournament", session->getTournamentId() },
+		{ "match", session->getTournamentMatchId() },
+		{ "teams", nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) }) },
+		{ "winner", state.winnerTeam },
+		{ "reason", tw::battle::toString(state.endReason) },
+		{ "rounds", state.round },
+		{ "mvp", mvp }
+	});
+	while (recentBattles.size() > 6)
+		recentBattles.pop_back();
 	stopRecording(session, { { "winner", state.winnerTeam }, { "reason", tw::battle::toString(state.endReason) }, { "rounds", state.round } }, true);
 
 	session->markEnded();
