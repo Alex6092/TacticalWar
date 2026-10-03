@@ -822,6 +822,7 @@ void BattleScreen::refreshPreview()
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
 	hud->setHint("");
 	const tw::battle::GameData & data = ClientGameData::get().data();
+	sf::String terrain = terrainHint(hoveredCell);
 
 	bool aiming = isInteractive() && me != NULL && selectedSpell >= 0;
 	if (!aiming)
@@ -836,6 +837,10 @@ void BattleScreen::refreshPreview()
 			bool enemy = me == NULL || hovered->team != me->team;
 			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
 			hud->setHint(fromServerText(hovered->name) + (enemy ? L" : déplacement possible au prochain tour en orange" : L" : déplacement possible au prochain tour en turquoise"));
+		}
+		else if (!terrain.isEmpty())
+		{
+			hud->setHint(terrain);
 		}
 	}
 
@@ -913,9 +918,31 @@ void BattleScreen::refreshPreview()
 				lostMp += loss.lostMp;
 				lostAp += loss.lostAp;
 			}
-			hud->setHint(L"Tacle : -" + num(lostMp) + L" PM, -" + num(lostAp) + L" PA");
+			hud->setHint(L"Tacle : -" + num(lostMp) + L" PM, -" + num(lostAp) + L" PA" + (terrain.isEmpty() ? sf::String() : L"     -     " + terrain));
 		}
 	}
+}
+
+sf::String BattleScreen::terrainName(const battle::Cell & cell) const
+{
+	tw::CellData * data = environment != NULL ? environment->getMapData(cell.x, cell.y) : NULL;
+	const tw::TileDef * tile = data != NULL ? tw::TileRegistry::get().find(data->getDisplayTile()) : NULL;
+	return tile != NULL ? fromServerText(tile->name) : sf::String(L"Case");
+}
+
+sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
+{
+	if (!map.contains(cell) || !map.isWalkable(cell))
+		return sf::String();
+	int damage = map.turnDamage(cell);
+	int heal = map.turnHeal(cell);
+	if (damage > 0)
+		return terrainName(cell) + L" : " + num(damage) + L" dégâts au début du tour de qui s'y trouve";
+	if (heal > 0)
+		return terrainName(cell) + L" : +" + num(heal) + L" PV au début du tour de qui s'y trouve";
+	if (map.blocksSight(cell))
+		return terrainName(cell) + L" : on peut y aller, mais la case bloque la ligne de vue (cachette contre les tirs)";
+	return sf::String();
 }
 
 void BattleScreen::updateAimPreview(const battle::Fighter & me, const battle::Cell & cell)

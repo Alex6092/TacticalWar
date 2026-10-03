@@ -149,6 +149,25 @@ Messages : `HC{"talents": 1, "ban": 20}` ouvre l'écran en mode bannissement, le
 `PB{"class": 1}`, et le serveur répond `BB{"banned", "done", "forbidden"}` à son équipe, puis à tous
 à la fin de la phase.
 
+## Cases spéciales
+
+Certaines cartes ont des cases qui changent le combat :
+
+| Case | Effet |
+|---|---|
+| Braises | Praticable ; 8 dégâts au début du tour de qui s'y trouve (le bouclier absorbe d'abord) |
+| Source | Praticable ; +6 PV au début du tour de qui s'y trouve |
+| Hautes herbes | Praticable, mais bloque la ligne de vue : on s'y cache des tirs |
+
+- L'effet s'applique au début du tour, après les poisons et les glyphes ; la mort subite reste en
+  dernier. Traverser une case pendant un déplacement ne déclenche rien.
+- Au survol, la ligne d'aide donne la règle de la case, y compris pendant un déplacement.
+- Les dégâts et les soins s'affichent avec le nom de la case (« Braises -8 », « Source +6 »).
+- L'ordinateur évite les braises et rejoint une source quand il est blessé.
+- Les 7 cartes du tournoi n'en ont pas. La carte 8, « Terrain d'exercice » (hors tournoi), les
+  montre toutes : `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte,
+  utiliser le groupe « Cases spéciales » de la palette de l'éditeur.
+
 ## Combinaisons entre classes
 
 Certains sorts **marquent** un ennemi, et un sort d'une autre classe lui inflige alors plus de dégâts :

@@ -110,6 +110,9 @@ namespace tw
 		Camera camera;
 		Mode mode;
 		sf::String teamNames[2];
+		// Case à effet (braises, source, hautes herbes) : nom de sa tuile et règle, pour l'aide au survol.
+		sf::String terrainName(const battle::Cell & cell) const;
+		sf::String terrainHint(const battle::Cell & cell) const;
 		bool forbiddenLogged = false;
 		float autoCloseRemaining;
 		bool cameraFitted;

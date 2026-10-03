@@ -280,7 +280,10 @@ float BattleEventView::onDamage(const Context & c)
 
 	// Le bouclier absorbe en premier : sa part en bleu, puis les PV perdus en rouge.
 	int lost = amount - absorbed;
-	sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)" : L"";
+	// Case à effet (braises) : son nom accompagne les dégâts.
+	sf::String terrain = kind == "terrain" ? screen.terrainName(c.fighter->position) : sf::String();
+	sf::String source = kind == "dot" ? L" (effet)" : kind == "collision" ? L" (collision)" : kind == "sudden" ? L" (mort subite)"
+		: kind == "terrain" ? L" (" + terrain + L")" : L"";
 	if (absorbed > 0)
 	{
 		screen.addFloatingText(c.fighterId, L"Bouclier -" + num(absorbed), sf::Color(120, 185, 255));
@@ -289,7 +292,7 @@ float BattleEventView::onDamage(const Context & c)
 	}
 	if (lost > 0)
 	{
-		screen.addFloatingText(c.fighterId, L"-" + num(lost), sf::Color(255, 80, 70));
+		screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"-" + num(lost), sf::Color(255, 80, 70));
 		screen.hud->log(screen.fighterName(c.fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
 	}
 	MusicManager::getInstance()->playTakeDamageSound();
@@ -310,8 +313,11 @@ float BattleEventView::onHeal(const Context & c)
 		screen.fx.periodic(c.fighterId, screen.periodicSpell(*c.fighter, c.event.value("src", -1), battle::EffectType::HOT));
 	else if (!c.fast && kind == "lifesteal")
 		screen.fx.playEvent("lifesteal", c.fighterId);
-	screen.addFloatingText(c.fighterId, L"+" + num(amount), sf::Color(110, 255, 110));
-	screen.hud->log(screen.fighterName(c.fighterId) + L" récupère " + num(amount) + L" PV", sf::Color(130, 255, 130));
+	// Case à effet (source) : son nom accompagne les soins.
+	sf::String terrain = kind == "terrain" ? screen.terrainName(c.fighter->position) : sf::String();
+	screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"+" + num(amount), sf::Color(110, 255, 110));
+	screen.hud->log(screen.fighterName(c.fighterId) + L" récupère " + num(amount) + L" PV" + (terrain.isEmpty() ? sf::String() : L" (" + terrain + L")"),
+		sf::Color(130, 255, 130));
 	return c.fast ? 0 : 0.3f;
 }
 

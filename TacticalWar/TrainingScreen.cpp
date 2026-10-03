@@ -50,12 +50,12 @@ const std::vector<std::pair<int, std::string>> & TrainingScreen::maps()
 
 int TrainingScreen::chooseMap(int requested)
 {
+	// Carte demandée (réglages, --training-map) : une carte du tournoi, ou une autre carte existante
+	// (carte d'exercice des cases spéciales).
+	std::vector<int> existing = EnvironmentManager::getInstance()->getAlreadyExistingIds();
+	if (requested > 0 && std::find(existing.begin(), existing.end(), requested) != existing.end())
+		return requested;
 	const std::vector<std::pair<int, std::string>> & candidates = maps();
-	for (const auto & entry : candidates)
-	{
-		if (entry.first == requested)
-			return requested;
-	}
 	if (candidates.empty())
 		return requested;
 	std::mt19937 rng(std::random_device{}());
