@@ -886,7 +886,30 @@ void BattleScreen::showEnd()
 
 	sf::String details = winners + L" remportent le combat.\n" + reasonLabel(shown.endReason)
 		+ L"\nTours joués : " + num(shown.round);
-	hud->showEnd(title, details, victory || me == NULL);
+
+	// Bilan de chaque combattant, l'équipe gagnante d'abord.
+	std::vector<BattleHud::EndRow> rows;
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (const battle::Fighter & fighter : shown.fighters)
+		{
+			if ((fighter.team == shown.winnerTeam) != (pass == 0))
+				continue;
+			const battle::ClassDef * classDef = ClientGameData::get().data().findClass(fighter.classId);
+			BattleHud::EndRow row;
+			row.name = fromServerText(fighter.name) + (classDef != nullptr ? L" (" + fromServerText(classDef->name) + L")" : sf::String());
+			row.team = fighter.team;
+			row.mvp = fighter.id == shown.mvpFighterId;
+			row.dealt = fighter.record.dealt;
+			row.healed = fighter.record.healed;
+			row.shielded = fighter.record.shielded;
+			row.kills = fighter.record.kills;
+			rows.push_back(row);
+			if (row.mvp)
+				hud->log(L"MVP du combat : " + row.name, sf::Color(255, 215, 70));
+		}
+	}
+	hud->showEnd(title, details, victory || me == NULL, rows);
 	hud->log(title, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 
 	if (mode == Mode::SPECTATOR && SpectatorModeScreen::isDirectorMode())

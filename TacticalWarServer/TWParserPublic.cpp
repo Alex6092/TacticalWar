@@ -82,10 +82,15 @@ nlohmann::json TWParser::publicStateJson()
 		live.push_back(battle);
 	}
 
+	nlohmann::json recent = nlohmann::json::array();
+	for (const nlohmann::json & battle : recentBattles)
+		recent.push_back(battle);
+
 	return {
 		{ "generatedAt", (long long)std::time(nullptr) },
 		{ "tournaments", tournamentsJson },
-		{ "live", live }
+		{ "live", live },
+		{ "recent", recent }
 	};
 }
 

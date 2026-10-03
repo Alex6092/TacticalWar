@@ -313,8 +313,8 @@ void BattleHud::layout(const sf::Vector2u & size)
 	readyButton->setSize(220, 60);
 	readyButton->setPosition((width - 220) / 2, height - 90);
 
-	endPanel->setSize(520, 220);
-	endPanel->setPosition((width - 520) / 2, (height - 220) / 2);
+	endPanel->setSize(endPanelSize.x, endPanelSize.y);
+	endPanel->setPosition((width - endPanelSize.x) / 2, (height - endPanelSize.y) / 2);
 
 	bannerLabel->setPosition((width - bannerLabel->getSize().x) / 2, 46);
 	leaveButton->setSize(180, 50);
@@ -564,9 +564,10 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	}
 }
 
-void BattleHud::showEnd(const sf::String & title, const sf::String & details, bool victory)
+void BattleHud::showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows)
 {
 	endPanel->removeAllWidgets();
+	endPanelSize = sf::Vector2f(660, rows.empty() ? 220.f : 236.f + rows.size() * 28.f + 60.f);
 
 	tgui::Label::Ptr titleLabel = createLabel(34, victory ? sf::Color(120, 255, 120) : sf::Color(255, 120, 120));
 	titleLabel->setText(title);
@@ -575,14 +576,43 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 
 	tgui::Label::Ptr detailsText = createLabel(18, sf::Color::White);
 	detailsText->setText(details);
-	detailsText->setPosition(20, 80);
+	detailsText->setPosition(20, 76);
 	endPanel->add(detailsText);
+
+	// Bilan : une ligne par combattant (couleur de son équipe), le MVP en doré.
+	const float columns[5] = { 20, 300, 395, 480, 600 };
+	const sf::String headers[5] = { L"Combattant", L"Dégâts", L"Soins", L"Boucliers", L"KO" };
+	float tableTop = 160;
+	if (!rows.empty())
+	{
+		for (int column = 0; column < 5; column++)
+		{
+			tgui::Label::Ptr header = createLabel(15, sf::Color(170, 170, 190));
+			header->setText(headers[column]);
+			header->setPosition(columns[column], tableTop);
+			endPanel->add(header);
+		}
+		for (std::size_t i = 0; i < rows.size(); i++)
+		{
+			const EndRow & row = rows[i];
+			sf::Color color = row.mvp ? sf::Color(255, 215, 70) : row.team == 1 ? sf::Color(150, 200, 255) : sf::Color(255, 160, 150);
+			const sf::String cells[5] = { row.name + (row.mvp ? sf::String(L"   MVP") : sf::String()), num(row.dealt), num(row.healed), num(row.shielded), num(row.kills) };
+			for (int column = 0; column < 5; column++)
+			{
+				tgui::Label::Ptr cell = createLabel(17, color);
+				cell->setText(cells[column]);
+				cell->setPosition(columns[column], tableTop + 28 + i * 28.f);
+				endPanel->add(cell);
+			}
+		}
+	}
+	float buttonTop = rows.empty() ? 160.f : tableTop + 28 + rows.size() * 28.f + 20;
 
 	endButton = tgui::Button::create(spectator ? L"Retour à la liste" : L"Fermer");
 	endButton->setInheritedFont(font);
 	endButton->setTextSize(18);
 	endButton->setSize(spectator ? 240 : 160, 44);
-	endButton->setPosition(spectator ? 260 : 340, 160);
+	endButton->setPosition((endPanelSize.x - (spectator ? 240 : 160)) / 2, buttonTop);
 	endButton->connect("pressed", [this]() {
 		if (onClose)
 			onClose();
@@ -591,6 +621,7 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	leaveButton->setVisible(false);
 
 	endPanel->setVisible(true);
+	layout(windowSize);
 	endTurnButton->setVisible(false);
 	emoteButton->setVisible(false);
 	emotePanel->setVisible(false);

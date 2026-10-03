@@ -164,3 +164,23 @@ table.standings tr.qualified td.team { color: var(--green); font-weight: 700; }
 .section-title { fill: var(--gold); font-size: 18px; font-weight: 700; text-transform: uppercase; }
 
 @keyframes pulse { 50% { stroke-opacity: 0.35; } }
+
+/* Meilleurs joueurs du tournoi */
+table.leaders { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+table.leaders th, table.leaders td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); text-align: right; }
+table.leaders th { color: var(--muted); font-weight: 600; }
+table.leaders th:nth-child(2), table.leaders td:nth-child(2) { text-align: left; }
+table.leaders td small { color: var(--muted); }
+table.leaders td.rank { color: var(--muted); width: 2.5rem; }
+table.leaders tr.top td.rank { color: var(--gold); font-weight: 700; }
+table.leaders tr.top td:nth-child(2) strong { color: var(--gold); }
+table.leaders td.mvp-count { color: var(--gold); }
+
+/* Derniers combats */
+.recent { display: flex; flex-direction: column; gap: 0.6rem; }
+.recent-battle { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.8rem; background: var(--bg-2); }
+.recent-battle .winner { margin-bottom: 0.3rem; }
+.recent-battle .mvp { border-top: 1px solid var(--line); padding-top: 0.35rem; }
+.recent-battle .mvp .star { color: var(--gold); font-weight: 700; }
+.recent-battle .mvp small { color: var(--muted); }
+.recent-battle .mvp-stats { color: var(--muted); font-size: 0.85rem; margin-top: 0.15rem; }
