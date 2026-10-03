@@ -77,6 +77,8 @@ nlohmann::json TWParser::publicStateJson()
 				});
 			}
 			battle["fighters"] = fighters;
+			if (state.zone.enabled)
+				battle["zone"] = { { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "points", state.zone.pointsToWin } };
 		}
 
 		live.push_back(battle);

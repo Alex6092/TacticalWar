@@ -19,6 +19,7 @@ namespace
 	{
 		if (reason == "KO") return L"KO";
 		if (reason == "ROUND_LIMIT") return L"aux PV";
+		if (reason == "OBJECTIVE") return L"zone";
 		if (reason == "FORFEIT") return L"forfait";
 		if (reason == "ADMIN") return L"arbitrage";
 		return fromServerText(reason);

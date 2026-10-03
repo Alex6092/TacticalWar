@@ -58,6 +58,10 @@ private:
 	tgui::EditBox::Ptr swissRounds;
 	tgui::Label::Ptr topCutLabel;
 	tgui::EditBox::Ptr topCut;
+	tgui::Label::Ptr modeLabel;
+	tgui::ComboBox::Ptr mode;
+	tgui::Label::Ptr zonePointsLabel;
+	tgui::EditBox::Ptr zonePoints;
 	tgui::ListView::Ptr teamList;
 	tgui::Button::Ptr saveButton;
 	tgui::Button::Ptr startButton;

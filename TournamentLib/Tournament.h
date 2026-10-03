@@ -51,7 +51,8 @@ namespace tw
 			ROUND_LIMIT,	// Décision aux points de vie après la limite de tours
 			FORFEIT,		// Équipe absente ou déconnectée
 			ADMIN,			// Résultat saisi par l'admin
-			BYE				// Exempt : victoire automatique
+			BYE,			// Exempt : victoire automatique
+			OBJECTIVE		// Zone à tenir : score atteint
 		};
 
 		// Origine d'une équipe dans un match.
@@ -141,6 +142,10 @@ namespace tw
 
 			int pointsForWin = 3;
 			int pointsForLoss = 0;
+
+			// Mode des combats : KO (par défaut) ou zone à tenir, gagnée au premier à zonePoints points.
+			bool zoneMode = false;
+			int zonePoints = 5;
 		};
 
 		struct Stage

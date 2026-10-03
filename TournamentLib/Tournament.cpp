@@ -57,6 +57,7 @@ const char * tw::tournament::toString(ResultReason reason)
 	{
 	case ResultReason::KO: return "KO";
 	case ResultReason::ROUND_LIMIT: return "ROUND_LIMIT";
+	case ResultReason::OBJECTIVE: return "OBJECTIVE";
 	case ResultReason::FORFEIT: return "FORFEIT";
 	case ResultReason::ADMIN: return "ADMIN";
 	case ResultReason::BYE: return "BYE";

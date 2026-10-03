@@ -76,6 +76,8 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo());
 	}
 
+	if (zonePoints > 0)
+		engine->enableZone(zonePoints);
 	engine->startPlacement(nowMs);
 
 	// Les joueurs absents ne bloquent pas le placement (ils peuvent revenir en cours de combat).

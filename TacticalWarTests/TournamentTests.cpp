@@ -514,3 +514,25 @@ TEST_CASE("Match results keep the players' records through JSON")
 	CHECK_FALSE(toJson(forfeit).contains("players"));
 	CHECK(resultFromJson(toJson(forfeit)).players.empty());
 }
+
+TEST_CASE("The battle mode of a tournament goes through JSON")
+{
+	Settings settings;
+	CHECK_FALSE(settings.zoneMode);
+	settings.zoneMode = true;
+	settings.zonePoints = 7;
+	Settings restored = settingsFromJson(toJson(settings));
+	CHECK(restored.zoneMode);
+	CHECK(restored.zonePoints == 7);
+
+	// Anciens tournois (sans "mode") : au KO ; un score hors bornes est ramené entre 1 et 20.
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("mode");
+	legacy["zonePoints"] = 0;
+	CHECK_FALSE(settingsFromJson(legacy).zoneMode);
+	CHECK(settingsFromJson(legacy).zonePoints == 1);
+
+	ResultReason reason;
+	REQUIRE(parseReason(toString(ResultReason::OBJECTIVE), reason));
+	CHECK((reason == ResultReason::OBJECTIVE));
+}
