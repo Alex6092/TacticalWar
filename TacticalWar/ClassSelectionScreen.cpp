@@ -8,7 +8,10 @@
 #include <CharacterFactory.h>
 #include "PictureCharacterView.h"
 #include "BattleScreen.h"
+#include "ClientConfig.h"
 #include "ClientGameData.h"
+#include <BattleRules.h>
+#include <algorithm>
 #include "WaitMatchScreen.h"
 
 
@@ -17,6 +20,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	: Screen()
 {
 	readyToLock = false;
+	locked = false;
 	ellapsedTime = 0;
 	orientation = 0;
 	this->gui = gui;
@@ -78,10 +82,6 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	
 	
 	tgui::Picture::Ptr Icon = tgui::Picture::create();
-	tgui::Picture::Ptr spell1 = tgui::Picture::create();
-	tgui::Picture::Ptr spell2 = tgui::Picture::create();
-	tgui::Picture::Ptr spell3 = tgui::Picture::create();
-	tgui::Picture::Ptr spell4 = tgui::Picture::create();
 
 	tgui::Picture::Ptr card = tgui::Picture::create();
 	std::shared_ptr<PictureCharacterView> classCharacterView = std::make_shared<PictureCharacterView>();
@@ -164,17 +164,6 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	tgui::Label::Ptr description = tgui::Label::create();
 	description->setInheritedFont(font2);
 
-	tgui::Label::Ptr spell1description = tgui::Label::create();
-	spell1description->setInheritedFont(font2);
-
-	tgui::Label::Ptr spell2description = tgui::Label::create();
-	spell2description->setInheritedFont(font2);
-
-	tgui::Label::Ptr spell3description = tgui::Label::create();
-	spell3description->setInheritedFont(font2);
-
-	tgui::Label::Ptr spell4description = tgui::Label::create();
-	spell4description->setInheritedFont(font2);
 
 
 	gui->add(statsPanel);
@@ -199,15 +188,24 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui)
 	gui->add(lifeLabel, "lifeLabel");
 	gui->add(defLabel, "defLabel");
 	gui->add(description, "description");
-	gui->add(spell1, "spell1");
-	gui->add(spell2, "spell2");
-	gui->add(spell3, "spell3");
-	gui->add(spell4, "spell4");
-
-	gui->add(spell1description, "spell1Description");
-	gui->add(spell2description, "spell2Description");
-	gui->add(spell3description, "spell3Description");
-	gui->add(spell4description, "spell4Description");
+	// Les 6 sorts de la classe : un clic (sur l'icône ou le texte) ajoute ou retire le sort.
+	for (int i = 0; i < 6; i++)
+	{
+		std::string index = std::to_string(i + 1);
+		tgui::Picture::Ptr spell = tgui::Picture::create();
+		spell->connect("Clicked", [this, i]() { toggleSpell(i); });
+		gui->add(spell, "spell" + index);
+		tgui::Label::Ptr spellDescription = tgui::Label::create();
+		spellDescription->setInheritedFont(font2);
+		spellDescription->connect("Clicked", [this, i]() { toggleSpell(i); });
+		gui->add(spellDescription, "spell" + index + "Description");
+	}
+	tgui::Label::Ptr spellCounter = tgui::Label::create();
+	spellCounter->setInheritedFont(font2);
+	spellCounter->setTextSize(18);
+	spellCounter->getRenderer()->setTextColor(sf::Color(255, 215, 0));
+	spellCounter->setPosition(215, 868);
+	gui->add(spellCounter, "spellCounter");
 	
 	gui->add(buttonLock, "buttonLock");
 
@@ -283,17 +281,20 @@ void ClassSelectionScreen::setClassView()
 	descriptionLabel->setSize(500, 260);
 	descriptionLabel->setTextSize(18);
 
-	tgui::Color outlineColor = tgui::Color::White;
-	float outlineWidth = 1;
+	// Sorts proposés : le dernier choix fait pour cette classe, à défaut les 4 premiers.
+	chosenSpells.clear();
+	if (classDef != NULL)
+		chosenSpells = tw::battle::validSpellChoice(*classDef, ClientConfig::get().spellChoice(classDef->id));
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 6; i++)
 	{
 		std::string index = std::to_string(i + 1);
 		tgui::Picture::Ptr icon = gui->get<tgui::Picture>("spell" + index);
 		tgui::Label::Ptr label = gui->get<tgui::Label>("spell" + index + "Description");
 
 		sf::String text;
-		if (classDef != NULL && i < (int)classDef->spells.size())
+		bool exists = classDef != NULL && i < (int)classDef->spells.size();
+		if (exists)
 		{
 			const tw::battle::SpellDef & spell = classDef->spells[i];
 			sf::Texture texture;
@@ -308,16 +309,19 @@ void ClassSelectionScreen::setClassView()
 			text += L"\n" + fromServerText(spell.description);
 		}
 
-		icon->setSize(tgui::Layout2d(80, 80));
-		icon->setPosition(tgui::Layout2d(215, 300 + i * 110));
+		icon->setVisible(exists);
+		label->setVisible(exists);
+		icon->setSize(tgui::Layout2d(72, 72));
+		icon->setPosition(tgui::Layout2d(215, 290 + i * 95));
 		label->setText(text);
-		label->setSize(sizeTextX + 100, 100);
-		label->setTextSize(16);
+		label->setSize(sizeTextX + 100, 90);
+		label->setTextSize(15);
 		label->getRenderer()->setTextStyle(sf::Text::Bold);
-		label->getRenderer()->setTextOutlineColor(outlineColor);
-		label->getRenderer()->setTextOutlineThickness(outlineWidth);
-		label->setPosition(310, 300 + i * 110);
+		label->getRenderer()->setTextOutlineColor(sf::Color::Black);
+		label->getRenderer()->setTextOutlineThickness(1);
+		label->setPosition(300, 290 + i * 95);
 	}
+	refreshSpells();
 
 	atkLabel->setPosition(PositionOfCardX + 510, PositionOfCardY + 60);
 	descriptionLabel->setPosition(DescriptionX, DescriptionY + 60);
@@ -340,6 +344,44 @@ void ClassSelectionScreen::setClassView()
 		convertedCharacterView->setSize(size.width, size.height);
 		convertedCharacterView->setPosition(600, 2000);
 	}
+}
+
+void ClassSelectionScreen::toggleSpell(int index)
+{
+	if (locked)
+		return;
+	auto it = std::find(chosenSpells.begin(), chosenSpells.end(), index);
+	if (it != chosenSpells.end())
+		chosenSpells.erase(it);
+	else if ((int)chosenSpells.size() < tw::battle::SPELL_SLOTS)
+		chosenSpells.push_back(index);
+	// Barre de sorts dans l'ordre de la classe.
+	std::sort(chosenSpells.begin(), chosenSpells.end());
+	refreshSpells();
+}
+
+void ClassSelectionScreen::refreshSpells()
+{
+	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(classesInstances[indexClass]->getClassId());
+	int needed = classDef != NULL ? (int)tw::battle::defaultSpells(*classDef).size() : 0;
+	for (int i = 0; i < 6; i++)
+	{
+		std::string index = std::to_string(i + 1);
+		bool chosen = std::find(chosenSpells.begin(), chosenSpells.end(), i) != chosenSpells.end();
+		gui->get<tgui::Picture>("spell" + index)->getRenderer()->setOpacity(chosen ? 1.f : 0.35f);
+		gui->get<tgui::Label>("spell" + index + "Description")->getRenderer()->setTextColor(chosen ? sf::Color(255, 240, 200) : sf::Color(150, 150, 150));
+	}
+
+	sf::String counter = L"Sorts emportés : " + sf::String(std::to_string(chosenSpells.size())) + L"/" + sf::String(std::to_string(needed));
+	if (!locked)
+		counter += (int)chosenSpells.size() < needed ? L" - cliquez sur un sort pour l'ajouter" : L" - cliquez sur un sort pour le retirer";
+	tgui::Label::Ptr counterLabel = gui->get<tgui::Label>("spellCounter");
+	counterLabel->setText(counter);
+	counterLabel->getRenderer()->setTextColor((int)chosenSpells.size() == needed ? sf::Color(255, 215, 0) : sf::Color(255, 120, 100));
+
+	tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
+	if (lockButton != nullptr && !locked)
+		lockButton->setEnabled((int)chosenSpells.size() == needed);
 }
 
 ClassSelectionScreen::~ClassSelectionScreen()
@@ -399,7 +441,11 @@ void ClassSelectionScreen::update(float deltatime)
 		
 	if (readyToLock)
 	{
-		LinkToServer::getInstance()->Send("PC" + std::to_string(classesInstances[indexClass]->getClassId()));
+		// Classe et sorts choisis, retenus pour la prochaine fois (client.json).
+		int classId = classesInstances[indexClass]->getClassId();
+		ClientConfig::get().spellChoices[classId] = chosenSpells;
+		ClientConfig::get().save();
+		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", classId }, { "spells", chosenSpells } }).dump());
 		readyToLock = false;
 	}
 
@@ -453,6 +499,7 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 	// Choix classe verrouillé :
 	if (m.substring(0, 2) == "PO")
 	{
+		locked = true;
 		tgui::Button::Ptr lockButton = gui->get<tgui::Button>("buttonLock");
 		lockButton->setEnabled(false);
 		lockButton->setText("Choix verrouillé");

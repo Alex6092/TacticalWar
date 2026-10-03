@@ -120,7 +120,7 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	BattleSession * sessionOfMatch(tw::Match * match);
 	BattleSession * sessionOfPlayer(tw::Player * player);
 	void sendGameData(ClientState * client);
-	void handlePickClass(ClientState * client, tw::Player * player, int classId);
+	void handlePickClass(ClientState * client, tw::Player * player, const std::string & body);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
 	// Signal d'un joueur à ses coéquipiers (CG -> BG), limité en cadence.
 	void handlePing(ClientState * client, const nlohmann::json & body);

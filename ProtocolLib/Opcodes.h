@@ -7,7 +7,7 @@ namespace tw
 	namespace protocol
 	{
 		// Version du protocole : le client et le serveur doivent être mis à jour ensemble.
-		const int PROTOCOL_VERSION = 3;
+		const int PROTOCOL_VERSION = 4;
 
 		const int DEFAULT_GAME_PORT = 12345;
 		const int DEFAULT_HTTP_PORT = 8080;
@@ -99,7 +99,7 @@ namespace tw
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe : PC<classId>" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe et ses sorts : PC{class, spells:[4 indices dans les sorts de la classe]} (PC<classId> : sorts par défaut)" },
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
 			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },

@@ -78,3 +78,21 @@ Mesures sur 2000 combats (graine 7, `--mode zone`, 5 points) :
   de la carte 2 donnait 72 % de victoires à l'équipe 1.
 - L'IA des tireurs laisse la zone à un coéquipier qui la tient déjà et évite le contact. Sans ce
   réglage, les tireurs allaient se faire battre dans la zone (Archer à 33 %).
+
+## Sorts au choix (octobre 2026)
+
+Le simulateur fait emporter à chaque combattant 4 sorts au hasard parmi les 6 de sa classe, et donne le
+taux de victoire quand chaque sort est emporté. Mesures sur 3000 combats (graine 7, au KO) :
+
+| Classe | Taux de victoire |
+|---|---|
+| Guerrier | 47,5 % |
+| Archer | 49,6 % |
+| Mage | 49,1 % |
+| Protecteur | 53,8 % |
+
+- Les sorts d'attaque de base (Tir précis, Taillade, Éclair) ressortent à 57-62 % : l'IA les utilise à chaque
+  tour.
+- Les nouveaux sorts sont entre 43 et 53 % : Cri de guerre à 43 %, Prison de glace à 45 %, Barrière à 51 %.
+- L'IA tire peu parti des renforcements et des marques de combinaison : les essais avec de vrais joueurs
+  décideront des retouches.

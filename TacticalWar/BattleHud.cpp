@@ -104,7 +104,7 @@ namespace
 }
 
 BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
-	: gui(gui), font(font), messageRemaining(0), spellBarClassId(0), readyState(false), spectator(false)
+	: gui(gui), font(font), messageRemaining(0), readyState(false), spectator(false)
 {
 	timelinePanel = tgui::Panel::create();
 	timelinePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 170));
@@ -377,19 +377,19 @@ void BattleHud::log(const sf::String & line, const sf::Color & color)
 	logBox->addLine(line, color);
 }
 
-void BattleHud::setSpellBar(const ClassDef & classDef)
+void BattleHud::setSpellBar(const GameData & data, const Fighter & fighter)
 {
-	spellBarClassId = classDef.id;
 	for (int i = 0; i < (int)spells.size(); i++)
 	{
 		SpellButton & button = spells[i];
-		if (i >= (int)classDef.spells.size())
+		const SpellDef * slotSpell = spellOf(data, fighter, i);
+		if (slotSpell == nullptr)
 		{
 			button.icon->setVisible(false);
 			continue;
 		}
 
-		const SpellDef & spell = classDef.spells[i];
+		const SpellDef & spell = *slotSpell;
 		button.spellId = spell.id;
 		button.icon->getRenderer()->setTexture(cachedTexture(spell.icon));
 		button.cost->setText(num(spell.apCost));
@@ -556,17 +556,20 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 
 	if (me != nullptr)
 	{
-		const ClassDef * classDef = data.findClass(me->classId);
-		if (classDef != nullptr && classDef->id != spellBarClassId)
+		std::string key = std::to_string(me->classId) + ":";
+		for (int index : me->spells)
+			key += std::to_string(index) + ",";
+		if (key != spellBarKey)
 		{
-			setSpellBar(*classDef);
+			spellBarKey = key;
+			setSpellBar(data, *me);
 			layout(windowSize);
 		}
 
-		for (int i = 0; i < (int)spells.size() && classDef != nullptr && i < (int)classDef->spells.size(); i++)
+		for (int i = 0; i < (int)spells.size() && spellOf(data, *me, i) != nullptr; i++)
 		{
 			SpellButton & button = spells[i];
-			const SpellDef & spell = classDef->spells[i];
+			const SpellDef & spell = *spellOf(data, *me, i);
 			auto cooldown = me->cooldowns.find(spell.id);
 			int remaining = cooldown == me->cooldowns.end() ? 0 : cooldown->second;
 			bool usable = myTurn && checkSpellResources(*me, spell).empty();

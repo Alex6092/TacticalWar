@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **3**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **4**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -98,7 +98,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe : PC&lt;classId&gt; |
+| `PC` | C → S | joueur | Choisir une classe et ses sorts : PC{class, spells:[4 indices dans les sorts de la classe]} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |

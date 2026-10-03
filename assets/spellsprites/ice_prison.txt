@@ -1,0 +1,104 @@
+
+ice_prison.png
+size: 640, 480
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ice_prison
+  rotate: false
+  xy: 0, 0
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 0
+ice_prison
+  rotate: false
+  xy: 128, 0
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 1
+ice_prison
+  rotate: false
+  xy: 256, 0
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 2
+ice_prison
+  rotate: false
+  xy: 384, 0
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 3
+ice_prison
+  rotate: false
+  xy: 512, 0
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 4
+ice_prison
+  rotate: false
+  xy: 0, 160
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 5
+ice_prison
+  rotate: false
+  xy: 128, 160
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 6
+ice_prison
+  rotate: false
+  xy: 256, 160
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 7
+ice_prison
+  rotate: false
+  xy: 384, 160
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 8
+ice_prison
+  rotate: false
+  xy: 512, 160
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 9
+ice_prison
+  rotate: false
+  xy: 0, 320
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 10
+ice_prison
+  rotate: false
+  xy: 128, 320
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 11
+ice_prison
+  rotate: false
+  xy: 256, 320
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 12
+ice_prison
+  rotate: false
+  xy: 384, 320
+  size: 128, 160
+  orig: 128, 160
+  offset: 0, 0
+  index: 13

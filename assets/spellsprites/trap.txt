@@ -1,0 +1,76 @@
+
+trap.png
+size: 384, 256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+trap
+  rotate: false
+  xy: 0, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 0
+trap
+  rotate: false
+  xy: 128, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 1
+trap
+  rotate: false
+  xy: 256, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 2
+trap
+  rotate: false
+  xy: 0, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 3
+trap
+  rotate: false
+  xy: 128, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 4
+trap
+  rotate: false
+  xy: 256, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 5
+trap
+  rotate: false
+  xy: 0, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 6
+trap
+  rotate: false
+  xy: 128, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 7
+trap
+  rotate: false
+  xy: 256, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 8
+trap
+  rotate: false
+  xy: 0, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 9

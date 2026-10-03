@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <string>
 
+#include "ClientConfig.h"
 #include "ClientGameData.h"
+#include <BattleRules.h>
 #include "LinkToServer.h"
 #include "LoginScreen.h"
 #include "ScreenManager.h"
@@ -21,7 +23,7 @@ namespace
 }
 
 TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
-	: gui(gui), request(Request::NONE)
+	: gui(gui), spellClassId(-1), spellsChanged(false), request(Request::NONE)
 {
 	gui->removeAllWidgets();
 	font.loadFromFile("./assets/font/neuropol_x_rg.ttf");
@@ -85,26 +87,42 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	description->setTextSize(14);
 	description->getRenderer()->setTextColor(sf::Color(255, 230, 150));
 	description->setPosition(20, top);
-	description->setSize(PANEL_WIDTH - 40, 70);
+	description->setSize(PANEL_WIDTH - 40, 56);
 	panel->add(description);
+
+	// Sorts emportés : les 6 de la classe, 4 choisis (survol : description du sort).
+	for (int i = 0; i < 6; i++)
+	{
+		spellIcons[i] = tgui::Picture::create();
+		spellIcons[i]->setSize(48, 48);
+		spellIcons[i]->setPosition(20 + i * 56.f, top + 60);
+		spellIcons[i]->connect("Clicked", [this, i]() { toggleSpell(i); });
+		panel->add(spellIcons[i]);
+	}
+	spellLabel = tgui::Label::create();
+	spellLabel->setInheritedFont(font);
+	spellLabel->setTextSize(14);
+	spellLabel->setPosition(20 + 6 * 56.f + 10, top + 64);
+	spellLabel->setSize(PANEL_WIDTH - (20 + 6 * 56.f + 10) - 20, 44);
+	panel->add(spellLabel);
 
 	tgui::Button::Ptr back = tgui::Button::create(L"Retour");
 	back->setInheritedFont(font);
 	back->setTextSize(18);
 	back->setSize(180, 44);
-	back->setPosition(PANEL_WIDTH / 2 - 200, top + 84);
+	back->setPosition(PANEL_WIDTH / 2 - 200, top + 124);
 	back->connect("pressed", [this]() { request = Request::BACK; });
 	panel->add(back);
 
-	tgui::Button::Ptr play = tgui::Button::create(L"Jouer");
-	play->setInheritedFont(font);
-	play->setTextSize(18);
-	play->setSize(180, 44);
-	play->setPosition(PANEL_WIDTH / 2 + 20, top + 84);
-	play->connect("pressed", [this]() { request = Request::PLAY; });
-	panel->add(play);
+	playButton = tgui::Button::create(L"Jouer");
+	playButton->setInheritedFont(font);
+	playButton->setTextSize(18);
+	playButton->setSize(180, 44);
+	playButton->setPosition(PANEL_WIDTH / 2 + 20, top + 124);
+	playButton->connect("pressed", [this]() { request = Request::PLAY; });
+	panel->add(playButton);
 
-	panel->setSize(PANEL_WIDTH, top + 148);
+	panel->setSize(PANEL_WIDTH, top + 188);
 
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
 	refresh();
@@ -168,6 +186,74 @@ void TrainingSetupScreen::refresh()
 		description->setText(fromServerText(classDef->name) + L" : " + fromServerText(classDef->description));
 	else
 		description->setText(L"Une classe tirée au sort à chaque combat.");
+
+	// Nouvelle classe : son dernier choix de sorts (à défaut, les 4 premiers).
+	int classId = classDef != nullptr ? classDef->id : 0;
+	if (classId != spellClassId)
+	{
+		spellClassId = classId;
+		chosenSpells = classDef != nullptr ? battle::validSpellChoice(*classDef, ClientConfig::get().spellChoice(classId)) : std::vector<int>();
+		for (int i = 0; i < 6; i++)
+		{
+			bool exists = classDef != nullptr && i < (int)classDef->spells.size();
+			spellIcons[i]->setVisible(exists);
+			if (!exists)
+				continue;
+			const battle::SpellDef & spell = classDef->spells[i];
+			sf::Texture texture;
+			if (texture.loadFromFile(spell.icon))
+				spellIcons[i]->getRenderer()->setTexture(texture);
+			tgui::Label::Ptr tip = tgui::Label::create(fromServerText(spell.name) + L" (" + std::to_wstring(spell.apCost) + L" PA)\n"
+				+ fromServerText(spell.description));
+			tip->setInheritedFont(font);
+			tip->setTextSize(13);
+			tip->setMaximumTextWidth(360);
+			tip->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 235));
+			tip->getRenderer()->setTextColor(sf::Color::White);
+			tip->getRenderer()->setBorders(1);
+			tip->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
+			tip->getRenderer()->setPadding(6);
+			spellIcons[i]->setToolTip(tip);
+		}
+	}
+	refreshSpells();
+}
+
+void TrainingSetupScreen::toggleSpell(int index)
+{
+	auto it = std::find(chosenSpells.begin(), chosenSpells.end(), index);
+	if (it != chosenSpells.end())
+		chosenSpells.erase(it);
+	else if ((int)chosenSpells.size() < battle::SPELL_SLOTS)
+		chosenSpells.push_back(index);
+	std::sort(chosenSpells.begin(), chosenSpells.end());
+	spellsChanged = true;
+	refreshSpells();
+}
+
+void TrainingSetupScreen::refreshSpells()
+{
+	const battle::ClassDef * classDef = ClientGameData::get().findClass(spellClassId);
+	spellLabel->setPosition(classDef != nullptr ? 20 + 6 * 56.f + 10 : 20.f, spellLabel->getPosition().y);
+	if (classDef == nullptr)
+	{
+		spellLabel->setText(L"Classe au hasard : sorts par défaut de la classe tirée, ou derniers sorts choisis pour elle.");
+		spellLabel->getRenderer()->setTextColor(sf::Color(200, 200, 200));
+		playButton->setEnabled(true);
+		return;
+	}
+
+	int needed = (int)battle::defaultSpells(*classDef).size();
+	for (int i = 0; i < 6; i++)
+	{
+		bool chosen = std::find(chosenSpells.begin(), chosenSpells.end(), i) != chosenSpells.end();
+		spellIcons[i]->getRenderer()->setOpacity(chosen ? 1.f : 0.35f);
+	}
+	bool complete = (int)chosenSpells.size() == needed;
+	spellLabel->setText(L"Sorts emportés : " + std::to_wstring(chosenSpells.size()) + L"/" + std::to_wstring(needed)
+		+ (complete ? L"\nClic : retirer un sort. Survol : description." : L"\nCliquez sur un sort pour l'ajouter."));
+	spellLabel->getRenderer()->setTextColor(complete ? sf::Color(255, 215, 0) : sf::Color(255, 120, 100));
+	playButton->setEnabled(complete);
 }
 
 void TrainingSetupScreen::save()
@@ -181,6 +267,15 @@ void TrainingSetupScreen::save()
 	settings.mapId = selectedId(map);
 	settings.easy = difficulty->getSelectedItemId() == "easy";
 	settings.zone = mode->getSelectedItemId() == "zone";
+
+	// Choix de sorts modifié : retenu pour cette classe (client.json), comme à l'écran de choix.
+	const battle::ClassDef * classDef = ClientGameData::get().findClass(spellClassId);
+	if (spellsChanged && classDef != nullptr && battle::validSpellChoice(*classDef, chosenSpells) == chosenSpells)
+	{
+		ClientConfig::get().spellChoices[spellClassId] = chosenSpells;
+		ClientConfig::get().save();
+		spellsChanged = false;
+	}
 }
 
 void TrainingSetupScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)

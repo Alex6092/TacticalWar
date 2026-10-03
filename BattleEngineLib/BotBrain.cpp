@@ -22,14 +22,11 @@ namespace tw
 			// Portée d'attaque la plus longue du combattant (sorts offensifs).
 			int attackRange(const BattleState & state, const GameData & data, const Fighter & fighter)
 			{
-				const ClassDef * classDef = data.findClass(fighter.classId);
 				int range = 1;
-				if (classDef == nullptr)
-					return range;
-				for (const SpellDef & spell : classDef->spells)
+				for (const SpellDef * spell : fighterSpells(data, fighter))
 				{
-					if (isOffensive(spell))
-						range = std::max(range, effectiveMaxRange(state, data, fighter, spell));
+					if (isOffensive(*spell))
+						range = std::max(range, effectiveMaxRange(state, data, fighter, *spell));
 				}
 				return range;
 			}
@@ -84,12 +81,9 @@ namespace tw
 				{
 					if (!ally.alive || ally.team != caster.team || ally.id == caster.id)
 						continue;
-					const ClassDef * classDef = data.findClass(ally.classId);
-					if (classDef == nullptr)
-						continue;
-					for (const SpellDef & spell : classDef->spells)
+					for (const SpellDef * spell : fighterSpells(data, ally))
 					{
-						for (const EffectDef & effect : spell.effects)
+						for (const EffectDef & effect : spell->effects)
 						{
 							if (effect.comboState == stateName)
 								return true;
@@ -171,14 +165,13 @@ namespace tw
 				bool mistake, BotAction & action)
 			{
 				std::vector<BotAction> useful;
-				const ClassDef * classDef = data.findClass(me.classId);
-				if (classDef == nullptr)
-					return false;
-
 				int bestScore = 0;
-				for (int slot = 0; slot < (int)classDef->spells.size(); slot++)
+				for (int slot = 0; slot < SPELL_SLOTS; slot++)
 				{
-					const SpellDef & spell = classDef->spells[slot];
+					const SpellDef * slotSpell = spellOf(data, me, slot);
+					if (slotSpell == nullptr)
+						continue;
+					const SpellDef & spell = *slotSpell;
 					if (!checkSpellResources(me, spell).empty())
 						continue;
 
@@ -201,6 +194,18 @@ namespace tw
 										continue;
 									for (const EffectDef & triggered : effect.glyphEffects)
 										value += effectValue(state, data, me, spell.id, triggered, *fighter) * 3 / 4;
+								}
+								// Piège sur une case libre : un ennemi tout proche risque d'y passer.
+								if (effect.glyphShape == ZoneShape::SINGLE && state.fighterAt(cell) == nullptr && nearestEnemyDistance(state, me.team, cell) == 1)
+								{
+									for (const Fighter & enemy : state.fighters)
+									{
+										if (!enemy.alive || enemy.team == me.team || manhattan(enemy.position, cell) != 1)
+											continue;
+										for (const EffectDef & triggered : effect.glyphEffects)
+											value += effectValue(state, data, me, spell.id, triggered, enemy) / 3;
+										break;
+									}
 								}
 								continue;
 							}
@@ -247,14 +252,11 @@ namespace tw
 			// Un sort offensif pourrait-il toucher un ennemi depuis cette case (sans compter les PA) ?
 			bool canHitFrom(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, const Cell & from)
 			{
-				const ClassDef * classDef = data.findClass(me.classId);
-				if (classDef == nullptr)
-					return false;
-
 				Fighter moved = me;
 				moved.position = from;
-				for (const SpellDef & spell : classDef->spells)
+				for (const SpellDef * offensive : fighterSpells(data, me))
 				{
+					const SpellDef & spell = *offensive;
 					if (!isOffensive(spell))
 						continue;
 					for (const Cell & cell : castableCells(state, map, data, moved, spell))

@@ -330,7 +330,7 @@ void FxGalleryScreen::advance()
 	{
 	case Step::AIM_ZONE:
 	{
-		selectSpell(entries[current].slot);
+		selectSpell(0);
 		const battle::Fighter * caster = truth.findFighter(CASTER);
 		const battle::SpellDef * spell = currentSpell();
 		battle::Cell aim = { -1, -1 };
@@ -366,7 +366,7 @@ void FxGalleryScreen::advance()
 		selectSpell(-1);
 		aimAt({ -1, -1 });
 		const battle::SpellDef * spell = currentSpell();
-		battle::ActionResult result = spell != nullptr ? engine->cast(CASTER, entries[current].slot, layout.target, nowMs)
+		battle::ActionResult result = spell != nullptr ? engine->cast(CASTER, 0, layout.target, nowMs)
 			: battle::ActionResult::failure("Sort introuvable.");
 		if (!result.ok)
 		{
@@ -524,7 +524,14 @@ std::unique_ptr<battle::BattleEngine> FxGalleryScreen::createEngine(const battle
 	engineMap.startCells[2] = { candidate.enemy };
 
 	std::unique_ptr<battle::BattleEngine> result(new battle::BattleEngine(data, engineMap, 1));
-	result->addFighter(1, classDef.id, classDef.name);
+	// Le lanceur emporte le sort montré en premier emplacement, puis d'autres sorts de sa classe.
+	std::vector<int> spells = { entries[current].slot };
+	for (int i = 0; i < (int)classDef.spells.size() && (int)spells.size() < battle::SPELL_SLOTS; i++)
+	{
+		if (i != entries[current].slot)
+			spells.push_back(i);
+	}
+	result->addFighter(1, classDef.id, classDef.name, spells);
 	result->addFighter(2, classIdByKey(data, "archer"), u8"Cible");
 	result->addFighter(1, classIdByKey(data, "guerrier"), u8"Allié");
 	result->startPlacement(nowMs);

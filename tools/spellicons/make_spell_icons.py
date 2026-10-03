@@ -225,12 +225,91 @@ def purification(d, accent):
     poly(d, star(0.2, 0.2, 0.07, 0.02, 4), accent)
 
 
+def tourbillon(d, accent):
+    # Épée au centre, entourée de trois arcs qui tournent.
+    blade = [(0.47, 0.2), (0.53, 0.2), (0.54, 0.6), (0.5, 0.66), (0.46, 0.6)]
+    poly(d, blade, LIGHT)
+    poly(d, [(0.4, 0.6), (0.6, 0.6), (0.6, 0.64), (0.4, 0.64)], accent)
+    poly(d, [(0.48, 0.64), (0.52, 0.64), (0.52, 0.78), (0.48, 0.78)], accent)
+    for start in (20, 140, 260):
+        d.arc((P(0.1, 0.1), P(0.9, 0.9)), start, start + 70, fill=LIGHT, width=int(0.045 * S))
+        a = math.radians(start + 70)
+        tip = (0.5 + 0.4 * math.cos(a), 0.5 + 0.4 * math.sin(a))
+        poly(d, rotate([(tip[0], tip[1] - 0.06), (tip[0] + 0.08, tip[1]), (tip[0], tip[1] + 0.06)], a + math.pi / 2, tip[0], tip[1]), LIGHT)
+
+
+def cri_de_guerre(d, accent):
+    # Bouche qui crie et ondes sonores.
+    poly(d, [(0.12, 0.38), (0.36, 0.3), (0.36, 0.7), (0.12, 0.62)], LIGHT)
+    d.ellipse((P(0.2, 0.42), P(0.32, 0.58)), fill=accent)
+    for k, r in enumerate((0.16, 0.27, 0.38)):
+        d.arc((P(0.36 - r, 0.5 - r), P(0.36 + r, 0.5 + r)), -45, 45, fill=LIGHT if k != 1 else accent, width=int(0.045 * S))
+
+
+def pluie_de_fleches(d, accent):
+    for x0, y0 in ((0.12, 0.08), (0.36, 0.04), (0.6, 0.08), (0.24, 0.3), (0.5, 0.28)):
+        arrow(d, x0, y0, x0 + 0.2, y0 + 0.42, width=0.035, head=0.1, fletching=False)
+    line(d, [(0.1, 0.88), (0.9, 0.88)], 0.03, accent)
+
+
+def piege(d, accent):
+    # Mâchoires dentées d'un piège à loup, vues de face.
+    d.arc((P(0.12, 0.3), P(0.88, 0.95)), 180, 360, fill=LIGHT, width=int(0.06 * S))
+    d.arc((P(0.12, 0.05), P(0.88, 0.7)), 0, 180, fill=LIGHT, width=int(0.06 * S))
+    for i in range(5):
+        x = 0.24 + i * 0.13
+        poly(d, [(x - 0.05, 0.6), (x + 0.05, 0.6), (x, 0.45)], LIGHT)
+        poly(d, [(x - 0.05, 0.38), (x + 0.05, 0.38), (x, 0.53)], accent)
+    circle(d, 0.5, 0.88, 0.05, fill=accent)
+
+
+def vague_de_flammes(d, accent):
+    # Trois flammes de plus en plus hautes, en ligne.
+    for i, (x, h) in enumerate(((0.22, 0.32), (0.48, 0.46), (0.74, 0.6))):
+        base = 0.84
+        flame = [(x - 0.11, base), (x - 0.08, base - h * 0.55), (x - 0.02, base - h * 0.7), (x, base - h), (x + 0.04, base - h * 0.62),
+                 (x + 0.1, base - h * 0.5), (x + 0.11, base)]
+        poly(d, flame, (255, 150 - i * 20, 40, 255))
+        poly(d, [(x - 0.05, base), (x, base - h * 0.5), (x + 0.05, base)], LIGHT)
+
+
+def prison_de_glace(d, accent):
+    # Cristaux de glace autour d'un cœur.
+    for x, h in ((0.2, 0.5), (0.35, 0.68), (0.5, 0.78), (0.65, 0.68), (0.8, 0.5)):
+        poly(d, [(x - 0.08, 0.86), (x, 0.86 - h), (x + 0.08, 0.86)], LIGHT)
+        line(d, [(x, 0.86), (x, 0.9 - h)], 0.015, accent)
+    line(d, [(0.1, 0.87), (0.9, 0.87)], 0.03, accent)
+
+
+def barriere(d, accent):
+    # Bouclier frappé d'une ancre (inamovible).
+    poly(d, shield_points(0.5, 0.52, 0.6, 0.74), LIGHT)
+    poly(d, shield_points(0.5, 0.52, 0.46, 0.6), accent)
+    line(d, [(0.5, 0.3), (0.5, 0.68)], 0.05, LIGHT)
+    line(d, [(0.4, 0.38), (0.6, 0.38)], 0.04, LIGHT)
+    d.arc((P(0.36, 0.48), P(0.64, 0.74)), 0, 180, fill=LIGHT, width=int(0.045 * S))
+    circle(d, 0.5, 0.27, 0.04, outline=LIGHT, width=0.025)
+
+
+def lien_de_vie(d, accent):
+    # Deux cœurs reliés par un lien.
+    for cx, cy, r, color in ((0.32, 0.4, 0.14, LIGHT), (0.68, 0.62, 0.14, (120, 220, 110, 255))):
+        circle(d, cx - r * 0.5, cy, r * 0.6, fill=color)
+        circle(d, cx + r * 0.5, cy, r * 0.6, fill=color)
+        poly(d, [(cx - r * 1.05, cy + r * 0.15), (cx + r * 1.05, cy + r * 0.15), (cx, cy + r * 1.3)], color)
+    line(d, [(0.4, 0.55), (0.6, 0.48)], 0.03, accent)
+    for t in (0.3, 0.7):
+        circle(d, 0.4 + 0.2 * t, 0.55 - 0.07 * t, 0.035, outline=accent, width=0.02)
+
+
 SYMBOLS = {
     'taillade': taillade, 'charge': charge, 'rempart': rempart, 'provocation': provocation,
     'tir_precis': tir_precis, 'fleche_empoisonnee': fleche_empoisonnee, 'fleche_recul': fleche_recul,
     'fleche_entravante': fleche_entravante, 'eclair': eclair, 'boule_de_feu': boule_de_feu,
     'glyphe_givre': glyphe_givre, 'transposition': transposition, 'chatiment': chatiment, 'soin': soin,
     'bouclier_sacre': bouclier_sacre, 'purification': purification,
+    'tourbillon': tourbillon, 'cri_de_guerre': cri_de_guerre, 'pluie_de_fleches': pluie_de_fleches, 'piege': piege,
+    'vague_de_flammes': vague_de_flammes, 'prison_de_glace': prison_de_glace, 'barriere': barriere, 'lien_de_vie': lien_de_vie,
 }
 
 
@@ -293,9 +372,10 @@ def main():
     print('%d icônes générées' % len(icons))
 
     if args.preview:
-        sheet = Image.new('RGB', (4 * 110, 4 * 110), (30, 30, 40))
+        # Une ligne par classe (6 sorts).
+        sheet = Image.new('RGB', (6 * 110, 4 * 110), (30, 30, 40))
         for i, icon in enumerate(icons):
-            sheet.paste(icon.convert('RGB'), ((i % 4) * 110 + 5, (i // 4) * 110 + 5))
+            sheet.paste(icon.convert('RGB'), ((i % 6) * 110 + 5, (i // 6) * 110 + 5))
         sheet.save(os.path.join(os.path.dirname(__file__), 'preview.png'))
 
 

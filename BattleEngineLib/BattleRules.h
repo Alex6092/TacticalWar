@@ -23,7 +23,19 @@ namespace tw
 		// combattants vivants bloquent la vue.
 		bool hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to);
 
-		const SpellDef * spellOf(const GameData & data, const Fighter & fighter, int spellIndex);
+		// Sorts au choix : chaque combattant emporte SPELL_SLOTS sorts parmi ceux de sa classe.
+		const int SPELL_SLOTS = 4;
+		// Choix par défaut : les premiers sorts de la classe.
+		std::vector<int> defaultSpells(const ClassDef & classDef);
+		// Choix demandé s'il est valable (SPELL_SLOTS indices distincts de sorts de la classe, ou tous
+		// ses sorts si elle en a moins), sinon le choix par défaut.
+		std::vector<int> validSpellChoice(const ClassDef & classDef, const std::vector<int> & requested);
+		// Choix au hasard (bots, entraînement), dans l'ordre des sorts de la classe.
+		std::vector<int> randomSpellChoice(const ClassDef & classDef, std::mt19937 & rng);
+		// Sort de l'emplacement "slot" de la barre du combattant (nullptr si aucun).
+		const SpellDef * spellOf(const GameData & data, const Fighter & fighter, int slot);
+		// Sorts emportés par le combattant, dans l'ordre de sa barre.
+		std::vector<const SpellDef *> fighterSpells(const GameData & data, const Fighter & fighter);
 		int effectiveMaxRange(const BattleState & state, const GameData & data, const Fighter & fighter, const SpellDef & spell);
 
 		// Cellules de la zone de lancer (forme et portée, sans la ligne de vue).
