@@ -1,0 +1,90 @@
+
+mantra1_blue.png
+size: 896, 672
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+mantra1_blue
+  rotate: false
+  xy: 0, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 0
+mantra1_blue
+  rotate: false
+  xy: 224, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 1
+mantra1_blue
+  rotate: false
+  xy: 448, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 2
+mantra1_blue
+  rotate: false
+  xy: 672, 0
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 3
+mantra1_blue
+  rotate: false
+  xy: 0, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 4
+mantra1_blue
+  rotate: false
+  xy: 224, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 5
+mantra1_blue
+  rotate: false
+  xy: 448, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 6
+mantra1_blue
+  rotate: false
+  xy: 672, 224
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 7
+mantra1_blue
+  rotate: false
+  xy: 0, 448
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 8
+mantra1_blue
+  rotate: false
+  xy: 224, 448
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 9
+mantra1_blue
+  rotate: false
+  xy: 448, 448
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 10
+mantra1_blue
+  rotate: false
+  xy: 672, 448
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 11

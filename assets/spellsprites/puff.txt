@@ -1,0 +1,125 @@
+
+puff.png
+size: 672, 594
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+puff
+  rotate: false
+  xy: 0, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 0
+puff
+  rotate: false
+  xy: 224, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 1
+puff
+  rotate: false
+  xy: 448, 0
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 2
+puff
+  rotate: false
+  xy: 0, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 3
+puff
+  rotate: false
+  xy: 224, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 4
+puff
+  rotate: false
+  xy: 448, 99
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 5
+puff
+  rotate: false
+  xy: 0, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 6
+puff
+  rotate: false
+  xy: 224, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 7
+puff
+  rotate: false
+  xy: 448, 198
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 8
+puff
+  rotate: false
+  xy: 0, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 9
+puff
+  rotate: false
+  xy: 224, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 10
+puff
+  rotate: false
+  xy: 448, 297
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 11
+puff
+  rotate: false
+  xy: 0, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 12
+puff
+  rotate: false
+  xy: 224, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 13
+puff
+  rotate: false
+  xy: 448, 396
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 14
+puff
+  rotate: false
+  xy: 0, 495
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 15
+puff
+  rotate: false
+  xy: 224, 495
+  size: 224, 99
+  orig: 224, 99
+  offset: 0, 0
+  index: 16

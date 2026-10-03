@@ -89,7 +89,9 @@ CharacterView::CharacterView(BaseCharacterModel * model)
 	
 	font.loadFromFile("./assets/font/neuropol_x_rg.ttf");
 	pseudoTxt.setFont(font);
-	pseudoTxt.setString(model->getPseudo());
+	// Les noms viennent du serveur en UTF-8 (accents).
+	std::string pseudo = model->getPseudo();
+	pseudoTxt.setString(sf::String::fromUtf8(pseudo.begin(), pseudo.end()));
 
 	lifeTxt.setFont(font);
 	paTxt.setFont(font);
@@ -216,7 +218,8 @@ void CharacterView::update(float deltatime)
 	elsetime += deltatime;
 
 	BaseCharacterModel * m = getModel();
-	if (m->hasTargetPosition())
+	// Un personnage poussé ou attiré glisse sans courir ni se retourner.
+	if (m->hasTargetPosition() && !m->isSliding())
 	{
 		setAnimation(Animation::RUN);
 		if (m->getTargetX() > m->getCurrentX())

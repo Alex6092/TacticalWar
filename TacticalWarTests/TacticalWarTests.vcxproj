@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BattleEngineTests.cpp" />
+    <ClCompile Include="FxDataTests.cpp" />
     <ClCompile Include="MapTests.cpp" />
     <ClCompile Include="ProtocolTests.cpp" />
     <ClCompile Include="ReplayTests.cpp" />

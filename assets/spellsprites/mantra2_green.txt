@@ -1,0 +1,55 @@
+
+mantra2_green.png
+size: 448, 236
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+mantra2_green
+  rotate: false
+  xy: 0, 0
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 0
+mantra2_green
+  rotate: false
+  xy: 224, 0
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 1
+mantra2_green
+  rotate: false
+  xy: 0, 59
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 2
+mantra2_green
+  rotate: false
+  xy: 224, 59
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 3
+mantra2_green
+  rotate: false
+  xy: 0, 118
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 4
+mantra2_green
+  rotate: false
+  xy: 224, 118
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 5
+mantra2_green
+  rotate: false
+  xy: 0, 177
+  size: 224, 59
+  orig: 224, 59
+  offset: 0, 0
+  index: 6

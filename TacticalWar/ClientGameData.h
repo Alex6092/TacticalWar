@@ -12,6 +12,8 @@ public:
 
 	const tw::battle::GameData & data();
 	bool loadFromServer(const std::string & json);
+	// Relit les données depuis un fichier (galerie des effets) ; celles en place sont gardées en cas d'erreur.
+	bool loadFromFile(const std::string & path, std::string & error);
 
 	const tw::battle::ClassDef * findClass(int classId) { return data().findClass(classId); }
 

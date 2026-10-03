@@ -1,5 +1,6 @@
 ﻿#include "IsometricRenderer.h"
 #include "BattleScreen.h"
+#include "FxGalleryScreen.h"
 #include "LoginScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
@@ -17,10 +18,13 @@ int main(int argc, char** argv)
 	sf::RenderWindow window(mode, "Tactical War"/*, sf::Style::Fullscreen*/);
 	tgui::Gui gui{ window };
 	window.setVerticalSyncEnabled(true);
-	tw::ScreenManager::getInstance()->setCurrentScreen(new tw::LoginScreen(&gui));
-	//tw::Screen * battle = new tw::BattleScreen(&gui);
+	if (config.fxGallery)
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::FxGalleryScreen(&gui, config.fxSpell, config.fxMap));
+	else
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::LoginScreen(&gui));
 	sf::Clock deltaClock;
 	sf::Clock runningClock;
+	bool firstFrame = true;
 
 	while (window.isOpen())
 	{
@@ -31,7 +35,7 @@ int main(int argc, char** argv)
 		gui.draw();
 
 		// Capture d'écran demandée en ligne de commande (outil de développement) :
-		if (!config.screenshotPath.empty() && runningClock.getElapsedTime().asSeconds() >= config.screenshotDelaySeconds)
+		if (!config.screenshotPath.empty() && !firstFrame && runningClock.getElapsedTime().asSeconds() >= config.screenshotDelaySeconds)
 		{
 			sf::Texture capture;
 			capture.create(window.getSize().x, window.getSize().y);
@@ -42,6 +46,15 @@ int main(int argc, char** argv)
 		}
 
 		window.display();
+
+		// La première image charge les textures (plusieurs secondes en Debug) : le temps du jeu et le
+		// délai avant la capture d'écran partent de la fin de ce chargement.
+		if (firstFrame)
+		{
+			firstFrame = false;
+			deltaClock.restart();
+			runningClock.restart();
+		}
 	}
 
 	delete tw::ScreenManager::getInstance()->getCurrentScreen();

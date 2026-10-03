@@ -1,0 +1,167 @@
+
+heal1_green.png
+size: 1120, 1055
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+heal1_green
+  rotate: false
+  xy: 0, 0
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 0
+heal1_green
+  rotate: false
+  xy: 224, 0
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 1
+heal1_green
+  rotate: false
+  xy: 448, 0
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 2
+heal1_green
+  rotate: false
+  xy: 672, 0
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 3
+heal1_green
+  rotate: false
+  xy: 896, 0
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 4
+heal1_green
+  rotate: false
+  xy: 0, 211
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 5
+heal1_green
+  rotate: false
+  xy: 224, 211
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 6
+heal1_green
+  rotate: false
+  xy: 448, 211
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 7
+heal1_green
+  rotate: false
+  xy: 672, 211
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 8
+heal1_green
+  rotate: false
+  xy: 896, 211
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 9
+heal1_green
+  rotate: false
+  xy: 0, 422
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 10
+heal1_green
+  rotate: false
+  xy: 224, 422
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 11
+heal1_green
+  rotate: false
+  xy: 448, 422
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 12
+heal1_green
+  rotate: false
+  xy: 672, 422
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 13
+heal1_green
+  rotate: false
+  xy: 896, 422
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 14
+heal1_green
+  rotate: false
+  xy: 0, 633
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 15
+heal1_green
+  rotate: false
+  xy: 224, 633
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 16
+heal1_green
+  rotate: false
+  xy: 448, 633
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 17
+heal1_green
+  rotate: false
+  xy: 672, 633
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 18
+heal1_green
+  rotate: false
+  xy: 896, 633
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 19
+heal1_green
+  rotate: false
+  xy: 0, 844
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 20
+heal1_green
+  rotate: false
+  xy: 224, 844
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 21
+heal1_green
+  rotate: false
+  xy: 448, 844
+  size: 224, 211
+  orig: 224, 211
+  offset: 0, 0
+  index: 22

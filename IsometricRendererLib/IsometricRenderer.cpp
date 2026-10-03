@@ -3,6 +3,7 @@
 #include <CharacterView.h>
 #include <SpellView.h>
 #include <TileRegistry.h>
+#include "Camera.h"
 #include <algorithm>
 #include <math.h>
 #include <iostream>
@@ -279,10 +280,30 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		byDepth[depth].push_back(model);
 	}
 
+	// Animations de sorts au sol (glyphes…) : sous les personnages et le décor qui les précèdent.
+	std::vector<std::vector<AbstractSpellView<sf::Sprite*>*>> groundByDepth(diagonals);
+	std::vector<AbstractSpellView<sf::Sprite*>*> onTop;
+	for (AbstractSpellView<sf::Sprite*> * spell : spells)
+	{
+		SpellView * view = dynamic_cast<SpellView*>(spell);
+		if (view != NULL && view->getLayer() == SpellView::Layer::GROUND)
+		{
+			int depth = (int)std::lround(view->getPositionX()) + (int)std::lround(view->getPositionY());
+			groundByDepth[std::max(0, std::min(diagonals - 1, depth))].push_back(spell);
+		}
+		else
+		{
+			onTop.push_back(spell);
+		}
+	}
+
 	for (int d = 0; d < diagonals; d++)
 	{
 		for (int x = std::max(0, d - (height - 1)); x <= std::min(width - 1, d); x++)
 			drawCell(environment, x, d - x);
+
+		for (AbstractSpellView<sf::Sprite*> * spell : groundByDepth[d])
+			drawSpell(spell);
 
 		std::sort(byDepth[d].begin(), byDepth[d].end(), [](BaseCharacterModel * a, BaseCharacterModel * b) {
 			return a->getInterpolatedX() < b->getInterpolatedX();
@@ -291,16 +312,8 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 			drawCharacter(model, deltatime);
 	}
 
-	for (int i = 0; i < spells.size(); i++)
-	{
-		SpellView * view = dynamic_cast<SpellView*>(spells[i]);
-		sf::Sprite * spellSprite = view->getImageToDraw();
-		int isoX = (view->getX() * 120 - view->getY() * 120) / 2;
-		int isoY = (view->getX() * 60 + view->getY() * 60) / 2;
-		spellSprite->setPosition(isoX + 60 - (spellSprite->getGlobalBounds().width / 2.0), isoY + 30 - (spellSprite->getGlobalBounds().height / 2.0));
-
-		window->draw(*spellSprite);
-	}
+	for (AbstractSpellView<sf::Sprite*> * spell : onTop)
+		drawSpell(spell);
 
 	// Noms, PV, PA et PM par-dessus le décor.
 	for (int d = 0; d < diagonals; d++)
@@ -485,6 +498,30 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	window->draw(*pseudoTxt);
 }
 
+
+void IsometricRenderer::drawSpell(AbstractSpellView<sf::Sprite*> * spell)
+{
+	sf::Sprite * sprite = spell->getImageToDraw();
+	if (sprite == NULL)
+		return;
+
+	// Position en coordonnées de case (fractionnaires en vol), plus la hauteur dans le monde.
+	SpellView * view = dynamic_cast<SpellView*>(spell);
+	sf::RenderStates states;
+	if (view != NULL)
+	{
+		sf::Vector2f world = Camera::cellToWorld(view->getPositionX(), view->getPositionY());
+		sprite->setPosition(world.x, world.y + view->getHeight());
+		if (view->isAdditive())
+			states.blendMode = sf::BlendAdd;
+	}
+	else
+	{
+		sf::Vector2f world = Camera::cellToWorld((float)spell->getX(), (float)spell->getY());
+		sprite->setPosition(world.x - sprite->getGlobalBounds().width / 2.f, world.y - sprite->getGlobalBounds().height / 2.f);
+	}
+	window->draw(*sprite, states);
+}
 
 CharacterView & IsometricRenderer::getCharacterView(BaseCharacterModel * model)
 {

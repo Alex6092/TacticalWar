@@ -20,6 +20,17 @@ const tw::battle::GameData & ClientGameData::data()
 	return gameData;
 }
 
+bool ClientGameData::loadFromFile(const std::string & path, std::string & error)
+{
+	tw::battle::GameData loadedData;
+	if (!loadedData.loadFromFile(path, error))
+		return false;
+
+	gameData = loadedData;
+	loaded = true;
+	return true;
+}
+
 bool ClientGameData::loadFromServer(const std::string & json)
 {
 	std::string error;

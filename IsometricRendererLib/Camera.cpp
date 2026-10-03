@@ -108,6 +108,11 @@ void Camera::centerOn(float cellX, float cellY)
 	target = center;
 }
 
+void Camera::setZoom(float value)
+{
+	zoom = std::min(MAX_ZOOM, std::max(MIN_ZOOM, value));
+}
+
 void Camera::update(float deltatime)
 {
 	if (!following)

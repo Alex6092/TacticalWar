@@ -1,0 +1,48 @@
+
+laser1_blue.png
+size: 320, 228
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+laser1_blue
+  rotate: false
+  xy: 0, 0
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 0
+laser1_blue
+  rotate: false
+  xy: 0, 38
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 1
+laser1_blue
+  rotate: false
+  xy: 0, 76
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 2
+laser1_blue
+  rotate: false
+  xy: 0, 114
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 3
+laser1_blue
+  rotate: false
+  xy: 0, 152
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 4
+laser1_blue
+  rotate: false
+  xy: 0, 190
+  size: 320, 38
+  orig: 320, 38
+  offset: 0, 0
+  index: 5

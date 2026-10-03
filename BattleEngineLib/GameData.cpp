@@ -130,6 +130,26 @@ namespace
 		spell.sound = object.value("sound", std::string());
 		spell.casterAnimation = object.value("animation", std::string("magical"));
 
+		if (object.contains("visual") && object["visual"].is_object())
+		{
+			const json & visual = object["visual"];
+			spell.visual.cast = visual.value("cast", std::string());
+			if (visual.contains("projectile") && visual["projectile"].is_object())
+			{
+				const json & projectile = visual["projectile"];
+				spell.visual.projectile = projectile.value("effect", std::string());
+				spell.visual.projectileSpeed = projectile.value("speed", spell.visual.projectileSpeed);
+				spell.visual.projectileArc = projectile.value("arc", spell.visual.projectileArc);
+			}
+			spell.visual.impact = visual.value("impact", std::string());
+			spell.visual.impactOn = visual.value("impactOn", spell.visual.impactOn);
+			spell.visual.status = visual.value("status", std::string());
+			spell.visual.tick = visual.value("tick", std::string());
+			spell.visual.glyph = visual.value("glyph", std::string());
+			spell.visual.glyphTrigger = visual.value("glyphTrigger", std::string());
+			spell.visual.impactSound = visual.value("impactSound", std::string());
+		}
+
 		if (spell.launch == LaunchShape::SELF)
 		{
 			spell.minRange = 0;

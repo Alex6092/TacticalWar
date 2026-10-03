@@ -25,6 +25,10 @@ public:
 	unsigned int windowHeight = 0;
 	std::string screenshotPath;
 	float screenshotDelaySeconds = 3;
+	// Galerie des effets de sorts, sans serveur : --fx-gallery [--fx-spell <id>] [--fx-map <id>].
+	bool fxGallery = false;
+	std::string fxSpell;
+	int fxMap = 4;
 
 	static ClientConfig & get();
 

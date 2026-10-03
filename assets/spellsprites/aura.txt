@@ -1,0 +1,90 @@
+
+aura.png
+size: 384, 256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+aura
+  rotate: false
+  xy: 0, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 0
+aura
+  rotate: false
+  xy: 128, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 1
+aura
+  rotate: false
+  xy: 256, 0
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 2
+aura
+  rotate: false
+  xy: 0, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 3
+aura
+  rotate: false
+  xy: 128, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 4
+aura
+  rotate: false
+  xy: 256, 64
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 5
+aura
+  rotate: false
+  xy: 0, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 6
+aura
+  rotate: false
+  xy: 128, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 7
+aura
+  rotate: false
+  xy: 256, 128
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 8
+aura
+  rotate: false
+  xy: 0, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 9
+aura
+  rotate: false
+  xy: 128, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 10
+aura
+  rotate: false
+  xy: 256, 192
+  size: 128, 64
+  orig: 128, 64
+  offset: 0, 0
+  index: 11

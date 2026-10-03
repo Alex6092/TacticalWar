@@ -55,6 +55,9 @@ namespace tw
 		int currentTargetY;
 
 		std::vector<Point2D> path;
+		// Déplacement subi (poussée, attraction, bond) : plus rapide, sans courir ni se retourner.
+		bool sliding;
+		float slideSpeed;
 		//---------------------------------
 
 		bool isReady;
@@ -111,6 +114,8 @@ namespace tw
 			this->currentY = currentY;
 			this->interpolatedX = (float)currentX;
 			this->interpolatedY = (float)currentY;
+			this->sliding = false;
+			this->slideSpeed = 0;
 
 			this->colorNumber = 1;
 			this->currentLife = 1;
@@ -232,9 +237,15 @@ namespace tw
 			return interpolatedY;
 		}
 
+		// Vitesse de déplacement, en cases par seconde.
 		inline float getSpeed()
 		{
-			return 3.0;
+			return sliding ? slideSpeed : 3.0f;
+		}
+
+		inline bool isSliding()
+		{
+			return sliding;
 		}
 
 		inline void update(float deltatime)
@@ -288,7 +299,10 @@ namespace tw
 					// On ne notifie qu'à la fin du déplacement (but : éviter les freeze à chaque
 					// changement de cellule).
 					if (path.size() == 0)
+					{
+						sliding = false;
 						notifyPositionChanged(currentX, currentY);
+					}
 
 					setNextPositionFromPath();
 				}
@@ -305,6 +319,16 @@ namespace tw
 		{
 			this->path = path;
 			this->currentMoveCallback = callback;
+			this->sliding = false;
+		}
+
+		// Déplacement subi (poussée, attraction, bond), à "cellsPerSecond" cases par seconde : le
+		// personnage garde son orientation et son animation.
+		void slide(std::vector<Point2D> path, float cellsPerSecond, MoveActionAnimationEventListener * callback = NULL)
+		{
+			setPath(path, callback);
+			this->sliding = true;
+			this->slideSpeed = cellsPerSecond;
 		}
 
 		inline void setTargetPosition(int x, int y)

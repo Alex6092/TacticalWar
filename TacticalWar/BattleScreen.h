@@ -17,6 +17,7 @@
 #include <BaseCharacterModel.h>
 #include <MoveActionAnimationEventListener.h>
 #include <SpellView.h>
+#include "BattleFx.h"
 #include <BattleState.h>
 
 namespace tw
@@ -33,7 +34,7 @@ namespace tw
 		enum class Mode { PLAYER, SPECTATOR, ADMIN };
 
 		BattleScreen(tgui::Gui * gui, int environmentId, Mode mode = Mode::PLAYER);
-		~BattleScreen();
+		virtual ~BattleScreen();
 
 		virtual void handleEvents(sf::RenderWindow * window, tgui::Gui * gui);
 		virtual void update(float deltatime);
@@ -52,7 +53,8 @@ namespace tw
 		// MoveActionAnimationEventListener
 		virtual void onMoveFinished();
 
-	private:
+	protected:
+		// La galerie des effets (FxGalleryScreen) alimente cet écran avec un moteur de combat local.
 		struct FloatingText
 		{
 			sf::String text;
@@ -60,12 +62,6 @@ namespace tw
 			float x = 0;
 			float y = 0;
 			float age = 0;
-		};
-
-		struct SpellEffect
-		{
-			std::unique_ptr<SpellView> view;
-			float remaining = 0;
 		};
 
 		void applySnapshot(const nlohmann::json & snapshot);
@@ -77,7 +73,8 @@ namespace tw
 		bool isInteractive() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
-		void sendAction(const std::string & op, const nlohmann::json & body);
+		// Action du joueur : envoyée au serveur.
+		virtual void sendAction(const std::string & op, const nlohmann::json & body);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
@@ -118,7 +115,8 @@ namespace tw
 
 		std::map<int, BaseCharacterModel*> views;
 		std::vector<FloatingText> floatingTexts;
-		std::vector<SpellEffect> spellEffects;
+		BattleFx fx;
+		std::string periodicSpell(const battle::Fighter & target, int sourceId, battle::EffectType type) const;
 		std::map<std::string, sf::SoundBuffer> soundBuffers;
 		std::vector<sf::Sound> sounds;
 

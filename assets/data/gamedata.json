@@ -28,7 +28,8 @@
           "id": "taillade", "name": "Taillade", "description": "Un coup d'épée puissant au corps à corps.",
           "icon": "./assets/spellicons/taillade.png", "ap": 3, "range": [1, 1], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
           "effects": [ { "type": "DAMAGE", "min": 16, "max": 19 } ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"impact": "slash_x"},
+          "sound": "./assets/sound/spells/punch1.ogg", "animation": "physical"
         },
         {
           "id": "charge", "name": "Charge", "description": "Bondit au contact de l'ennemi visé, le blesse et le ralentit (-1 PM pendant 1 tour).",
@@ -38,7 +39,8 @@
             { "type": "DAMAGE", "min": 8, "max": 10 },
             { "type": "STAT_MOD", "stat": "MP", "min": -1, "duration": 1, "name": "Ralenti" }
           ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"impact": "claw_red", "status": "aura_slow", "impactSound": "./assets/sound/spells/punch5.ogg"},
+          "sound": "./assets/sound/spells/speed.ogg", "animation": "physical"
         },
         {
           "id": "rempart", "name": "Rempart", "description": "+30 % de résistance pour le Guerrier et +15 % pour les alliés à 2 cases ou moins, pendant 2 tours.",
@@ -47,7 +49,8 @@
             { "type": "STAT_MOD", "targets": "CASTER", "stat": "RESISTANCE", "min": 15, "duration": 2, "refresh": false, "name": "Rempart" },
             { "type": "STAT_MOD", "targets": "ALLIES", "stat": "RESISTANCE", "min": 15, "duration": 2, "refresh": false, "name": "Rempart" }
           ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"cast": "shockwave_red", "status": "aura_rampart"},
+          "sound": "./assets/sound/spells/boost.ogg", "animation": "magical"
         },
         {
           "id": "provocation", "name": "Provocation", "description": "Attire l'ennemi de 3 cases et donne +4 tacle au Guerrier pendant 1 tour.",
@@ -56,7 +59,8 @@
             { "type": "PULL", "min": 3 },
             { "type": "STAT_MOD", "targets": "CASTER", "stat": "LOCK", "min": 4, "duration": 1, "name": "Provocation" }
           ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"cast": "roar"},
+          "sound": "./assets/sound/spells/roar1.ogg", "animation": "physical"
         }
       ]
     },
@@ -75,7 +79,8 @@
           "id": "tir_precis", "name": "Tir précis", "description": "Une flèche à longue portée.",
           "icon": "./assets/spellicons/tir_precis.png", "ap": 3, "range": [4, 9], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
           "effects": [ { "type": "DAMAGE", "min": 11, "max": 13 } ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "hit_red"},
+          "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
         {
           "id": "fleche_empoisonnee", "name": "Flèche empoisonnée", "description": "Blesse puis empoisonne la cible : 6 dégâts au début de chacun de ses 3 prochains tours (non cumulable).",
@@ -84,7 +89,8 @@
             { "type": "DAMAGE", "min": 5, "max": 6 },
             { "type": "DOT", "min": 6, "max": 6, "duration": 3, "name": "Poison" }
           ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "poison_cloud", "status": "aura_poison", "tick": "poison_puff", "impactSound": "./assets/sound/spells/poison1.ogg"},
+          "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
         {
           "id": "fleche_recul", "name": "Flèche de recul", "description": "Repousse la cible de 3 cases. Une poussée bloquée inflige des dégâts de collision.",
@@ -93,7 +99,8 @@
             { "type": "DAMAGE", "min": 5, "max": 7 },
             { "type": "PUSH", "min": 3 }
           ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "air_burst", "impactSound": "./assets/sound/spells/blast1.ogg"},
+          "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         },
         {
           "id": "fleche_entravante", "name": "Flèche entravante", "description": "Blesse la cible et lui retire 2 PM pendant 1 tour.",
@@ -102,7 +109,8 @@
             { "type": "DAMAGE", "min": 4, "max": 5 },
             { "type": "STAT_MOD", "stat": "MP", "min": -2, "duration": 1, "name": "Entrave" }
           ],
-          "fx": "./assets/spellsprites/claw1_red", "sound": "./assets/sound/punch3.wav", "animation": "physical"
+          "visual": {"projectile": {"effect": "arrow", "speed": 14, "arc": 0.5}, "impact": "root", "status": "aura_slow"},
+          "sound": "./assets/sound/spells/arrow.ogg", "animation": "physical"
         }
       ]
     },
@@ -121,7 +129,8 @@
           "id": "eclair", "name": "Éclair", "description": "Un trait de foudre rapide.",
           "icon": "./assets/spellicons/eclair.png", "ap": 2, "range": [1, 6], "rangeModifiable": true, "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 3,
           "effects": [ { "type": "DAMAGE", "min": 8, "max": 9 } ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"projectile": {"effect": "bolt", "speed": 30, "arc": 0}, "impact": "spark"},
+          "sound": "./assets/sound/spells/thunder1.ogg", "animation": "magical"
         },
         {
           "id": "boule_de_feu", "name": "Boule de feu", "description": "Explose en croix et touche TOUT LE MONDE, alliés compris : dégâts puis brûlure de 4 pendant 2 tours.",
@@ -130,7 +139,8 @@
             { "type": "DAMAGE", "targets": "ALL", "min": 12, "max": 15 },
             { "type": "DOT", "targets": "ALL", "min": 4, "max": 4, "duration": 2, "name": "Brûlure" }
           ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"projectile": {"effect": "fireball", "speed": 10, "arc": 0.3}, "impact": "explosion", "impactOn": "cells", "status": "burning", "tick": "burn_tick", "impactSound": "./assets/sound/spells/blast1.ogg"},
+          "sound": "./assets/sound/spells/fire1.ogg", "animation": "magical"
         },
         {
           "id": "glyphe_givre", "name": "Glyphe de givre", "description": "Pose un glyphe pendant 2 tours : un ennemi qui y commence son tour subit 8 dégâts et perd 2 PM.",
@@ -147,13 +157,15 @@
               }
             }
           ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"cast": "shockwave_blue", "impact": "frost_rise", "glyph": "frost_glyph", "glyphTrigger": "frost_burst"},
+          "sound": "./assets/sound/spells/ice1.ogg", "animation": "magical"
         },
         {
           "id": "transposition", "name": "Transposition", "description": "Se téléporte sur une case libre, ou échange sa place avec un allié.",
           "icon": "./assets/spellicons/transposition.png", "ap": 2, "range": [1, 5], "lineOfSight": false, "launch": "CIRCLE", "target": "FREE_CELL_OR_ALLY", "cooldown": 3,
           "effects": [ { "type": "TELEPORT", "targets": "CASTER", "allowSwap": true } ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"cast": "portal", "impact": "portal"},
+          "sound": "./assets/sound/spells/teleport1.ogg", "animation": "magical"
         }
       ]
     },
@@ -172,19 +184,22 @@
           "id": "chatiment", "name": "Châtiment", "description": "Inflige des dégâts et rend au Protecteur 50 % des dégâts infligés.",
           "icon": "./assets/spellicons/chatiment.png", "ap": 3, "range": [1, 4], "launch": "CIRCLE", "target": "ENEMY", "castsPerTurn": 2,
           "effects": [ { "type": "LIFESTEAL", "min": 9, "max": 11, "percent": 50 } ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"impact": "hit_holy"},
+          "sound": "./assets/sound/spells/impact3.ogg", "animation": "magical"
         },
         {
           "id": "soin", "name": "Soin", "description": "Soigne un allié ou soi-même (une fois par tour).",
           "icon": "./assets/spellicons/soin.png", "ap": 3, "range": [0, 4], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "castsPerTurn": 1,
           "effects": [ { "type": "HEAL", "targets": "ALLIES", "min": 14, "max": 18 } ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"impact": "heal"},
+          "sound": "./assets/sound/spells/heal1.ogg", "animation": "magical"
         },
         {
           "id": "bouclier_sacre", "name": "Bouclier sacré", "description": "Bouclier de 20 PV sur un allié ou soi-même pendant 2 tours.",
           "icon": "./assets/spellicons/bouclier_sacre.png", "ap": 2, "range": [0, 5], "launch": "CIRCLE", "target": "ALLY_OR_SELF", "cooldown": 3,
           "effects": [ { "type": "SHIELD", "targets": "ALLIES", "min": 20, "max": 20, "duration": 2, "name": "Bouclier sacré" } ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"impact": "ward", "status": "shield_bubble"},
+          "sound": "./assets/sound/spells/shield1.ogg", "animation": "magical"
         },
         {
           "id": "purification", "name": "Purification", "description": "Dans un rayon de 2 cases : retire les effets négatifs des alliés et les effets positifs des ennemis.",
@@ -193,7 +208,8 @@
             { "type": "DISPEL", "targets": "ALLIES", "dispel": "NEGATIVE" },
             { "type": "DISPEL", "targets": "ENEMIES", "dispel": "POSITIVE" }
           ],
-          "fx": "./assets/spellsprites/ballbig1_red", "sound": "./assets/sound/explosion1.wav", "animation": "magical"
+          "visual": {"cast": "purify_wave", "impact": "sparkles", "impactOn": "cells"},
+          "sound": "./assets/sound/spells/heal2.ogg", "animation": "magical"
         }
       ]
     }

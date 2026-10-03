@@ -1,0 +1,174 @@
+
+boost1.png
+size: 824, 672
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+boost1
+  rotate: false
+  xy: 0, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 0
+boost1
+  rotate: false
+  xy: 103, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 1
+boost1
+  rotate: false
+  xy: 206, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 2
+boost1
+  rotate: false
+  xy: 309, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 3
+boost1
+  rotate: false
+  xy: 412, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 4
+boost1
+  rotate: false
+  xy: 515, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 5
+boost1
+  rotate: false
+  xy: 618, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 6
+boost1
+  rotate: false
+  xy: 721, 0
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 7
+boost1
+  rotate: false
+  xy: 0, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 8
+boost1
+  rotate: false
+  xy: 103, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 9
+boost1
+  rotate: false
+  xy: 206, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 10
+boost1
+  rotate: false
+  xy: 309, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 11
+boost1
+  rotate: false
+  xy: 412, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 12
+boost1
+  rotate: false
+  xy: 515, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 13
+boost1
+  rotate: false
+  xy: 618, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 14
+boost1
+  rotate: false
+  xy: 721, 224
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 15
+boost1
+  rotate: false
+  xy: 0, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 16
+boost1
+  rotate: false
+  xy: 103, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 17
+boost1
+  rotate: false
+  xy: 206, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 18
+boost1
+  rotate: false
+  xy: 309, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 19
+boost1
+  rotate: false
+  xy: 412, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 20
+boost1
+  rotate: false
+  xy: 515, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 21
+boost1
+  rotate: false
+  xy: 618, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 22
+boost1
+  rotate: false
+  xy: 721, 448
+  size: 103, 224
+  orig: 103, 224
+  offset: 0, 0
+  index: 23

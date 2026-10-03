@@ -1,0 +1,37 @@
+{
+  "source": "C:/Users/alexg/Documents/Exode/MMORPG-Maker/exode/assets/spell",
+  "maxFrameSize": 224,
+  "effects": [
+    { "name": "impact2_red" },
+    { "name": "clawbig1_red" },
+    { "name": "impact3_red" },
+    { "name": "circleimpact1_red" },
+    { "name": "circleimpact1_blue" },
+    { "name": "hit1_red" },
+    { "name": "impact4_pink" },
+    { "name": "plazma" },
+    { "name": "impact1" },
+    { "name": "ricochet" },
+    { "name": "smoke1_green" },
+    { "name": "smoke1_blue", "as": "puff", "grayscale": true },
+    { "name": "destruction_air_blue" },
+    { "name": "mantra2_green" },
+    { "name": "mantra2_blue" },
+    { "name": "laser1_blue", "maxFrameSize": 320 },
+    { "name": "fireball1_red", "maxFrameSize": 256 },
+    { "name": "explosion1_red" },
+    { "name": "flame1_normal", "step": 2 },
+    { "name": "flame2_normal" },
+    { "name": "mantra1_blue" },
+    { "name": "impact5_blue" },
+    { "name": "heal1_green" },
+    { "name": "heal1_pink" },
+    { "name": "heal1_blue" },
+    { "name": "circle1_pink" },
+    { "name": "boost1" }
+  ],
+  "sounds": [
+    "arrow", "blast1", "boost", "fire1", "heal1", "heal2", "ice1", "impact1", "impact3",
+    "poison1", "punch1", "punch5", "roar1", "shield1", "speed", "teleport1", "thunder1"
+  ]
+}
