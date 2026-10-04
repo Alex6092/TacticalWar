@@ -150,9 +150,18 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	bans->addItem(L"Phase finale", "FINALS");
 	bans->addItem(L"Tous les matchs", "ALL");
 	bans->setSelectedItemById("NONE");
+	// Cartes tirées pour les matchs : classiques, à cases spéciales (braises, sources...) ou toutes.
+	mapsLabel = createLabel(L"Cartes");
+	maps = tgui::ComboBox::create();
+	maps->setInheritedFont(font);
+	maps->setTextSize(TEXT_SIZE);
+	maps->addItem(L"Classiques", "CLASSIC");
+	maps->addItem(L"À cases spéciales", "SPECIAL");
+	maps->addItem(L"Toutes", "ALL");
+	maps->setSelectedItemById("CLASSIC");
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps })
 		form->add(widget);
 
 	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -368,6 +377,10 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	bans->setPosition(x + 160, y);
 	bans->setSize(w - 160, 26);
 	y += 34;
+	mapsLabel->setPosition(x, y + 4);
+	maps->setPosition(x + 160, y);
+	maps->setSize(w - 160, 26);
+	y += 34;
 
 	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
 	teamList->setPosition(x, y + 20);
@@ -538,6 +551,8 @@ void TournamentAdminPanel::refreshForm()
 		maxTalents->setText(num(settings.value("maxTalents", 3)));
 		std::string banMode = settings.value("bans", std::string("NONE"));
 		bans->setSelectedItemById(banMode == "FINALS" || banMode == "ALL" ? banMode : "NONE");
+		std::string mapPool = settings.value("maps", std::string("CLASSIC"));
+		maps->setSelectedItemById(mapPool == "SPECIAL" || mapPool == "ALL" ? mapPool : "CLASSIC");
 	}
 	refreshFormatOptions();
 
@@ -586,6 +601,7 @@ void TournamentAdminPanel::refreshForm()
 	zonePoints->setEnabled(draft);
 	maxTalents->setEnabled(draft);
 	bans->setEnabled(draft);
+	maps->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -688,7 +704,8 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "mode", mode->getSelectedItemId().toAnsiString() },
 		{ "zonePoints", number(zonePoints) },
 		{ "maxTalents", number(maxTalents) },
-		{ "bans", bans->getSelectedItemId().toAnsiString() }
+		{ "bans", bans->getSelectedItemId().toAnsiString() },
+		{ "maps", maps->getSelectedItemId().toAnsiString() }
 	};
 }
 

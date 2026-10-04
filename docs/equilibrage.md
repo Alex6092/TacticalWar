@@ -133,3 +133,19 @@ combattants ; à 150 dégâts, il en récompense 27 %. Mesures sur 1500 combats 
 
 L'IA déclenche peu de combinaisons : entre joueurs qui se coordonnent, « Maître des combos » devrait
 être plus fréquent.
+
+## Cartes à cases spéciales (octobre 2026)
+
+Les cartes 9 à 11 sont symétriques par demi-tour. Mesures sur 600 combats par carte (graine 7, au KO),
+puis 1500 combats (graine 21) pour les cartes 9 et 11 :
+
+| Carte | Équipe 1 | Classes |
+|---|---|---|
+| 9 Cœur du volcan | 45,3 %, puis 47,9 % | 45,8 à 54,7 % |
+| 10 Prairie des hautes herbes | 50,8 % | 47,0 à 55,1 % |
+| 11 Oasis brûlante | 46,5 %, puis 49,9 % | 43,7 à 54,0 % |
+
+- En mode zone, la zone calculée est au centre, à égale distance des deux équipes (5 ou 6 pas), et
+  l'équipe 1 gagne 48 à 49,5 % des combats.
+- Les hautes herbes de la carte 10 (33 cases) ne pénalisent pas l'Archer plus que les rochers des
+  cartes classiques (47 %).

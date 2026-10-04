@@ -82,7 +82,8 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
 		{ "zonePoints", settings.zonePoints },
 		{ "maxTalents", settings.maxTalents },
-		{ "bans", toString(settings.bans) }
+		{ "bans", toString(settings.bans) },
+		{ "maps", toString(settings.maps) }
 	};
 }
 
@@ -102,6 +103,7 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
 	settings.maxTalents = std::max(0, std::min(5, json.value("maxTalents", settings.maxTalents)));
 	parseEnum(json.value("bans", std::string()), settings.bans, { BanMode::NONE, BanMode::FINALS, BanMode::ALL });
+	parseEnum(json.value("maps", std::string()), settings.maps, { MapPool::CLASSIC, MapPool::SPECIAL, MapPool::ALL });
 	return settings;
 }
 

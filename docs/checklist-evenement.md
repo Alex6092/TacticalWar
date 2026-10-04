@@ -40,6 +40,7 @@
    Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
    Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
    finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
+   Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 

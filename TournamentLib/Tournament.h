@@ -30,6 +30,15 @@ namespace tw
 			ALL
 		};
 
+		// Cartes tirées pour les matchs : classiques, à cases spéciales (braises, sources, hautes herbes)
+		// ou toutes.
+		enum class MapPool
+		{
+			CLASSIC,
+			SPECIAL,
+			ALL
+		};
+
 		enum class StageType
 		{
 			ROUND_ROBIN_POOLS,
@@ -161,6 +170,7 @@ namespace tw
 			int maxTalents = 3;
 
 			BanMode bans = BanMode::NONE;
+			MapPool maps = MapPool::CLASSIC;
 		};
 
 		struct Stage
@@ -225,9 +235,12 @@ namespace tw
 		int talentSlots(const Tournament & tournament, int teamId);
 		// Le match commence par une phase de bannissement (réglage settings.bans).
 		bool hasBanPhase(const Tournament & tournament, const TMatch & match);
+		// Une carte (avec ou sans cases spéciales) fait partie des cartes du réglage.
+		bool mapInPool(MapPool pool, bool hasSpecialCells);
 
 		const char * toString(Format format);
 		const char * toString(BanMode mode);
+		const char * toString(MapPool pool);
 		const char * toString(StageType type);
 		const char * toString(TournamentStatus status);
 		const char * toString(MatchStatus status);

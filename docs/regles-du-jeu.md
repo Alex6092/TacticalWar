@@ -213,9 +213,14 @@ Certaines cartes ont des cases qui changent le combat :
 - Au survol, la ligne d'aide donne la règle de la case, y compris pendant un déplacement.
 - Les dégâts et les soins s'affichent avec le nom de la case (« Braises -8 », « Source +6 »).
 - L'ordinateur évite les braises et rejoint une source quand il est blessé.
-- Les 7 cartes du tournoi n'en ont pas. La carte 8, « Terrain d'exercice » (hors tournoi), les
-  montre toutes : `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte,
-  utiliser le groupe « Cases spéciales » de la palette de l'éditeur.
+- **Cartes** : les 7 cartes classiques n'en ont pas. Trois cartes de tournoi en ont : 9 « Cœur du
+  volcan », 10 « Prairie des hautes herbes », 11 « Oasis brûlante ». Elles sont symétriques (un
+  demi-tour échange les deux camps) et générées par `py tools/maps/make_special_maps.py`.
+- **Réglage du tournoi** « Cartes » (onglet Tournoi) : classiques (par défaut), à cases spéciales, ou
+  toutes. L'entraînement propose toutes les cartes du tournoi.
+- La carte 8, « Terrain d'exercice » (hors tournoi, celle du tutoriel), les montre toutes :
+  `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte, utiliser le
+  groupe « Cases spéciales » de la palette de l'éditeur.
 
 ## Combinaisons entre classes
 

@@ -358,9 +358,18 @@ void TWParser::dispatchTournamentMatches()
 		m->setTeam1Players(teamA[0], teamA[1]);
 		m->setTeam2Players(teamB[0], teamB[1]);
 
-		// Carte tirée de façon reproductible à partir de la graine du tournoi.
+		// Carte tirée de façon reproductible à partir de la graine du tournoi, parmi celles du réglage
+		// (classiques, à cases spéciales ou toutes ; à défaut, toutes).
+		std::vector<tw::Environment*> pool;
+		for (tw::Environment * environment : tournamentEnvironments)
+		{
+			if (tw::tournament::mapInPool(tournament.settings.maps, environment->hasSpecialCells()))
+				pool.push_back(environment);
+		}
+		if (pool.empty())
+			pool = tournamentEnvironments;
 		std::uint32_t pick = tournament.rngSeed + (std::uint32_t)request.matchId * 7919u;
-		m->setEnvironment(tournamentEnvironments[pick % tournamentEnvironments.size()]);
+		m->setEnvironment(pool[pick % pool.size()]);
 
 		m->addEventListener(this);
 		tw::PlayerManager::addMatch(m);

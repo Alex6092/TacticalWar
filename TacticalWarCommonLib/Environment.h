@@ -39,6 +39,10 @@ namespace tw
 		// Variante avec des règles explicites (carte reçue du serveur).
 		void setTile(int x, int y, const std::string & tile, const TileRules & rules);
 
+		// La carte a des cases spéciales : effet au début du tour (braises, source), ou case praticable
+		// qui bloque la vue (hautes herbes).
+		bool hasSpecialCells();
+
 		std::vector<tw::Obstacle> getObstacles()
 		{
 			if (!obstacleCacheInitDone)

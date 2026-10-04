@@ -580,6 +580,24 @@ TEST_CASE("Teams earn one talent per finished match, up to the tournament maximu
 	CHECK(settingsFromJson(legacy).maxTalents == 5);
 }
 
+TEST_CASE("The map setting picks classic maps, maps with special cells, or both")
+{
+	Settings settings;
+	CHECK((settings.maps == MapPool::CLASSIC));
+	CHECK(mapInPool(MapPool::CLASSIC, false));
+	CHECK_FALSE(mapInPool(MapPool::CLASSIC, true));
+	CHECK(mapInPool(MapPool::SPECIAL, true));
+	CHECK_FALSE(mapInPool(MapPool::SPECIAL, false));
+	CHECK(mapInPool(MapPool::ALL, true));
+	CHECK(mapInPool(MapPool::ALL, false));
+
+	settings.maps = MapPool::SPECIAL;
+	CHECK((settingsFromJson(toJson(settings)).maps == MapPool::SPECIAL));
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("maps");
+	CHECK((settingsFromJson(legacy).maps == MapPool::CLASSIC));
+}
+
 TEST_CASE("The ban setting decides which matches start with a class ban")
 {
 	Tournament tournament;

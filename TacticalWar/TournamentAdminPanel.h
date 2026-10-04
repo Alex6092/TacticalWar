@@ -66,6 +66,8 @@ private:
 	tgui::EditBox::Ptr maxTalents;
 	tgui::Label::Ptr bansLabel;
 	tgui::ComboBox::Ptr bans;
+	tgui::Label::Ptr mapsLabel;
+	tgui::ComboBox::Ptr maps;
 	tgui::ListView::Ptr teamList;
 	tgui::Button::Ptr saveButton;
 	tgui::Button::Ptr startButton;
