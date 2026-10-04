@@ -355,6 +355,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
 		}
+		// Classe regardée sur l'écran de choix (montrée au coéquipier) :
+		else if (StringUtils::startsWith(toParse, "PV"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handleViewClass(client, p, toParse.substr(2));
+		}
 		// Bannissement d'une classe :
 		else if (StringUtils::startsWith(toParse, "PB"))
 		{
@@ -699,6 +706,14 @@ void TWParser::notifyMatchConnectedPlayerChanged(tw::Match * match)
 			{
 				send(c, playerStatus);
 			}
+		}
+
+		// Choix de classe en cours : chacun retrouve l'état de son coéquipier (arrivée, départ).
+		BattleSession * session = sessionOfMatch(match);
+		if (session != NULL)
+		{
+			for (tw::Player * participant : session->getParticipants())
+				sendTeammateStates(session, participant);
 		}
 	}
 }

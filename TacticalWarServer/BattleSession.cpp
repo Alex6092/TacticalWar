@@ -90,6 +90,20 @@ bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vec
 	return true;
 }
 
+bool BattleSession::setViewing(tw::Player * player, int classId)
+{
+	if ((phase != Phase::BAN && phase != Phase::CLASS_SELECTION) || fighterIdOf(player) < 0 || viewing[player] == classId)
+		return false;
+	viewing[player] = classId;
+	return true;
+}
+
+int BattleSession::viewingClass(tw::Player * player) const
+{
+	auto it = viewing.find(player);
+	return it == viewing.end() ? 0 : it->second;
+}
+
 int BattleSession::chosenClass(tw::Player * player) const
 {
 	auto it = classes.find(player);

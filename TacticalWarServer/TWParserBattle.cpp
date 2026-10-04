@@ -90,6 +90,46 @@ void TWParser::handleBan(ClientState * client, tw::Player * player, const std::s
 		finishBanPhase(session);
 }
 
+void TWParser::handleViewClass(ClientState * client, tw::Player * player, const std::string & body)
+{
+	BattleSession * session = sessionOfPlayer(player);
+	if (session == NULL || !player->getHasJoinBattle())
+		return;
+
+	// PV{"class": id} : la classe que le joueur regarde, montrée à son coéquipier.
+	nlohmann::json view = nlohmann::json::parse(body, nullptr, false);
+	int classId = view.is_object() ? view.value("class", 0) : 0;
+	if (gameData.findClass(classId) != nullptr && session->setViewing(player, classId))
+		sendTeammateStates(session, player);
+}
+
+nlohmann::json TWParser::teammateState(BattleSession * session, tw::Player * player)
+{
+	int chosen = session->chosenClass(player);
+	return {
+		{ "name", displayNameOf(player) },
+		{ "class", chosen },
+		{ "viewing", session->viewingClass(player) },
+		{ "locked", chosen != 0 },
+		{ "present", getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle() }
+	};
+}
+
+void TWParser::sendTeammateStates(BattleSession * session, tw::Player * about)
+{
+	// Seulement aux coéquipiers, pendant le bannissement et le choix des classes.
+	if (session->getPhase() != BattleSession::Phase::BAN && session->getPhase() != BattleSession::Phase::CLASS_SELECTION)
+		return;
+	std::string message = encode("PT", teammateState(session, about));
+	int team = session->teamOf(about);
+	for (tw::Player * mate : session->getParticipants())
+	{
+		ClientState * client = getClientStateFromPlayer(mate);
+		if (mate != about && session->teamOf(mate) == team && client != NULL && mate->getHasJoinBattle())
+			send(client, message);
+	}
+}
+
 void TWParser::sendBanState(BattleSession * session, ClientState * client, tw::Player * player)
 {
 	if (!session->hasBanPhase())
@@ -160,6 +200,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 	if (session->chooseClass(player, classId, spells, talents))
 	{
 		send(client, "PO" + std::to_string(classId) + "\n");
+		sendTeammateStates(session, player);
 		if (session->allClassesChosen())
 			startBattle(session);
 	}

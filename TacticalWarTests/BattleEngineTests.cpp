@@ -1121,6 +1121,47 @@ TEST_CASE("Fireball marks burned enemies only and the frost glyph freezes until 
 	CHECK(frost.fighter(2).hasState("gele"));
 }
 
+TEST_CASE("Combos between two classes list the marking and finishing spells, both ways")
+{
+	auto has = [](const std::vector<std::string> & list, const std::string & name) {
+		return std::find(list.begin(), list.end(), name) != list.end();
+	};
+
+	// Mage et Guerrier : Brise-glace, la marque venant aussi du glyphe.
+	std::vector<ComboLink> links = combosBetween(gameData(), MAGE, GUERRIER);
+	REQUIRE(links.size() == 1);
+	CHECK(links[0].name == "Brise-glace");
+	CHECK(links[0].setterClass == MAGE);
+	CHECK(links[0].finisherClass == GUERRIER);
+	CHECK(links[0].percent == 40);
+	CHECK(has(links[0].setters, "Glyphe de givre"));
+	CHECK(has(links[0].setters, "Prison de glace"));
+	CHECK(has(links[0].finishers, "Taillade"));
+	CHECK(has(links[0].finishers, "Charge"));
+	// L'ordre des classes ne change pas le résultat.
+	CHECK(combosBetween(gameData(), GUERRIER, MAGE).size() == 1);
+
+	// Les 4 combinaisons du jeu, chacune entre deux classes différentes.
+	std::set<std::string> names;
+	const int classes[4] = { MAGE, ARCHER, PROTECTEUR, GUERRIER };
+	for (int i = 0; i < 4; i++)
+	{
+		CHECK(combosBetween(gameData(), classes[i], classes[i]).empty());
+		for (int j = i + 1; j < 4; j++)
+		{
+			for (const ComboLink & link : combosBetween(gameData(), classes[i], classes[j]))
+			{
+				CHECK(link.setterClass != link.finisherClass);
+				CHECK_FALSE(link.setters.empty());
+				CHECK_FALSE(link.finishers.empty());
+				names.insert(link.name);
+			}
+		}
+	}
+	CHECK(names == std::set<std::string>{ "Brise-glace", "Cible immobile", "Dans le mille", "Jugement ardent" });
+	CHECK(combosBetween(gameData(), MAGE, 99).empty());
+}
+
 TEST_CASE("Each combo uses a mark set by a spell of another class")
 {
 	std::map<std::string, std::set<int>> producers;
