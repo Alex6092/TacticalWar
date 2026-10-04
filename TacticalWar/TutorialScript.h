@@ -23,6 +23,9 @@ namespace tw
 		bool turnEnded = false;
 		bool pinged = false;
 		bool continued = false;		// Bouton « Continuer »
+		// Le mannequin a subi des dégâts (bouclier compris). Le bilan des combattants n'arrive dans
+		// l'état affiché qu'à la fin du combat : l'écran le lit dans le moteur local.
+		bool dummyHit = false;
 	};
 
 	struct TutorialStep

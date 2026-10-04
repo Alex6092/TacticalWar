@@ -21,7 +21,9 @@ namespace
 	const int DUMMY_HP = 50;
 	// Le mannequin passe son tour après ce délai (le joueur voit que c'est son tour).
 	const float DUMMY_DELAY = 0.8f;
-	// Case de la source : le Guerrier y va pendant les étapes jouées automatiquement (--tutorial-step).
+	// Démonstration : pause avant chaque action.
+	const float DEMO_DELAY = 0.5f;
+	// Case de la source : le Guerrier y va pendant la démonstration (--tutorial-step).
 	const battle::Cell SPRING = { 4, 4 };
 	const float PANEL_TOP = 52;
 	const float FINAL_WIDTH = 860;
@@ -35,8 +37,8 @@ namespace
 
 TutorialScreen::TutorialScreen(tgui::Gui * gui, Origin origin, int startStep)
 	: LocalBattleScreen(gui, MAP_ID), origin(origin), next(Next::BACK), dummy(1), fightStart({ -1, -1 }),
-	turnEnded(false), pinged(false), continued(false), dummyWait(0), cameraPlaced(false), pendingSpell(-1), pendingHover({ -1, -1 }),
-	finalRequested(false)
+	turnEnded(false), pinged(false), continued(false), dummyWait(0), cameraPlaced(false), demoUntil(0), demoActed(-1),
+	demoWait(0), finalRequested(false)
 {
 	timers = false;
 	textFont.loadFromFile("./assets/font/OpenSans-Regular.ttf");
@@ -93,65 +95,76 @@ TutorialScreen::TutorialScreen(tgui::Gui * gui, Origin origin, int startStep)
 	panel->add(continueButton);
 	gui->add(panel);
 
-	if (startStep > 0)
-		fastForward(std::min(startStep, script.count() + 1));
+	// Démonstration des étapes précédant l'étape demandée ; au-delà de la dernière : écran final.
+	demoUntil = std::max(0, std::min(startStep, script.count()));
+	finalRequested = startStep > script.count();
 	refreshPanel();
 }
 
-void TutorialScreen::fastForward(int step)
+void TutorialScreen::playDemo(int step)
 {
-	// Étapes déjà franchies, jouées directement par le moteur (captures d'écran d'une étape).
-	if (step > 0 && engine->getState().phase == battle::BattlePhase::PLACEMENT)
-	{
-		engine->place(0, map.startCells[1].front(), nowMs);
-		engine->setReady(0, true, nowMs);
-		passDummyTurns();
-		fightStart = engine->getState().findFighter(0)->position;
-	}
-	if (step > 1)
-		engine->move(0, battle::findPath(engine->getState(), map, *engine->getState().findFighter(0), SPRING), nowMs);
-	deliver();
+	// Chaque étape est jouée comme le ferait le joueur (mêmes messages qu'un clic) : sa condition de
+	// réussite est vérifiée comme en jeu. Une action par étape, sauf pour finir le combat.
+	const battle::Fighter * me = truth.findFighter(you);
+	const battle::Fighter * target = truth.findFighter(dummy);
+	if (me == NULL || target == NULL || (step == demoActed && step != 8))
+		return;
+	if (step >= 1 && !isInteractive())
+		return;
+	demoActed = step;
 
-	// Charge (emplacement 2) sélectionnée, et visée sur le mannequin pendant l'étape « Attaque ».
-	const battle::Cell target = engine->getState().findFighter(dummy)->position;
-	if (step == 4)
+	switch (step)
 	{
-		pendingSpell = 1;
-		pendingHover = target;
+	case 0:
+		sendToServer("CP", { { "x", map.startCells[1].front().x }, { "y", map.startCells[1].front().y } });
+		sendToServer("Cs", { { "ready", true } });
+		break;
+	case 1:
+	{
+		json path = json::array();
+		for (const battle::Cell & cell : battle::findPath(truth, map, *me, SPRING))
+			path.push_back(json::array({ cell.x, cell.y }));
+		sendAction("Cm", { { "path", path } });
+		break;
 	}
-	if (step > 4)
-		engine->cast(0, 1, target, nowMs);
-	if (step > 5)
+	case 2:
+		continued = true;
+		break;
+	case 3:
+		// Charge (emplacement 2), visée sur le mannequin.
+		selectSpell(1);
+		hoveredCell = target->position;
+		break;
+	case 4:
+		sendAction("CL", { { "slot", 1 }, { "x", target->position.x }, { "y", target->position.y } });
+		selectSpell(-1);
+		break;
+	case 5:
+		sendAction("Ct", json::object());
+		break;
+	case 6:
+		hoveredFighter = dummy;
+		break;
+	case 7:
+		sendPing({ target->position.x - 1, target->position.y });
+		break;
+	default:
 	{
-		engine->endTurn(0, nowMs);
-		passDummyTurns();
-	}
-	if (step > 8)
-	{
-		// Combat mené jusqu'au bout : Taillade au contact, sinon Charge, sinon fin du tour.
-		for (int guard = 0; guard < 40 && engine->getState().phase == battle::BattlePhase::FIGHT; guard++)
+		// Victoire : Taillade au contact, sinon Charge, sinon fin du tour.
+		const battle::GameData & data = ClientGameData::get().data();
+		for (int slot = 0; slot < 2; slot++)
 		{
-			if (engine->getState().activeFighterId() != 0)
+			const battle::SpellDef * spell = battle::spellOf(data, *me, slot);
+			std::vector<battle::Cell> cells = spell != NULL ? battle::castableCells(truth, map, data, *me, *spell) : std::vector<battle::Cell>();
+			if (std::find(cells.begin(), cells.end(), target->position) != cells.end())
 			{
-				passDummyTurns();
-				continue;
+				sendAction("CL", { { "slot", slot }, { "x", target->position.x }, { "y", target->position.y } });
+				return;
 			}
-			battle::Cell at = engine->getState().findFighter(dummy)->position;
-			if (!engine->cast(0, 0, at, nowMs).ok && !engine->cast(0, 1, at, nowMs).ok)
-				engine->endTurn(0, nowMs);
 		}
+		sendAction("Ct", json::object());
+		break;
 	}
-	finalRequested = step > 9;
-	deliver();
-	script.skipTo(step);
-}
-
-void TutorialScreen::passDummyTurns()
-{
-	for (int guard = 0; guard < 4 && engine->getState().phase == battle::BattlePhase::FIGHT
-		&& engine->getState().activeFighterId() == dummy; guard++)
-	{
-		engine->endTurn(dummy, nowMs);
 	}
 }
 
@@ -298,11 +311,15 @@ void TutorialScreen::update(float deltatime)
 	if (finalRequested && endShown && !finalPanel)
 		showFinal();
 
-	if (pendingSpell >= 0 && isInteractive() && idle())
+	// Démonstration (--tutorial-step) : une action à la fois, animations terminées.
+	if (!script.finished() && script.current() < demoUntil && hasSnapshot && idle() && !awaitingServer)
 	{
-		selectSpell(pendingSpell);
-		hoveredCell = pendingHover;
-		pendingSpell = -1;
+		demoWait += deltatime;
+		if (demoWait >= DEMO_DELAY)
+		{
+			demoWait = 0;
+			playDemo(script.current());
+		}
 	}
 
 	if (fightStart.x < 0 && shown.phase == battle::BattlePhase::FIGHT)
@@ -321,6 +338,9 @@ void TutorialScreen::update(float deltatime)
 	context.turnEnded = turnEnded;
 	context.pinged = pinged;
 	context.continued = continued;
+	// Le bilan des combattants n'arrive dans l'état affiché qu'à la fin du combat : les dégâts subis
+	// par le mannequin sont lus dans le moteur local, une fois les animations terminées.
+	context.dummyHit = idle() && engine->getState().findFighter(dummy)->record.taken > 0;
 	bool changed = script.update(context);
 	// Mannequin mis hors combat avant la fin des étapes : le tutoriel est terminé.
 	if (!script.finished() && shown.phase == battle::BattlePhase::ENDED)

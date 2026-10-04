@@ -15,9 +15,9 @@ namespace tw
 		// Écran d'où vient le joueur (bouton « Retour » de la fin).
 		enum class Origin { LOGIN, TRAINING };
 
-		// startStep : étape de départ (0 = la première) ; les étapes précédentes sont jouées
-		// automatiquement (captures d'écran : --tutorial-step). 9 : combat mené jusqu'au bilan de fin ;
-		// 10 : écran de présentation du tournoi.
+		// startStep : étape de départ (0 = la première). Les étapes précédentes sont jouées en
+		// démonstration, comme par un joueur, et doivent réussir (captures d'écran : --tutorial-step).
+		// 9 : tutoriel joué jusqu'au bilan de fin ; 10 : puis écran de présentation du tournoi.
 		TutorialScreen(tgui::Gui * gui, Origin origin, int startStep = 0);
 
 		virtual void update(float deltatime);
@@ -29,8 +29,8 @@ namespace tw
 		virtual void leave();
 
 	private:
-		void fastForward(int step);
-		void passDummyTurns();
+		// Action de démonstration de l'étape (placement, déplacement, sort...).
+		void playDemo(int step);
 		void refreshPanel();
 		void layoutPanels();
 		void showFinal();
@@ -47,9 +47,10 @@ namespace tw
 		bool continued;
 		float dummyWait;
 		bool cameraPlaced;
-		// Étapes jouées automatiquement : sort à sélectionner (et case visée) dès que le joueur a la main.
-		int pendingSpell;
-		battle::Cell pendingHover;
+		// Démonstration : étapes jouées automatiquement (celles d'indice inférieur à demoUntil).
+		int demoUntil;
+		int demoActed;
+		float demoWait;
 		bool finalRequested;
 		sf::Vector2f viewSize;
 		sf::Font textFont;

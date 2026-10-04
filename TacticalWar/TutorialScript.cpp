@@ -65,10 +65,7 @@ std::vector<TutorialStep> TutorialScript::standardSteps()
 	steps.push_back(makeStep(L"Attaque",
 		L"Lancez un sort sur le mannequin. Charge (touche 2) l'atteint en ligne droite, de 2 à 5 cases ; Taillade (touche 1) "
 		L"au contact. Avant de cliquer, l'aperçu montre les PV qu'il perdra et ce que son bouclier (écusson bleu) absorbera.",
-		[](const TutorialContext & c) {
-			const battle::Fighter * dummy = fighter(c, c.dummy);
-			return dummy != nullptr && dummy->record.taken > 0;
-		}));
+		[](const TutorialContext & c) { return c.dummyHit; }));
 	steps.push_back(makeStep(L"Fin du tour",
 		L"Quand vous n'avez plus de PA (étoile jaune) ou plus rien à faire, cliquez sur le bouton Passer le tour. "
 		L"En tournoi, un tour dure 40 secondes.",
