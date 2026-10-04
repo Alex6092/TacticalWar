@@ -50,12 +50,12 @@ const std::vector<std::pair<int, std::string>> & TrainingScreen::maps()
 
 int TrainingScreen::chooseMap(int requested)
 {
+	// Carte demandée (réglages, --training-map) : une carte du tournoi, ou une autre carte existante
+	// (carte d'exercice des cases spéciales).
+	std::vector<int> existing = EnvironmentManager::getInstance()->getAlreadyExistingIds();
+	if (requested > 0 && std::find(existing.begin(), existing.end(), requested) != existing.end())
+		return requested;
 	const std::vector<std::pair<int, std::string>> & candidates = maps();
-	for (const auto & entry : candidates)
-	{
-		if (entry.first == requested)
-			return requested;
-	}
 	if (candidates.empty())
 		return requested;
 	std::mt19937 rng(std::random_device{}());
@@ -83,6 +83,18 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 			return std::vector<int>();
 		return settings.autoplay ? battle::randomSpellChoice(*classDef, rng) : battle::validSpellChoice(*classDef, ClientConfig::get().spellChoice(classId));
 	};
+	// Talents : ceux du joueur (complétés au hasard), au hasard pour l'ordinateur.
+	auto aiTalents = [&]() { return battle::randomTalentChoice(data, settings.talentCount, rng); };
+	std::vector<std::string> playerTalents = settings.autoplay ? aiTalents()
+		: battle::validTalentChoice(data, settings.talents, settings.talentCount);
+	for (const std::string & id : battle::randomTalentChoice(data, (int)data.talents.size(), rng))
+	{
+		if ((int)playerTalents.size() >= settings.talentCount)
+			break;
+		if (std::find(playerTalents.begin(), playerTalents.end(), id) == playerTalents.end())
+			playerTalents.push_back(id);
+	}
+
 	auto aiSpells = [&](int classId) {
 		const battle::ClassDef * classDef = data.findClass(classId);
 		return classDef != nullptr ? battle::randomSpellChoice(*classDef, rng) : std::vector<int>();
@@ -91,18 +103,18 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	// Équipe 1 : le joueur (combattant 0) et son allié ; équipe 2 : les adversaires.
 	std::unique_ptr<battle::BattleEngine> created(new battle::BattleEngine(data, map, rng()));
 	int playerClass = pick(settings.playerClass);
-	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass));
+	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents);
 	if (settings.duo)
 	{
 		int allyClass = pick(settings.allyClass);
-		created->addFighter(1, allyClass, u8"Allié (IA)", aiSpells(allyClass));
+		created->addFighter(1, allyClass, u8"Allié (IA)", aiSpells(allyClass), aiTalents());
 	}
 	int enemyClass = pick(settings.enemyClasses[0]);
-	created->addFighter(2, enemyClass, settings.duo ? u8"Adversaire 1" : u8"Adversaire", aiSpells(enemyClass));
+	created->addFighter(2, enemyClass, settings.duo ? u8"Adversaire 1" : u8"Adversaire", aiSpells(enemyClass), aiTalents());
 	if (settings.duo)
 	{
 		int secondClass = pick(settings.enemyClasses[1]);
-		created->addFighter(2, secondClass, u8"Adversaire 2", aiSpells(secondClass));
+		created->addFighter(2, secondClass, u8"Adversaire 2", aiSpells(secondClass), aiTalents());
 	}
 	if (settings.zone)
 		created->enableZone(TrainingSettings::ZONE_POINTS);

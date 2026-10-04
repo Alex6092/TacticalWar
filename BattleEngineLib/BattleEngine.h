@@ -45,7 +45,10 @@ namespace tw
 			// Ajoute un combattant avant le placement. Retourne son identifiant (ou -1).
 			// spells : sorts emportés (indices dans les sorts de la classe) ; un choix non valable
 			// (voir validSpellChoice) donne les premiers sorts de la classe.
-			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>());
+			// talents : talents de tournoi (identifiants connus et distincts gardés) ; leurs bonus sont
+			// ajoutés aux caractéristiques, leurs effets appliqués au début du combat.
+			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>(),
+				const std::vector<std::string> & talents = std::vector<std::string>());
 
 			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
 			void enableZone(int pointsToWin);
@@ -106,7 +109,7 @@ namespace tw
 			void applyEffectToTarget(Fighter & caster, const std::string & spellId, const EffectDef & effect, Fighter & target, const Cell & targetCell);
 			int computeDamage(const Fighter & caster, const Fighter & target, int roll, int comboPercent = 0) const;
 			// Combinaison de l'effet sur la cible : bonus de dégâts en %, 0 sans combinaison.
-			int triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target);
+			int triggerCombo(Fighter & caster, const EffectDef & effect, Fighter & target);
 			int dealDamage(Fighter & target, int amount, int sourceId, const std::string & kind);
 			int heal(Fighter & target, int amount, int sourceId, const std::string & kind);
 			void addActiveEffect(Fighter & target, ActiveEffect effect, bool refresh);
@@ -115,6 +118,8 @@ namespace tw
 			void moveFighterTo(Fighter & fighter, const Cell & cell, const std::string & kind);
 			void tickEffectsAtTurnStart(Fighter & fighter);
 			void triggerGlyphs(Fighter & fighter);
+			// Case à effet sous le combattant (braises, source), au début de son tour.
+			void applyTerrain(Fighter & fighter);
 			void applyOnCastPassive(Fighter & caster);
 			int roll(int min, int max);
 
@@ -123,6 +128,8 @@ namespace tw
 			nlohmann::json glyphJson(const Glyph & glyph) const;
 			static nlohmann::json recordJson(const FighterRecord & record);
 			static nlohmann::json zoneJson(const ZoneState & zone);
+			// "Sort" des effets posés par les talents au début du combat.
+			static constexpr const char * TALENT_SPELL_ID = "__talent";
 			void emit(const nlohmann::json & event);
 			void emitStats(const Fighter & fighter);
 

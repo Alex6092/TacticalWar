@@ -37,7 +37,7 @@ namespace tw
 		// (une tuile inconnue est traitée comme un obstacle).
 		void setTile(int x, int y, const std::string & tile);
 		// Variante avec des règles explicites (carte reçue du serveur).
-		void setTile(int x, int y, const std::string & tile, bool walkable, bool obstacle);
+		void setTile(int x, int y, const std::string & tile, const TileRules & rules);
 
 		std::vector<tw::Obstacle> getObstacles()
 		{

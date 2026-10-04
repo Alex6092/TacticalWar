@@ -225,11 +225,12 @@ void BattleEngine::applyEffectToTarget(Fighter & caster, const std::string & spe
 	}
 }
 
-int BattleEngine::triggerCombo(const Fighter & caster, const EffectDef & effect, Fighter & target)
+int BattleEngine::triggerCombo(Fighter & caster, const EffectDef & effect, Fighter & target)
 {
 	if (effect.comboState.empty() || effect.comboPercent <= 0 || !target.hasState(effect.comboState))
 		return 0;
 
+	caster.record.combos++;
 	emit({ { "t", "combo" }, { "f", target.id }, { "src", caster.id }, { "name", effect.comboName }, { "percent", effect.comboPercent } });
 	if (effect.comboConsumes)
 	{
@@ -312,7 +313,11 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 		target.hp = 0;
 		target.alive = false;
 		if (byEnemy)
+		{
 			source->record.kills++;
+			if (state.firstBloodFighterId < 0)
+				state.firstBloodFighterId = source->id;
+		}
 	}
 
 	emit({
@@ -517,6 +522,17 @@ void BattleEngine::triggerGlyphs(Fighter & fighter)
 			applyEffectToTarget(*caster, glyph.spellId, effect, fighter, fighter.position);
 		}
 	}
+}
+
+void BattleEngine::applyTerrain(Fighter & fighter)
+{
+	// Valeurs fixes (ni puissance ni résistance) ; le bouclier absorbe les dégâts comme d'habitude.
+	int damage = map.turnDamage(fighter.position);
+	if (damage > 0)
+		dealDamage(fighter, damage, -1, "terrain");
+	int healing = map.turnHeal(fighter.position);
+	if (healing > 0 && fighter.alive)
+		heal(fighter, healing, -1, "terrain");
 }
 
 void BattleEngine::applyOnCastPassive(Fighter & caster)

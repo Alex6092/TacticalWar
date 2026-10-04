@@ -29,6 +29,8 @@ namespace tw
 
 		// Durée du choix des classes avant le combat (les classes manquantes sont tirées au hasard).
 		int classSelectionSeconds = 90;
+		// Durée de la phase de bannissement des matchs de tournoi qui en ont une (réglage du tournoi).
+		int banSeconds = 20;
 
 		// Tournois : combats simultanés au maximum, repos entre deux matchs d'une équipe,
 		// délai avant forfait d'une équipe absente ou déconnectée.

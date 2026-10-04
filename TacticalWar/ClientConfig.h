@@ -15,6 +15,8 @@ public:
 	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
 	// proposés à nouveau au choix suivant et à l'entraînement.
 	std::map<int, std::vector<int>> spellChoices;
+	// Derniers talents de tournoi choisis (proposés à nouveau au match suivant et à l'entraînement).
+	std::vector<std::string> talentChoice;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -29,18 +31,19 @@ public:
 	std::string autoLogin;
 	std::string autoPassword;
 
-	// Outils de développement : --window LxH, --screenshot <fichier.png> [--screenshot-after <s>]
-	// (la fenêtre se ferme après la capture).
+	// Outils de développement : --window LxH, --screenshot <fichier.png> [--screenshot-after <s>|end]
+	// (la fenêtre se ferme après la capture ; "end" : dès l'affichage de l'écran de fin du combat).
 	unsigned int windowWidth = 0;
 	unsigned int windowHeight = 0;
 	std::string screenshotPath;
 	float screenshotDelaySeconds = 3;
+	bool screenshotAtEnd = false;
 	// Galerie des effets de sorts, sans serveur : --fx-gallery [--fx-spell <id>] [--fx-map <id>].
 	bool fxGallery = false;
 	std::string fxSpell;
 	int fxMap = 4;
 	// Entraînement hors ligne : --training ouvre ses réglages ; --training-start (ou l'une des options
-	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-autoplay) lance directement
+	// --training-class <id>, --training-map <id>, --training-1v1, --training-zone, --training-talents <n>, --training-autoplay) lance directement
 	// un combat. --training-autoplay : le personnage du joueur est aussi joué par l'IA et les combats
 	// s'enchaînent (démonstration sur l'écran projeté, captures).
 	bool training = false;
@@ -50,6 +53,16 @@ public:
 	bool trainingDuel = false;
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
+	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
+	// (--class-screen N), pour les captures. -1 : désactivé. Bannissement en cours pendant S secondes
+	// (--class-screen-ban S), ou terminé avec la classe interdite (--class-screen-forbidden <id>).
+	int classScreenTalents = -1;
+	// Tutoriel guidé (--tutorial), à partir d'une étape (--tutorial-step N, de 1 à 9) pour les captures.
+	bool tutorial = false;
+	int tutorialStep = 1;
+	int classScreenBan = 0;
+	int classScreenForbidden = 0;
+	int trainingTalents = 0;
 
 	static ClientConfig & get();
 

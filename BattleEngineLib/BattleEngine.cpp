@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "Achievements.h"
 #include "Emotes.h"
 
 #include <algorithm>
@@ -25,7 +26,8 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const B
 {
 }
 
-int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells)
+int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells,
+	const std::vector<std::string> & talents)
 {
 	const ClassDef * classDef = data.findClass(classId);
 	if (classDef == nullptr || (team != 1 && team != 2) || state.phase != BattlePhase::PLACEMENT || state.round != 0)
@@ -38,6 +40,13 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name, co
 	fighter.name = name;
 	fighter.spells = validSpellChoice(*classDef, spells);
 	fighter.baseStats = classDef->baseStats;
+	fighter.talents = validTalentChoice(data, talents, (int)talents.size());
+	for (const std::string & id : fighter.talents)
+	{
+		const TalentDef * talent = data.findTalent(id);
+		for (int i = 0; i < STAT_COUNT; i++)
+			fighter.baseStats.set((Stat)i, fighter.baseStats.get((Stat)i) + talent->stats.get((Stat)i));
+	}
 	fighter.maxHp = fighter.baseStats.get(Stat::MAX_HP);
 	fighter.hp = fighter.maxHp;
 	fighter.ap = fighter.baseStats.get(Stat::AP);
@@ -184,6 +193,21 @@ void BattleEngine::startFight(std::int64_t nowMs)
 	if (state.phase != BattlePhase::PLACEMENT)
 		return;
 
+	// Talents : effets de début de combat (bouclier, PM du premier tour...). Appliqués avant le passage
+	// en phase de combat, une durée d'un tour couvre exactement le premier tour de chacun. Un bouclier
+	// de talent ne compte pas dans le bilan des boucliers donnés.
+	for (Fighter & fighter : state.fighters)
+	{
+		int shielded = fighter.record.shielded;
+		for (const std::string & id : fighter.talents)
+		{
+			const TalentDef * talent = data.findTalent(id);
+			for (const EffectDef & effect : talent != nullptr ? talent->effects : std::vector<EffectDef>())
+				applyEffectToTarget(fighter, TALENT_SPELL_ID, effect, fighter, fighter.position);
+		}
+		fighter.record.shielded = shielded;
+	}
+
 	computeTurnOrder();
 	state.phase = BattlePhase::FIGHT;
 	state.round = 1;
@@ -234,6 +258,9 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 		tickEffectsAtTurnStart(fighter);
 		if (fighter.alive)
 			triggerGlyphs(fighter);
+		// Case à effet, après les effets périodiques et les glyphes ; la mort subite reste en dernier.
+		if (fighter.alive)
+			applyTerrain(fighter);
 
 		// Mort subite : des dégâts croissants empêchent les combats sans fin.
 		if (fighter.alive && state.round >= data.rules.suddenDeathRound)
@@ -525,7 +552,15 @@ void BattleEngine::scoreZone()
 	zonePresence(state, present);
 	int holder = present[1] && !present[2] ? 1 : present[2] && !present[1] ? 2 : 0;
 	if (holder != 0)
+	{
 		state.zone.scores[holder]++;
+		// Bilan : le point revient à chaque combattant de l'équipe présent dans la zone.
+		for (Fighter & fighter : state.fighters)
+		{
+			if (fighter.alive && fighter.team == holder && state.zone.contains(fighter.position))
+				fighter.record.zonePoints++;
+		}
+	}
 	state.zone.holder = holder;
 	emit({ { "t", "score" }, { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "holder", holder },
 		{ "contested", present[1] && present[2] } });
@@ -576,6 +611,8 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	state.endReason = reason;
 	state.deadlineMs = 0;
 	state.mvpFighterId = chooseMvp(state);
+	for (Fighter & fighter : state.fighters)
+		fighter.record.badges = earnedAchievements(state, fighter);
 
 	// Bilan de chaque combattant, pour l'écran de fin (joueurs, spectateurs, rediffusions).
 	json records = json::array();
@@ -698,7 +735,10 @@ json BattleEngine::recordJson(const FighterRecord & record)
 		{ "healed", record.healed },
 		{ "shielded", record.shielded },
 		{ "kills", record.kills },
-		{ "casts", record.casts }
+		{ "casts", record.casts },
+		{ "combos", record.combos },
+		{ "zonePoints", record.zonePoints },
+		{ "badges", record.badges }
 	};
 }
 
@@ -727,6 +767,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "classId", fighter.classId },
 		{ "name", fighter.name },
 		{ "spells", fighter.spells },
+		{ "talents", fighter.talents },
 		{ "x", fighter.position.x },
 		{ "y", fighter.position.y },
 		{ "hp", fighter.hp },

@@ -105,6 +105,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.classId = value.value("classId", 0);
 		fighter.name = value.value("name", std::string());
 		fighter.spells = value.value("spells", std::vector<int>());
+		fighter.talents = value.value("talents", std::vector<std::string>());
 		fighter.position = { value.value("x", 0), value.value("y", 0) };
 		fighter.hp = value.value("hp", 0);
 		fighter.maxHp = value.value("maxHp", 0);
@@ -322,5 +323,12 @@ FighterRecord BattleMirror::recordFromJson(const json & value)
 	record.shielded = value.value("shielded", 0);
 	record.kills = value.value("kills", 0);
 	record.casts = value.value("casts", 0);
+	record.combos = value.value("combos", 0);
+	record.zonePoints = value.value("zonePoints", 0);
+	for (const json & badge : value.value("badges", json::array()))
+	{
+		if (badge.is_string())
+			record.badges.push_back(badge.get<std::string>());
+	}
 	return record;
 }

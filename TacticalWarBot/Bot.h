@@ -37,6 +37,8 @@ private:
 	void send(const std::string & line);
 	void onLine(const std::string & line);
 	void onBattleEvent(const nlohmann::json & event);
+	// Classe (celle demandée, sinon au hasard parmi les autorisées), 4 sorts et talents au hasard.
+	void pickClass(int forbiddenClass);
 	void act(std::int64_t now);
 	void log(const std::string & text);
 
@@ -55,4 +57,5 @@ private:
 	bool readySent;
 	std::int64_t nextActionAt;
 	int battlesPlayed;
+	int talentSlots = 0;		// Talents à choisir pour le prochain match (HC)
 };

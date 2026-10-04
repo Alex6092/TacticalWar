@@ -37,7 +37,9 @@ namespace tw
 		sf::Sprite lifeBg;
 		sf::Sprite paBg;
 		sf::Sprite pmBg;
+		sf::Sprite shieldBg;
 		sf::Text lifeTxt;
+		sf::Text shieldTxt;
 		sf::Text paTxt;
 		sf::Text pmTxt;
 		
@@ -64,6 +66,12 @@ namespace tw
 			return &lifeTxt;
 		}
 
+		sf::Text * getShieldText()
+		{
+			shieldTxt.setString(std::to_string(getModel()->getCurrentShield()));
+			return &shieldTxt;
+		}
+
 		sf::Text * getPaText()
 		{
 			paTxt.setString(std::to_string(getModel()->getCurrentPA()));
@@ -79,6 +87,11 @@ namespace tw
 		sf::Sprite * getLifeBackground()
 		{
 			return &lifeBg;
+		}
+
+		sf::Sprite * getShieldBackground()
+		{
+			return &shieldBg;
 		}
 
 		sf::Sprite * getPaBackground()

@@ -238,7 +238,9 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 								else
 								{
 									// Envoi vers l'écran de choix de classe (avec la classe déjà verrouillée, s'il y en a une) :
-									send(client, "HC\n");
+									send(client, classSelectionMessage(p));
+									if (session != NULL)
+										sendBanState(session, client, p);
 									if (session != NULL && session->chosenClass(p) != 0)
 										send(client, "PO" + std::to_string(session->chosenClass(p)) + "\n");
 								}
@@ -353,6 +355,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
 		}
+		// Bannissement d'une classe :
+		else if (StringUtils::startsWith(toParse, "PB"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handleBan(client, p, toParse.substr(2));
+		}
 	}
 }
 
@@ -414,7 +423,7 @@ void TWParser::notifySwitchToClassSelectionToConnectedPlayer(std::vector<tw::Pla
 		if (connectedPlayerMap.find(p) != connectedPlayerMap.end())
 		{
 			ClientState * client = connectedPlayerMap[p];
-			send(client, "HC\n");
+			send(client, classSelectionMessage(p));
 			p->setHasJoinBattle(true);
 		}
 	}

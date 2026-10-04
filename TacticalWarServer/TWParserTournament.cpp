@@ -124,6 +124,7 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 		int shielded = 0;
 		int kills = 0;
 		int mvp = 0;
+		int badges = 0;
 		int score() const { return dealt + healed + shielded / 2 + 25 * kills; }
 	};
 	std::map<std::pair<int, std::string>, Leader> leaders;
@@ -145,6 +146,7 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 			leader.shielded += player.shielded;
 			leader.kills += player.kills;
 			leader.mvp += player.mvp ? 1 : 0;
+			leader.badges += (int)player.badges.size();
 		}
 	}
 	std::vector<Leader> sorted;
@@ -158,7 +160,7 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 		leaderRows.push_back({
 			{ "name", leader.name }, { "class", leader.className }, { "team", leader.team }, { "matches", leader.matches },
 			{ "dealt", leader.dealt }, { "healed", leader.healed }, { "shielded", leader.shielded }, { "kills", leader.kills },
-			{ "mvp", leader.mvp }, { "score", leader.score() }
+			{ "mvp", leader.mvp }, { "badges", leader.badges }, { "score", leader.score() }
 		});
 	}
 	state["leaders"] = leaderRows;
@@ -366,6 +368,9 @@ void TWParser::dispatchTournamentMatches()
 		BattleSession * session = sessionOfMatch(m);
 		session->setTournamentMatch(request.tournamentId, request.matchId);
 		session->setZonePoints(tournament.settings.zoneMode ? tournament.settings.zonePoints : 0);
+		session->setTalentSlots(tw::tournament::talentSlots(tournament, request.teamA), tw::tournament::talentSlots(tournament, request.teamB));
+		if (tw::tournament::hasBanPhase(tournament, *match))
+			session->startBanPhase(nowMs() + (std::int64_t)config.banSeconds * 1000);
 		tournaments.markLaunched(request, session->getId());
 
 		std::cout << "Lancement : " << name << " (" << teamName(request.teamA) << " contre " << teamName(request.teamB) << ")" << std::endl;

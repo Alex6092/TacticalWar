@@ -80,7 +80,9 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "pointsForWin", settings.pointsForWin },
 		{ "pointsForLoss", settings.pointsForLoss },
 		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
-		{ "zonePoints", settings.zonePoints }
+		{ "zonePoints", settings.zonePoints },
+		{ "maxTalents", settings.maxTalents },
+		{ "bans", toString(settings.bans) }
 	};
 }
 
@@ -98,6 +100,8 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.pointsForLoss = json.value("pointsForLoss", settings.pointsForLoss);
 	settings.zoneMode = json.value("mode", std::string("KO")) == "ZONE";
 	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
+	settings.maxTalents = std::max(0, std::min(5, json.value("maxTalents", settings.maxTalents)));
+	parseEnum(json.value("bans", std::string()), settings.bans, { BanMode::NONE, BanMode::FINALS, BanMode::ALL });
 	return settings;
 }
 
@@ -115,10 +119,13 @@ nlohmann::json tw::tournament::toJson(const MatchResult & result)
 		nlohmann::json players = nlohmann::json::array();
 		for (const PlayerRecord & player : result.players)
 		{
-			players.push_back({
+			nlohmann::json value = {
 				{ "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
 				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills }, { "mvp", player.mvp }
-			});
+			};
+			if (!player.badges.empty())
+				value["badges"] = player.badges;
+			players.push_back(value);
 		}
 		json["players"] = players;
 	}
@@ -144,6 +151,11 @@ MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
 		player.shielded = value.value("shielded", 0);
 		player.kills = value.value("kills", 0);
 		player.mvp = value.value("mvp", false);
+		for (const nlohmann::json & badge : value.value("badges", nlohmann::json::array()))
+		{
+			if (badge.is_string())
+				player.badges.push_back(badge.get<std::string>());
+		}
 		result.players.push_back(player);
 	}
 	return result;

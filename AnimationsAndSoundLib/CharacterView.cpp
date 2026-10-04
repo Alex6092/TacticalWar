@@ -94,19 +94,23 @@ CharacterView::CharacterView(BaseCharacterModel * model)
 	pseudoTxt.setString(sf::String::fromUtf8(pseudo.begin(), pseudo.end()));
 
 	lifeTxt.setFont(font);
+	shieldTxt.setFont(font);
 	paTxt.setFont(font);
 	pmTxt.setFont(font);
 
 	sf::Texture * lifeTexture = getCachedTexture("./assets/ui/characterdata/life_bg.png");
 	sf::Texture * paTexture = getCachedTexture("./assets/ui/characterdata/pa_bg.png");
 	sf::Texture * pmTexture = getCachedTexture("./assets/ui/characterdata/pm_bg.png");
+	sf::Texture * shieldTexture = getCachedTexture("./assets/ui/characterdata/shield_bg.png");
 	lifeTexture->setSmooth(true);
 	paTexture->setSmooth(true);
 	pmTexture->setSmooth(true);
+	shieldTexture->setSmooth(true);
 
 	lifeBg.setTexture(*lifeTexture, true);
 	paBg.setTexture(*paTexture, true);
 	pmBg.setTexture(*pmTexture, true);
+	shieldBg.setTexture(*shieldTexture, true);
 
 	getModel()->addEventListener(this);
 }

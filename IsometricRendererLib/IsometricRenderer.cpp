@@ -510,6 +510,26 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	window->draw(*pmBg);
 	window->draw(*pmTxt);
 
+	// Bouclier : écusson bleu avec sa valeur, posé sur le haut du cœur (il absorbe les dégâts en premier).
+	if (m->getCurrentShield() > 0 && m->getCurrentLife() > 0)
+	{
+		sf::Sprite * shieldBg = v.getShieldBackground();
+		sf::Text * shieldTxt = v.getShieldText();
+		shieldTxt->setCharacterSize(12);
+		shieldTxt->setFillColor(sf::Color::White);
+		shieldTxt->setOutlineColor(sf::Color(20, 45, 95));
+		shieldTxt->setOutlineThickness(1);
+		shieldBg->setScale(0.62f, 0.62f);
+		float shieldX = isoX + 60 - shieldBg->getGlobalBounds().width / 2.0f;
+		float shieldY = lifeBgY - shieldBg->getGlobalBounds().height * 0.72f;
+		shieldBg->setPosition(shieldX, shieldY);
+		sf::FloatRect textBounds = shieldTxt->getLocalBounds();
+		shieldTxt->setPosition(isoX + 60 - textBounds.width / 2.0f - textBounds.left,
+			shieldY + shieldBg->getGlobalBounds().height * 0.46f - textBounds.height / 2.0f - textBounds.top);
+		window->draw(*shieldBg);
+		window->draw(*shieldTxt);
+	}
+
 	window->draw(*pseudoTxt);
 }
 

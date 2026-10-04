@@ -24,16 +24,16 @@ int main(int argc, char** argv)
 
 	
 
-	environment.getMapData(5, 7)->setIsObstacle(true);
+	environment.setTile(5, 7, "stone");
 	environment.getMapData(6, 7)->setIsWalkable(false);
-	environment.getMapData(7, 7)->setIsObstacle(true);
+	environment.setTile(7, 7, "stone");
 	environment.getMapData(8, 7)->setIsWalkable(false);
 
 
 	environment.getMapData(10, 10)->setIsWalkable(false);
-	environment.getMapData(11, 11)->setIsObstacle(true);
+	environment.setTile(11, 11, "stone");
 	environment.getMapData(12, 12)->setIsWalkable(false);
-	environment.getMapData(13, 13)->setIsObstacle(true);
+	environment.setTile(13, 13, "stone");
 
 	TestColorator * colorator = new TestColorator();
 

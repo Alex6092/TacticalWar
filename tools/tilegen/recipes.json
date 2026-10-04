@@ -134,6 +134,38 @@
         { "op": "recolor", "mask": "water", "hue": 16, "sat": 1.0, "val": 1.05 },
         { "op": "noise", "mask": "water", "amount": 0.25, "scale": 9 }
       ]
+    },
+    {
+      "id": "embers", "name": "Braises", "category": "ground", "group": "Cases spéciales", "base": "grass",
+      "turnStart": { "damage": 8 },
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 20, "sat": 0.25, "val": 0.36 },
+        { "op": "noise", "mask": "top", "amount": 0.25, "scale": 3 },
+        { "op": "pool", "radius": 7, "sizeVariation": 0.5, "wobble": 0.45,
+          "at": [[-26, 2], [-6, -9], [15, -5], [27, 5], [-13, 11], [7, 10], [0, 1]],
+          "color": [255, 110, 25], "edge": [120, 25, 10], "rim": 0.7, "shine": 0.6, "glow": 0.45,
+          "sparkles": 2, "sparkleColor": [255, 235, 140] }
+      ]
+    },
+    {
+      "id": "spring", "name": "Source", "category": "ground", "group": "Cases spéciales", "base": "grass",
+      "turnStart": { "heal": 6 },
+      "ops": [
+        { "op": "pool", "radius": 30, "wobble": 0.2, "at": [[0, 1]],
+          "color": [60, 190, 215], "edge": [215, 245, 255], "rim": 0.75, "shine": 0.4, "glow": 0.15,
+          "sparkles": 7, "sparkleColor": [255, 255, 255] },
+        { "op": "overlay", "from": "stone", "mask": "object", "scale": 0.12,
+          "at": [[-34, 6], [32, 4], [-10, 19], [14, -9]] }
+      ]
+    },
+    {
+      "id": "tall_grass", "name": "Hautes herbes", "category": "ground", "group": "Cases spéciales", "base": "grass",
+      "blocksLineOfSight": true,
+      "ops": [
+        { "op": "recolor", "mask": "top", "hue": 80, "sat": 0.95, "val": 0.9 },
+        { "op": "blades", "count": 140, "height": [14, 30], "lean": 0.6, "width": 1.6, "spread": 0.82,
+          "base": [46, 96, 30], "tip": [196, 214, 96] }
+      ]
     }
   ]
 }

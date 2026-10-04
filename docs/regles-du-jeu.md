@@ -27,6 +27,20 @@ faibles puis les plus forts : le résultat réel est toujours dans la fourchette
 
 Échap annule la visée.
 
+## Boucliers
+
+Un bouclier absorbe les dégâts **avant** les points de vie. Il est affiché partout où l'on regarde :
+- **au-dessus du personnage** : un écusson bleu avec sa valeur, posé sur le cœur des PV ;
+- **dans la frise des tours** : « PV 93/98 +20 » (le bouclier en bleu), et une barre de vie rouge prolongée
+  en bleu par le bouclier ;
+- **dans le panneau de détails** : « Bouclier 20 : absorbe les dégâts en premier » ;
+- **pendant la visée** : l'aperçu sépare les PV perdus (« -6 à -9 PV ») de la part absorbée (« Bouclier -10 ») ;
+- **à chaque coup** : un texte bleu « Bouclier -10 », puis un texte rouge pour les PV perdus ; le journal dit ce
+  qu'il reste du bouclier ou qu'il est brisé ;
+- **sur la page projetée** : « +20 » en bleu à côté des PV.
+
+L'écusson est dessiné par `tools/ui/make_overlay_icons.py` (`assets/ui/characterdata/shield_bg.png`).
+
 ## Anticiper les déplacements
 
 Survoler un combattant montre où il pourra aller à son prochain tour, sans compter le tacle :
@@ -67,6 +81,92 @@ pour chaque classe est retenu (`client.json`) et proposé la fois suivante. Sans
 - Les bots et l'ordinateur de l'entraînement emportent 4 sorts au hasard.
 - Le message `PC` envoie la classe et les sorts : `PC{"class": 4, "spells": [0, 1, 4, 5]}`. Un choix non
   valable donne les sorts par défaut.
+
+## Talents de tournoi
+
+Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour toutes les classes :
+**un talent par match joué** par son équipe (victoire, défaite ou exempt), jusqu'à 3 (réglable).
+
+- Au premier match, personne n'a de talent ; au deuxième, chacun en a 1 ; au troisième, 2.
+- Deux équipes qui se rencontrent ont presque toujours autant de matchs joués, donc autant de talents :
+  pas d'effet boule de neige.
+- Les talents se **choisissent librement avant chaque match**, comme les sorts : bouton « Talents (0/2) »
+  sous la liste des sorts de l'écran de choix de classe. « Verrouiller mon choix » attend que les sorts
+  et les talents soient choisis. Le dernier choix est retenu (`client.json`) et proposé la fois suivante.
+- Un joueur qui ne choisit pas à temps reçoit des talents au hasard.
+- Les talents de chaque combattant sont visibles de tous : panneau de détails du combat (clic sur un
+  personnage) et cartes des combats en direct de la page projetée.
+
+| Talent | Effet |
+|---|---|
+| Robustesse | +15 PV max |
+| Force | +10 % de puissance |
+| Carapace | +8 % de résistance |
+| Célérité | +20 d'initiative et +2 de fuite |
+| Ancrage | +3 de tacle |
+| Allonge | +1 de portée (sorts à portée modifiable) |
+| Ferveur | +15 % de soins |
+| Garde | bouclier de 15 au début du combat, pendant 2 tours |
+| Élan | +1 PM pendant son premier tour |
+| Vigueur | +4 PV au début de chacun de ses 4 premiers tours |
+
+**Réglages** :
+- tournoi : « Talents par joueur » dans l'onglet Tournoi de l'administration (0 : pas de talents) ;
+- matchs hors tournoi : pas de talents ;
+- entraînement : réglage « Talents de tournoi » (0 à 3, ou `--training-talents N`). L'ordinateur reçoit
+  autant de talents, tirés au hasard ;
+- données : section `"talents"` de `assets/data/gamedata.json` (`stats` : bonus permanents, `effects` :
+  effets posés au début du combat).
+
+Le serveur annonce le nombre de talents dans `HC{"talents": 2}`, et le joueur répond
+`PC{"class": 4, "spells": [0, 1, 4, 5], "talents": ["garde", "force"]}`.
+
+## Bannissement de classe
+
+Au choix de l'organisateur, un match de tournoi peut commencer par un **bannissement** : chaque équipe
+interdit une classe à l'équipe adverse, qui choisit ensuite parmi les 3 autres.
+
+- **Phase de bannissement** (20 s) : l'écran de choix de classe affiche « Bannissement », une consigne
+  avec le compte à rebours, et le bouton « Bannir cette classe » pour la classe affichée.
+  - Le premier joueur de l'équipe qui bannit décide pour l'équipe : son coéquipier voit « Votre équipe
+    interdit : Mage. En attente de l'adversaire... ».
+  - Une équipe qui ne bannit pas à temps n'interdit rien. Les deux équipes peuvent interdire la même
+    classe.
+- **Choix des classes** : le délai habituel repart à la fin du bannissement. La consigne rappelle la
+  classe interdite par l'adversaire ; cette classe est grisée et marquée « interdite », et ne peut pas
+  être verrouillée. Un joueur qui ne choisit pas à temps reçoit une classe autorisée au hasard.
+- Le journal du combat (joueurs, spectateurs, rediffusions) et la page projetée indiquent la classe
+  interdite à chaque équipe.
+
+**Réglages** :
+- tournoi : « Bannissement » dans l'onglet Tournoi de l'administration : aucun (par défaut), phase finale
+  (tableaux à élimination, finales et petite finale, pas les poules ni les rondes suisses) ou tous les
+  matchs ;
+- durée de la phase : `"banSeconds"` dans `server.json` (20 par défaut) ;
+- matchs hors tournoi : pas de bannissement.
+
+Messages : `HC{"talents": 1, "ban": 20}` ouvre l'écran en mode bannissement, le joueur envoie
+`PB{"class": 1}`, et le serveur répond `BB{"banned", "done", "forbidden"}` à son équipe, puis à tous
+à la fin de la phase.
+
+## Cases spéciales
+
+Certaines cartes ont des cases qui changent le combat :
+
+| Case | Effet |
+|---|---|
+| Braises | Praticable ; 8 dégâts au début du tour de qui s'y trouve (le bouclier absorbe d'abord) |
+| Source | Praticable ; +6 PV au début du tour de qui s'y trouve |
+| Hautes herbes | Praticable, mais bloque la ligne de vue : on s'y cache des tirs |
+
+- L'effet s'applique au début du tour, après les poisons et les glyphes ; la mort subite reste en
+  dernier. Traverser une case pendant un déplacement ne déclenche rien.
+- Au survol, la ligne d'aide donne la règle de la case, y compris pendant un déplacement.
+- Les dégâts et les soins s'affichent avec le nom de la case (« Braises -8 », « Source +6 »).
+- L'ordinateur évite les braises et rejoint une source quand il est blessé.
+- Les 7 cartes du tournoi n'en ont pas. La carte 8, « Terrain d'exercice » (hors tournoi), les
+  montre toutes : `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte,
+  utiliser le groupe « Cases spéciales » de la palette de l'éditeur.
 
 ## Combinaisons entre classes
 
@@ -137,7 +237,56 @@ Le bilan s'affiche sur l'écran de fin (joueurs, spectateurs, rediffusions). Les
 tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
 - **les derniers combats**, avec le vainqueur et le MVP ;
 - **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
-  titres de MVP.
+  titres de MVP et de hauts faits.
+
+### Hauts faits
+
+Le bilan décerne aussi des **hauts faits**, affichés sous le nom de chaque combattant sur l'écran de fin
+(description au survol) et annoncés dans le journal :
+
+| Haut fait | Condition |
+|---|---|
+| Premier sang | Premier ennemi mis hors combat du combat |
+| Coup double | Au moins 2 ennemis mis hors combat |
+| Maître des combos | Au moins 2 combinaisons déclenchées |
+| Démolisseur | Au moins 150 dégâts infligés |
+| Ange gardien | Au moins 60 PV rendus ou protégés (soins et boucliers) |
+| Intouchable | Aucun dégât subi, et debout à la fin du combat |
+| Dernier debout | Seul survivant de l'équipe gagnante |
+| Gardien de la zone | Dans la zone pour au moins 3 points marqués (mode zone) |
+| Victoire éclair | Victoire en 5 tours ou moins |
+
+- Un forfait ou une décision de l'organisateur ne donne ni « Intouchable » ni « Victoire éclair ».
+- Les hauts faits sont enregistrés avec les résultats du tournoi. La page projetée montre ceux du MVP
+  dans les derniers combats.
+- Liste et descriptions : `BattleEngineLib/Achievements.h` ; conditions : `Achievements.cpp`.
+
+## Tutoriel guidé
+
+Le bouton **« Tutoriel »** (écran de connexion, ou réglages de l'entraînement) apprend les bases en
+quelques minutes, sans serveur. Le joueur est un Guerrier avec le talent Garde ; il affronte un
+« Mannequin » (un Archer qui passe ses tours, protégé lui aussi par Garde) sur la carte 8, « Terrain
+d'exercice ». Un panneau en haut de l'écran donne la consigne ; l'étape suivante s'affiche dès que
+la consigne est remplie.
+
+| Étape | Consigne |
+|---|---|
+| 1. Placement | Choisir une case de départ, puis cliquer sur Prêt |
+| 2. Déplacement | Se déplacer sur une case verte (PM) |
+| 3. Cases spéciales | Survoler les braises, la source ou les hautes herbes (ou Continuer) |
+| 4. Sorts | Sélectionner un sort : sa portée s'affiche |
+| 5. Attaque | Lancer un sort sur le mannequin, après avoir lu l'aperçu (PV et bouclier perdus) |
+| 6. Fin du tour | Passer son tour |
+| 7. Anticiper | Survoler le mannequin : sa portée de déplacement au prochain tour |
+| 8. Signal | Envoyer un signal (Alt + clic) |
+| 9. Victoire | Mettre le mannequin hors combat : le bilan présente les hauts faits |
+
+- Pas de minuteur : chacun avance à son rythme. « Quitter » interrompt le tutoriel.
+- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts, talents,
+  bannissement, mode de victoire, jeu en équipe. Puis « Entraînement libre » ou « Retour ».
+- Captures d'écran : `TacticalWar.exe --tutorial-step N` ouvre le tutoriel à l'étape N (1 à 9), les
+  étapes précédentes étant jouées automatiquement ; 10 mène le combat jusqu'au bilan, 11 ouvre l'écran
+  final. `--tutorial` ouvre le tutoriel au début.
 
 ## Entraînement hors ligne
 

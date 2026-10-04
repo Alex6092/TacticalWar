@@ -13,8 +13,9 @@
       d'identifiants générées dans `data\exports\fiches-equipes.html`.
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
-- [ ] Proposer aux élèves de s'entraîner avant le jour J : bouton « Entraînement » de l'écran de
-      connexion, sans serveur (voir `docs/regles-du-jeu.md`).
+- [ ] Proposer aux élèves de faire le **tutoriel** (bouton « Tutoriel » de l'écran de connexion,
+      quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement » (voir
+      `docs/regles-du-jeu.md`).
 
 ## Test grandeur nature sans joueurs
 
@@ -36,6 +37,9 @@
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
+   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
+   Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
+   finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 

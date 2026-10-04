@@ -1,12 +1,15 @@
 ﻿#include "IsometricRenderer.h"
 #include "BattleScreen.h"
+#include "ClassSelectionScreen.h"
 #include "FxGalleryScreen.h"
 #include "LoginScreen.h"
 #include "TrainingScreen.h"
 #include "TrainingSetupScreen.h"
+#include "TutorialScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
+#include <algorithm>
 
 int main(int argc, char** argv)
 {
@@ -24,6 +27,22 @@ int main(int argc, char** argv)
 	{
 		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::FxGalleryScreen(&gui, config.fxSpell, config.fxMap));
 	}
+	else if (config.classScreenTalents >= 0)
+	{
+		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
+		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
+		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
+		// Fin de bannissement simulée : la classe donnée est interdite, la suivante bannie par notre équipe.
+		if (config.classScreenForbidden > 0)
+		{
+			screen->onMessageReceived("BB{\"banned\": " + std::to_string(config.classScreenForbidden % 4 + 1) + ", \"done\": true, \"forbidden\": "
+				+ std::to_string(config.classScreenForbidden) + "}");
+		}
+	}
+	else if (config.tutorial)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TutorialScreen(&gui, tw::TutorialScreen::Origin::LOGIN, std::max(0, config.tutorialStep - 1)));
+	}
 	else if (config.training)
 	{
 		tw::TrainingSettings & settings = tw::TrainingSettings::current();
@@ -32,6 +51,8 @@ int main(int argc, char** argv)
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;
 		settings.zone = config.trainingZone;
+		settings.talentCount = config.trainingTalents;
+		settings.talents = config.talentChoice;
 		if (config.trainingStart)
 			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));
 		else

@@ -32,6 +32,11 @@ namespace tw
 		std::vector<int> validSpellChoice(const ClassDef & classDef, const std::vector<int> & requested);
 		// Choix au hasard (bots, entraînement), dans l'ordre des sorts de la classe.
 		std::vector<int> randomSpellChoice(const ClassDef & classDef, std::mt19937 & rng);
+		// Talents de tournoi : au plus "slots" talents connus et distincts, dans l'ordre demandé.
+		std::vector<std::string> validTalentChoice(const GameData & data, const std::vector<std::string> & requested, int slots);
+		// Talents au hasard (bots, ordinateur de l'entraînement, emplacements laissés vides).
+		std::vector<std::string> randomTalentChoice(const GameData & data, int slots, std::mt19937 & rng);
+
 		// Sort de l'emplacement "slot" de la barre du combattant (nullptr si aucun).
 		const SpellDef * spellOf(const GameData & data, const Fighter & fighter, int slot);
 		// Sorts emportés par le combattant, dans l'ordre de sa barre.

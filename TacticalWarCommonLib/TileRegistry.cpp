@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "TileRegistry.h"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -30,6 +31,22 @@ TileCategory tw::tileCategoryFromString(const std::string & text)
 	if (text == "liquid") return TileCategory::LIQUID;
 	if (text == "empty") return TileCategory::EMPTY;
 	return TileCategory::GROUND;
+}
+
+TileRules TileRules::forCategory(TileCategory category)
+{
+	TileRules rules;
+	rules.walkable = category == TileCategory::GROUND;
+	rules.blocksLineOfSight = category == TileCategory::OBSTACLE;
+	return rules;
+}
+
+TileRules TileRules::unknown()
+{
+	TileRules rules;
+	rules.walkable = false;
+	rules.blocksLineOfSight = true;
+	return rules;
 }
 
 TileRegistry & TileRegistry::get()
@@ -86,8 +103,7 @@ void TileRegistry::loadBuiltins()
 	stone.texture = "assets/tiles/resized/Stone_02.png";
 	stone.anchorX = 70;
 	stone.anchorY = 59;
-	stone.walkable = false;
-	stone.blocksLineOfSight = true;
+	stone.rules = TileRules::forCategory(TileCategory::OBSTACLE);
 	stone.group = "Obstacles";
 	add(stone);
 
@@ -98,7 +114,7 @@ void TileRegistry::loadBuiltins()
 	water.texture = "assets/tiles/resized/Water_01.png";
 	water.anchorX = 69;
 	water.anchorY = 33;
-	water.walkable = false;
+	water.rules = TileRules::forCategory(TileCategory::LIQUID);
 	water.group = "Liquides";
 	water.shader = "water";
 	add(water);
@@ -147,10 +163,14 @@ bool TileRegistry::loadFromString(const std::string & text, std::string * error)
 		}
 
 		// Règles par défaut selon la catégorie, modifiables tuile par tuile.
-		tile.walkable = tile.category == TileCategory::GROUND;
-		tile.blocksLineOfSight = tile.category == TileCategory::OBSTACLE;
-		tile.walkable = item.value("walkable", tile.walkable);
-		tile.blocksLineOfSight = item.value("blocksLineOfSight", tile.blocksLineOfSight);
+		tile.rules = TileRules::forCategory(tile.category);
+		tile.rules.walkable = item.value("walkable", tile.rules.walkable);
+		tile.rules.blocksLineOfSight = item.value("blocksLineOfSight", tile.rules.blocksLineOfSight);
+		if (item.contains("turnStart") && item["turnStart"].is_object())
+		{
+			tile.rules.turnDamage = std::max(0, item["turnStart"].value("damage", 0));
+			tile.rules.turnHeal = std::max(0, item["turnStart"].value("heal", 0));
+		}
 
 		tile.group = item.value("group", std::string());
 		tile.shader = item.value("shader", std::string());

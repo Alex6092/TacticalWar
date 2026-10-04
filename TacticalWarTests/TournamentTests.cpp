@@ -488,6 +488,7 @@ TEST_CASE("Match results keep the players' records through JSON")
 	archer.dealt = 120;
 	archer.kills = 2;
 	archer.mvp = true;
+	archer.badges = { "first_blood", "double_ko" };
 	PlayerRecord healer;
 	healer.name = "Tom";
 	healer.className = "Protecteur";
@@ -504,6 +505,9 @@ TEST_CASE("Match results keep the players' records through JSON")
 	CHECK(restored.players[0].dealt == 120);
 	CHECK(restored.players[0].kills == 2);
 	CHECK(restored.players[0].mvp);
+	CHECK(restored.players[0].badges == archer.badges);
+	CHECK(restored.players[1].badges.empty());
+	CHECK_FALSE(toJson(result)["players"][1].contains("badges"));
 	CHECK(restored.players[1].healed == 45);
 	CHECK(restored.players[1].shielded == 40);
 	CHECK_FALSE(restored.players[1].mvp);
@@ -535,4 +539,82 @@ TEST_CASE("The battle mode of a tournament goes through JSON")
 	ResultReason reason;
 	REQUIRE(parseReason(toString(ResultReason::OBJECTIVE), reason));
 	CHECK((reason == ResultReason::OBJECTIVE));
+}
+
+TEST_CASE("Teams earn one talent per finished match, up to the tournament maximum")
+{
+	Tournament tournament;
+	auto addMatch = [&tournament](int id, int teamA, int teamB, MatchStatus status) {
+		TMatch match;
+		match.id = id;
+		match.teamA = teamA;
+		match.teamB = teamB;
+		match.status = status;
+		tournament.matches[id] = match;
+	};
+	addMatch(1, 1, 2, MatchStatus::DONE);
+	addMatch(2, 1, BYE_TEAM, MatchStatus::DONE);		// Exempt : compte comme un match joué
+	addMatch(3, 1, 3, MatchStatus::DONE);
+	addMatch(4, 1, 2, MatchStatus::IN_PROGRESS);
+	addMatch(5, 3, 2, MatchStatus::READY);
+
+	CHECK(matchesPlayed(tournament, 1) == 3);
+	CHECK(matchesPlayed(tournament, 2) == 1);
+	CHECK(matchesPlayed(tournament, 4) == 0);
+
+	tournament.settings.maxTalents = 2;
+	CHECK(talentSlots(tournament, 1) == 2);
+	CHECK(talentSlots(tournament, 2) == 1);
+	tournament.settings.maxTalents = 0;
+	CHECK(talentSlots(tournament, 1) == 0);
+
+	// Réglage enregistré avec le tournoi, borné entre 0 et 5 ; 3 par défaut (anciens tournois).
+	Settings settings;
+	CHECK(settings.maxTalents == 3);
+	settings.maxTalents = 1;
+	CHECK(settingsFromJson(toJson(settings)).maxTalents == 1);
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("maxTalents");
+	CHECK(settingsFromJson(legacy).maxTalents == 3);
+	legacy["maxTalents"] = 9;
+	CHECK(settingsFromJson(legacy).maxTalents == 5);
+}
+
+TEST_CASE("The ban setting decides which matches start with a class ban")
+{
+	Tournament tournament;
+	TMatch pool;
+	pool.bracket = "P0";
+	TMatch swiss;
+	swiss.bracket = "S";
+	std::vector<TMatch> finals(5);
+	const char * brackets[5] = { "W", "L", "GF", "GF2", "3P" };
+	for (int i = 0; i < 5; i++)
+		finals[i].bracket = brackets[i];
+
+	// Par défaut, aucun bannissement.
+	CHECK((tournament.settings.bans == BanMode::NONE));
+	CHECK_FALSE(hasBanPhase(tournament, pool));
+	CHECK_FALSE(hasBanPhase(tournament, finals[0]));
+
+	// Phase finale : les tableaux, pas les poules ni les rondes suisses.
+	tournament.settings.bans = BanMode::FINALS;
+	CHECK_FALSE(hasBanPhase(tournament, pool));
+	CHECK_FALSE(hasBanPhase(tournament, swiss));
+	for (const TMatch & match : finals)
+		CHECK(hasBanPhase(tournament, match));
+
+	tournament.settings.bans = BanMode::ALL;
+	CHECK(hasBanPhase(tournament, pool));
+	CHECK(hasBanPhase(tournament, swiss));
+
+	// Réglage enregistré avec le tournoi ; anciens tournois et valeur inconnue : aucun.
+	Settings settings;
+	settings.bans = BanMode::FINALS;
+	CHECK((settingsFromJson(toJson(settings)).bans == BanMode::FINALS));
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("bans");
+	CHECK((settingsFromJson(legacy).bans == BanMode::NONE));
+	legacy["bans"] = "PARFOIS";
+	CHECK((settingsFromJson(legacy).bans == BanMode::NONE));
 }

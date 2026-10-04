@@ -235,13 +235,26 @@ namespace tw
 			double tackleApFactor = 0.5;	// Part de la perte de PA par rapport à la perte de PM
 		};
 
+		// Talent de tournoi : bonus gagné au fil du tournoi (un par match joué) et choisi avant chaque
+		// match, valable pour toutes les classes.
+		struct TalentDef
+		{
+			std::string id;
+			std::string name;
+			std::string description;
+			Stats stats;					// Bonus permanents, ajoutés aux caractéristiques de la classe
+			std::vector<EffectDef> effects;	// Appliqués au combattant au début du combat (bouclier, PM...)
+		};
+
 		struct GameData
 		{
 			int version = 1;
 			BattleRules rules;
 			std::vector<ClassDef> classes;
+			std::vector<TalentDef> talents;
 
 			const ClassDef * findClass(int classId) const;
+			const TalentDef * findTalent(const std::string & id) const;
 
 			// Charge les données (assets/data/gamedata.json). Retourne false et renseigne error en cas de problème.
 			bool loadFromJsonText(const std::string & text, std::string & error);

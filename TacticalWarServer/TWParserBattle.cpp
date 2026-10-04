@@ -1,7 +1,9 @@
 ﻿// Combats : sessions (choix des classes puis BattleEngine), actions des joueurs,
 // diffusion des événements et fin de combat.
 #include "TWParser.h"
+#include <Achievements.h>
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 
@@ -52,6 +54,70 @@ void TWParser::sendGameData(ClientState * client)
 	send(client, gameDataMessage);
 }
 
+std::string TWParser::classSelectionMessage(tw::Player * player)
+{
+	BattleSession * session = sessionOfPlayer(player);
+	int talents = session != NULL ? session->talentSlots(player) : 0;
+	nlohmann::json body = { { "talents", talents } };
+	// Phase de bannissement en cours : secondes restantes.
+	if (session != NULL && session->getPhase() == BattleSession::Phase::BAN)
+		body["ban"] = std::max<std::int64_t>(1, (session->getBanDeadline() - nowMs() + 999) / 1000);
+	return encode("HC", body);
+}
+
+void TWParser::handleBan(ClientState * client, tw::Player * player, const std::string & body)
+{
+	BattleSession * session = sessionOfPlayer(player);
+	if (session == NULL || !player->getHasJoinBattle())
+		return;
+
+	// PB{"class": id} : le premier bannissement d'un joueur de l'équipe compte.
+	nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
+	int classId = pick.is_object() ? pick.value("class", 0) : 0;
+	if (!session->ban(player, classId))
+		return;
+
+	int team = session->teamOf(player);
+	std::cout << "Combat " << session->getId() << " : l'equipe " << team << " bannit la classe " << classId << std::endl;
+	for (tw::Player * mate : session->getParticipants())
+	{
+		ClientState * mateClient = getClientStateFromPlayer(mate);
+		if (session->teamOf(mate) == team && mateClient != NULL && mate->getHasJoinBattle())
+			sendBanState(session, mateClient, mate);
+	}
+	publicDirty = true;
+	if (session->allTeamsBanned())
+		finishBanPhase(session);
+}
+
+void TWParser::sendBanState(BattleSession * session, ClientState * client, tw::Player * player)
+{
+	if (!session->hasBanPhase())
+		return;
+	int team = session->teamOf(player);
+	bool done = session->getPhase() != BattleSession::Phase::BAN;
+	nlohmann::json body = { { "banned", session->bannedBy(team) }, { "done", done } };
+	// La classe interdite par l'adversaire n'est connue qu'à la fin de la phase.
+	if (done)
+		body["forbidden"] = session->forbiddenClass(team);
+	send(client, encode("BB", body));
+}
+
+void TWParser::finishBanPhase(BattleSession * session)
+{
+	// Le délai du choix des classes part de la fin du bannissement.
+	session->endBanPhase(nowMs() + (std::int64_t)config.classSelectionSeconds * 1000);
+	std::cout << "Combat " << session->getId() << " : classes interdites " << session->forbiddenClass(1) << " (equipe 1), "
+		<< session->forbiddenClass(2) << " (equipe 2)." << std::endl;
+	for (tw::Player * player : session->getParticipants())
+	{
+		ClientState * client = getClientStateFromPlayer(player);
+		if (client != NULL && player->getHasJoinBattle())
+			sendBanState(session, client, player);
+	}
+	publicDirty = true;
+}
+
 void TWParser::handlePickClass(ClientState * client, tw::Player * player, const std::string & body)
 {
 	BattleSession * session = sessionOfPlayer(player);
@@ -61,6 +127,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 	// PC{"class": id, "spells": [indices]} ; ancien format PC<classId> : sorts par défaut.
 	int classId = 0;
 	std::vector<int> spells;
+	std::vector<std::string> talents;
 	if (!body.empty() && body[0] == '{')
 	{
 		nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
@@ -75,6 +142,14 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 						spells.push_back(index.get<int>());
 				}
 			}
+			if (pick.contains("talents") && pick["talents"].is_array())
+			{
+				for (const nlohmann::json & talent : pick["talents"])
+				{
+					if (talent.is_string())
+						talents.push_back(talent.get<std::string>());
+				}
+			}
 		}
 	}
 	else
@@ -82,7 +157,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 		classId = std::atoi(body.c_str());
 	}
 
-	if (session->chooseClass(player, classId, spells))
+	if (session->chooseClass(player, classId, spells, talents))
 	{
 		send(client, "PO" + std::to_string(classId) + "\n");
 		if (session->allClassesChosen())
@@ -141,6 +216,8 @@ nlohmann::json TWParser::battleSnapshot(BattleSession * session, int fighterId)
 	// Noms des équipes et du match, pour l'affichage (bandeau spectateur, écran de fin).
 	tw::Match * match = session->getMatch();
 	snapshot["teams"] = nlohmann::json::array({ teamName(match->getTeam1()[0]->getTeamNumber()), teamName(match->getTeam2()[0]->getTeamNumber()) });
+	if (session->hasBanPhase())
+		snapshot["forbidden"] = nlohmann::json::array({ session->forbiddenClass(1), session->forbiddenClass(2) });
 	snapshot["title"] = match->getMatchName();
 	return snapshot;
 }
@@ -299,11 +376,19 @@ void TWParser::finishBattle(BattleSession * session)
 		player.shielded = fighter.record.shielded;
 		player.kills = fighter.record.kills;
 		player.mvp = fighter.id == state.mvpFighterId;
+		player.badges = fighter.record.badges;
 		players.push_back(player);
 		if (player.mvp)
 		{
+			// Hauts faits du MVP par leur nom, pour la page projetée.
+			nlohmann::json badges = nlohmann::json::array();
+			for (const std::string & id : player.badges)
+			{
+				const tw::battle::AchievementDef * achievement = tw::battle::findAchievement(id);
+				badges.push_back(achievement != nullptr ? std::string(achievement->name) : id);
+			}
 			mvp = { { "name", player.name }, { "class", player.className }, { "side", player.side }, { "dealt", player.dealt },
-				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills } };
+				{ "healed", player.healed }, { "shielded", player.shielded }, { "kills", player.kills }, { "badges", badges } };
 		}
 	}
 	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round, players);
@@ -383,7 +468,13 @@ void TWParser::tickBattles()
 
 	for (BattleSession * session : active)
 	{
-		if (session->getPhase() == BattleSession::Phase::CLASS_SELECTION)
+		if (session->getPhase() == BattleSession::Phase::BAN)
+		{
+			// Une équipe qui n'a pas banni à temps n'interdit rien.
+			if (now >= session->getBanDeadline())
+				finishBanPhase(session);
+		}
+		else if (session->getPhase() == BattleSession::Phase::CLASS_SELECTION)
 		{
 			if (now < session->getClassSelectionDeadline())
 				continue;

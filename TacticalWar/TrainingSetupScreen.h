@@ -1,8 +1,11 @@
 ﻿#pragma once
 
+#include <memory>
 #include <vector>
 
 #include "Screen.h"
+#include "SpellPicker.h"
+#include "TalentPicker.h"
 
 namespace tw
 {
@@ -18,16 +21,15 @@ namespace tw
 		virtual void render(sf::RenderWindow * window);
 
 	private:
-		enum class Request { NONE, PLAY, BACK };
+		enum class Request { NONE, PLAY, BACK, TUTORIAL };
 
 		tgui::ComboBox::Ptr addRow(const sf::String & text);
 		tgui::ComboBox::Ptr addClassRow(const sf::String & text, int selected);
 		static int selectedId(const tgui::ComboBox::Ptr & box);
 		void refresh();
 		void save();
-		// Sorts emportés par le joueur (classe choisie) : clic pour ajouter ou retirer.
-		void toggleSpell(int index);
-		void refreshSpells();
+		// Jouer : sorts complets (classe choisie) et talents complets.
+		void refreshPlay();
 
 		tgui::Gui * gui;
 		sf::Font font;
@@ -43,13 +45,15 @@ namespace tw
 		tgui::ComboBox::Ptr map;
 		tgui::ComboBox::Ptr mode;
 		tgui::ComboBox::Ptr difficulty;
+		tgui::ComboBox::Ptr talentCount;
 		tgui::Label::Ptr description;
-		tgui::Picture::Ptr spellIcons[6];
-		tgui::Label::Ptr spellLabel;
+		std::unique_ptr<SpellPicker> spellPicker;
+		tgui::Label::Ptr randomSpells;
+		std::unique_ptr<TalentPicker> talentPicker;
 		tgui::Button::Ptr playButton;
-		std::vector<int> chosenSpells;
 		int spellClassId;
 		bool spellsChanged;
+		bool talentsChanged;
 		Request request;
 	};
 }

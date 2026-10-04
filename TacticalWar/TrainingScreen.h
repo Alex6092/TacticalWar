@@ -24,6 +24,10 @@ namespace tw
 		// Mode "zone à tenir" (premier à ZONE_POINTS points), sinon au KO.
 		bool zone = false;
 		static const int ZONE_POINTS = 5;
+		// Talents de tournoi : autant pour chaque combattant ; ceux du joueur sont choisis, ceux de
+		// l'ordinateur tirés au hasard.
+		int talentCount = 0;
+		std::vector<std::string> talents;
 		// Le personnage du joueur est aussi joué par l'IA, et les combats s'enchaînent (démonstration
 		// sur un écran projeté, captures automatiques).
 		bool autoplay = false;

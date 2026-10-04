@@ -7,6 +7,7 @@
 #include <random>
 #include <set>
 
+#include <Achievements.h>
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
@@ -652,6 +653,30 @@ TEST_CASE("Spell preview reports shields, periodic effects, pushes, collisions a
 	CHECK(arena.fighter(2).hp == arena.fighter(2).maxHp);
 }
 
+TEST_CASE("Spell preview ignores shields already in place, even in a client mirror")
+{
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } });
+	arena.playUntilTurnOf(0);
+
+	// Le Guerrier a déjà un bouclier ; le miroir d'un client ne connaît pas le compteur d'identifiants.
+	BattleState mirror = arena.state();
+	ActiveEffect shield;
+	shield.uid = 40;
+	shield.type = EffectType::SHIELD;
+	shield.value = 30;
+	shield.remainingTurns = 2;
+	shield.positive = true;
+	mirror.findFighter(1)->effects.push_back(shield);
+	mirror.findFighter(1)->shield = 30;
+	mirror.nextUid = 1;
+
+	std::vector<TargetPreview> previews = previewSpell(mirror, arena.map, gameData(), 0, arena.slotOf(0, "tir_precis"), { 2, 8 });
+	REQUIRE(previews.size() == 1);
+	CHECK(previews[0].maxAbsorbed > 0);
+	CHECK(previews[0].minShield == 0);
+	CHECK(previews[0].maxShield == 0);
+}
+
 TEST_CASE("Spell preview includes collision damage when a push is blocked")
 {
 	BattleMap map = openMap();
@@ -750,11 +775,15 @@ TEST_CASE("Battle records credit damage, shields, casts and knockouts to the rig
 	CHECK(arena.fighter(0).record.kills == 1);
 	CHECK(arena.fighter(0).record.dealt == arena.fighter(2).record.taken);
 	CHECK(arena.state().mvpFighterId == 0);
+	CHECK(arena.state().firstBloodFighterId == 0);
+	const std::vector<std::string> & badges = arena.fighter(0).record.badges;
+	CHECK(std::find(badges.begin(), badges.end(), "first_blood") != badges.end());
 
 	std::vector<nlohmann::json> ends = arena.eventsOfType("end");
 	REQUIRE(ends.size() == 1);
 	CHECK(ends[0]["mvp"].get<int>() == 0);
 	CHECK(ends[0]["records"].size() == 3);
+	CHECK(ends[0]["records"][0]["badges"] == nlohmann::json(badges));
 
 	// Les clients retrouvent le bilan dans l'état complet.
 	BattleState mirror;
@@ -763,6 +792,163 @@ TEST_CASE("Battle records credit damage, shields, casts and knockouts to the rig
 	CHECK(mirror.mvpFighterId == 0);
 	CHECK(mirror.findFighter(0)->record.kills == 1);
 	CHECK(mirror.findFighter(1)->record.shielded == arena.fighter(1).record.shielded);
+	CHECK(mirror.findFighter(0)->record.badges == badges);
+}
+
+TEST_CASE("Special cells hurt or heal the fighter standing on them at the start of its turn")
+{
+	BattleMap map = openMap();
+	map.setTurnEffect({ 2, 2 }, 8, 0);	// Braises sous l'Archer
+	map.setTurnEffect({ 2, 8 }, 0, 6);	// Source sous le Guerrier
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } }, map);
+
+	// Braises : 8 dégâts fixes au début du tour (le premier tour commence au lancement du combat).
+	int hp = arena.fighter(0).hp;
+	arena.playUntilTurnOf(1);
+	arena.playUntilTurnOf(0);
+	std::vector<nlohmann::json> damage = arena.eventsOfType("damage");
+	REQUIRE(damage.size() >= 1);
+	CHECK(damage.back()["kind"] == "terrain");
+	CHECK(damage.back()["amount"].get<int>() == 8);
+	CHECK(damage.back()["src"].get<int>() == -1);
+	CHECK(arena.fighter(0).hp < hp);
+
+	// Source : soigne un combattant blessé (6 PV), rien s'il a tous ses PV.
+	BattleState wounded = arena.state();
+	wounded.findFighter(1)->hp -= 20;
+	BattleEngine engine(gameData(), arena.map, wounded, 1);
+	REQUIRE(engine.endTurn(0, arena.now).ok);
+	CHECK(engine.getState().findFighter(1)->hp == wounded.findFighter(1)->hp + 6);
+	nlohmann::json batch = engine.flushEvents();
+	bool healed = false;
+	for (const nlohmann::json & event : batch["ev"])
+		healed = healed || (event["t"] == "heal" && event["kind"] == "terrain" && event["amount"].get<int>() == 6);
+	CHECK(healed);
+}
+
+TEST_CASE("Tall grass can be walked through but hides what is behind it")
+{
+	BattleMap map = openMap(9);
+	map.setCell({ 4, 2 }, true, true);
+	Arena arena({ { ARCHER, { 4, 0 } } }, { { GUERRIER, { 4, 4 } } }, map);
+	CHECK_FALSE(hasLineOfSight(arena.state(), arena.map, { 4, 0 }, { 4, 4 }));
+	CHECK(hasLineOfSight(arena.state(), arena.map, { 4, 0 }, { 4, 2 }));
+	arena.playUntilTurnOf(0);
+	std::vector<Cell> path = findPath(arena.state(), arena.map, arena.fighter(0), { 4, 2 });
+	REQUIRE(path.size() == 2);
+	CHECK(arena.engine->move(0, path, arena.now).ok);
+	CHECK(arena.fighter(0).position == Cell{ 4, 2 });
+}
+
+TEST_CASE("The AI keeps off embers and heads for a spring when wounded")
+{
+	// Destination du premier déplacement de l'IA ce tour-ci (après ses éventuels sorts).
+	auto destination = [](const BattleMap & map, const BattleState & state) {
+		BattleEngine engine(gameData(), map, state, 1);
+		std::mt19937 rng(3);
+		for (int i = 0; i < 6; i++)
+		{
+			BotAction action = chooseBotAction(engine.getState(), engine.getMap(), gameData(), 0, rng);
+			if (action.kind == BotAction::Kind::MOVE)
+				return action.path.back();
+			if (action.kind != BotAction::Kind::CAST || !engine.cast(0, action.slot, action.target, 0).ok)
+				break;
+		}
+		return Cell{ -1, -1 };
+	};
+
+	// Guerrier loin de l'Archer : sans case à effet, il avance vers lui.
+	BattleMap plain = openMap();
+	Arena arena({ { GUERRIER, { 2, 2 } } }, { { ARCHER, { 2, 13 } } }, plain);
+	arena.playUntilTurnOf(0);
+	Cell usual = destination(plain, arena.state());
+	REQUIRE(usual != Cell{ -1, -1 });
+
+	BattleMap embers = plain;
+	embers.setTurnEffect(usual, 8, 0);
+	Cell avoided = destination(embers, arena.state());
+	CHECK(avoided != Cell{ -1, -1 });
+	CHECK(avoided != usual);
+
+	// Blessé, il fait un détour par une source ; en pleine forme, il l'ignore.
+	BattleMap spring = plain;
+	spring.setTurnEffect({ 3, 3 }, 0, 6);
+	CHECK(destination(spring, arena.state()) != Cell{ 3, 3 });
+	BattleState hurt = arena.state();
+	hurt.findFighter(0)->hp = hurt.findFighter(0)->maxHp / 2;
+	CHECK(destination(spring, hurt) == Cell{ 3, 3 });
+}
+
+TEST_CASE("Achievements reward each feat at the end of the battle")
+{
+	BattleState state;
+	state.phase = BattlePhase::ENDED;
+	state.winnerTeam = 1;
+	state.endReason = EndReason::KO;
+	state.round = 9;
+	Fighter striker;
+	striker.id = 0;
+	striker.team = 1;
+	Fighter healer;
+	healer.id = 1;
+	healer.team = 1;
+	Fighter enemy;
+	enemy.id = 2;
+	enemy.team = 2;
+	enemy.alive = false;
+	state.fighters = { striker, healer, enemy };
+	auto earned = [&state](int id) { return earnedAchievements(state, *state.findFighter(id)); };
+	using Badges = std::vector<std::string>;
+
+	// Un combattant qui n'a rien fait n'obtient rien.
+	CHECK(earned(1).empty());
+
+	Fighter & a = *state.findFighter(0);
+	a.record.kills = 2;
+	a.record.combos = 2;
+	a.record.dealt = 150;
+	a.record.taken = 5;
+	a.record.casts = 6;
+	state.firstBloodFighterId = 0;
+	CHECK(earned(0) == Badges{ "first_blood", "double_ko", "combo_master", "demolisher" });
+	a.record.kills = 1;
+	a.record.combos = 1;
+	a.record.dealt = 149;
+	state.firstBloodFighterId = -1;
+	CHECK(earned(0).empty());
+
+	// Soins et boucliers donnés ; aucun dégât subi en ayant joué.
+	Fighter & h = *state.findFighter(1);
+	h.record.healed = 35;
+	h.record.shielded = 25;
+	h.record.casts = 4;
+	CHECK(earned(1) == Badges{ "guardian_angel", "untouchable" });
+	h.record.taken = 1;
+	CHECK(earned(1) == Badges{ "guardian_angel" });
+
+	// Seul survivant de l'équipe gagnante.
+	h.alive = false;
+	CHECK(earned(0) == Badges{ "last_standing" });
+	CHECK(earned(2).empty());
+
+	// Zone tenue pour 3 points ; victoire en 5 tours ou moins, pas sur une décision de l'organisateur.
+	a.record.zonePoints = 3;
+	state.round = 5;
+	CHECK(earned(0) == Badges{ "last_standing", "zone_keeper", "lightning" });
+	state.endReason = EndReason::ADMIN;
+	CHECK(earned(0) == Badges{ "last_standing", "zone_keeper" });
+
+	// Chaque haut fait a un nom et une description, et un identifiant unique.
+	std::set<std::string> ids;
+	for (const AchievementDef & achievement : ACHIEVEMENTS)
+	{
+		CHECK(findAchievement(achievement.id) == &achievement);
+		CHECK(std::string(achievement.name).size() > 0);
+		CHECK(std::string(achievement.description).size() > 0);
+		ids.insert(achievement.id);
+	}
+	CHECK(ids.size() == ACHIEVEMENT_COUNT);
+	CHECK(findAchievement("inconnu") == nullptr);
 }
 
 TEST_CASE("The MVP has the best record score, the winning team breaking ties")
@@ -850,6 +1036,7 @@ TEST_CASE("Combos boost damage on a marked target and consume the mark when requ
 			if (event["t"] == "combo")
 				combos.push_back(event);
 		}
+		CHECK(engine.getState().findFighter(0)->record.combos == (int)combos.size());
 	};
 
 	std::vector<int> plain, boosted;
@@ -1099,6 +1286,11 @@ TEST_CASE("Holding the zone alone scores a point each round until the target sco
 	CHECK(duel.engine->isOver());
 	CHECK(duel.state().winnerTeam == 1);
 	CHECK((duel.state().endReason == EndReason::OBJECTIVE));
+
+	// Bilan : les 2 points reviennent au Guerrier dans la zone ; victoire en moins de 5 tours.
+	CHECK(duel.state().findFighter(0)->record.zonePoints == 2);
+	CHECK(duel.state().findFighter(1)->record.zonePoints == 0);
+	CHECK(duel.state().findFighter(0)->record.badges == std::vector<std::string>{ "lightning" });
 }
 
 TEST_CASE("A contested zone scores nothing and a decision counts zone points first")
@@ -1276,4 +1468,93 @@ TEST_CASE("Barriere blocks pushes and Lien de vie heals over the next turns")
 	// Lien de vie : soin au début de son tour suivant.
 	arena.playUntilTurnOf(0);
 	CHECK(arena.fighter(0).hp > hp);
+}
+
+TEST_CASE("Spell preview separates what the shield absorbs from the HP lost")
+{
+	Arena arena({ { GUERRIER, { 5, 5 } } }, { { ARCHER, { 5, 6 } } });
+	arena.playUntilTurnOf(0);
+	int taillade = spellIndex(GUERRIER, "taillade");
+
+	BattleState shielded = arena.state();
+	ActiveEffect shield;
+	shield.uid = shielded.nextUid++;
+	shield.type = EffectType::SHIELD;
+	shield.value = 10;
+	shield.remainingTurns = 2;
+	shield.positive = true;
+	Fighter & target = *shielded.findFighter(1);
+	target.effects.push_back(shield);
+	target.shield = 10;
+
+	std::vector<TargetPreview> previews = previewSpell(shielded, arena.map, gameData(), 0, taillade, { 5, 6 });
+	REQUIRE(previews.size() == 1);
+	CHECK(previews[0].minAbsorbed == 10);
+	CHECK(previews[0].maxAbsorbed == 10);
+	CHECK(previews[0].minDamage > 10);
+
+	// Sans bouclier : mêmes dégâts, rien d'absorbé.
+	std::vector<TargetPreview> bare = previewSpell(arena.state(), arena.map, gameData(), 0, taillade, { 5, 6 });
+	REQUIRE(bare.size() == 1);
+	CHECK(bare[0].maxAbsorbed == 0);
+	CHECK(bare[0].minDamage == previews[0].minDamage);
+	CHECK(bare[0].maxDamage == previews[0].maxDamage);
+}
+
+TEST_CASE("Tournament talents add their bonuses and their start-of-fight effects")
+{
+	const GameData & data = gameData();
+	REQUIRE(data.talents.size() == 10);
+	REQUIRE(data.findTalent("garde") != nullptr);
+	CHECK(data.findTalent("inconnu") == nullptr);
+
+	CHECK(validTalentChoice(data, { "garde", "garde", "inconnu", "force", "elan" }, 2) == std::vector<std::string>{ "garde", "force" });
+	std::mt19937 rng(5);
+	std::vector<std::string> random = randomTalentChoice(data, 3, rng);
+	CHECK(random.size() == 3);
+	CHECK(validTalentChoice(data, random, 3) == random);
+	CHECK(randomTalentChoice(data, 0, rng).empty());
+
+	// Guerrier avec Robustesse, Garde et Élan (les doublons et inconnus sont ignorés) ; Archer sans talent.
+	BattleMap map = openMap();
+	map.startCells[1] = { { 2, 2 } };
+	map.startCells[2] = { { 8, 8 } };
+	BattleEngine engine(data, map, 1);
+	engine.addFighter(1, GUERRIER, "A", {}, { "robustesse", "garde", "elan", "garde", "?" });
+	engine.addFighter(2, ARCHER, "B");
+	int baseHp = data.findClass(GUERRIER)->baseStats.get(Stat::MAX_HP);
+	int baseMp = data.findClass(GUERRIER)->baseStats.get(Stat::MP);
+	const Fighter & warrior = *engine.getState().findFighter(0);
+	CHECK(warrior.talents == std::vector<std::string>{ "robustesse", "garde", "elan" });
+	CHECK(warrior.maxHp == baseHp + 15);
+	CHECK(warrior.hp == baseHp + 15);
+	CHECK(warrior.shield == 0);
+
+	engine.startPlacement(0);
+	REQUIRE(engine.setReady(0, true, 0).ok);
+	REQUIRE(engine.setReady(1, true, 0).ok);
+	REQUIRE((engine.getState().phase == BattlePhase::FIGHT));
+	CHECK(warrior.shield == 15);
+	// Un bouclier de talent ne compte pas dans le bilan des boucliers donnés.
+	CHECK(warrior.record.shielded == 0);
+
+	// Élan : +1 PM pendant le premier tour seulement.
+	auto playUntilWarrior = [&engine]() {
+		for (int guard = 0; engine.getState().activeFighterId() != 0; guard++)
+		{
+			REQUIRE(guard < 5);
+			REQUIRE(engine.endTurn(engine.getState().activeFighterId(), 0).ok);
+		}
+	};
+	playUntilWarrior();
+	CHECK(warrior.mp == baseMp + 1);
+	REQUIRE(engine.endTurn(0, 0).ok);
+	playUntilWarrior();
+	CHECK(warrior.mp == baseMp);
+
+	// Les clients reçoivent les talents.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(-1, 0));
+	CHECK(mirror.findFighter(0)->talents == warrior.talents);
 }

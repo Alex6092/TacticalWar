@@ -114,10 +114,10 @@ function renderLeaders(tournament) {
     <td class="rank">${i + 1}</td>
     <td><strong>${esc(p.name)}</strong> <small>${esc(p.class)} · ${esc(teamName(tournament, p.team))}</small></td>
     <td>${p.dealt}</td><td>${p.healed}</td><td>${p.shielded}</td><td>${p.kills}</td>
-    <td class="mvp-count">${p.mvp ? "★ " + p.mvp : ""}</td><td>${p.matches}</td>
+    <td class="mvp-count">${p.mvp ? "★ " + p.mvp : ""}</td><td class="badge-count">${p.badges ? p.badges : ""}</td><td>${p.matches}</td>
   </tr>`).join("");
   return `<table class="leaders">
-    <thead><tr><th>#</th><th>Joueur</th><th>Dégâts</th><th>Soins</th><th>Boucliers</th><th>KO</th><th>MVP</th><th>Matchs</th></tr></thead>
+    <thead><tr><th>#</th><th>Joueur</th><th>Dégâts</th><th>Soins</th><th>Boucliers</th><th>KO</th><th>MVP</th><th>Hauts faits</th><th>Matchs</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -272,15 +272,16 @@ function renderLive(tournament) {
     const label = tournament && battle.match ? tournament.labels[String(battle.match)] : battle.name;
     let body;
     if (!battle.fighters) {
-      body = `<p class="phase-note">Choix des classes...</p>`;
+      body = `<p class="phase-note">${battle.phase === "BAN" ? "Bannissement des classes..." : "Choix des classes..."}</p>`;
     } else {
       const side = (team) => battle.fighters.filter((f) => f.team === team).map((f) => {
         const max = Math.max(1, f.initialMaxHp);
         const hp = Math.max(0, f.hp) / max * 100;
         const shield = Math.min(100 - hp, f.shield / max * 100);
         return `<div class="fighter ${f.alive ? "" : "dead"} ${f.id === battle.active ? "active" : ""}">
-          <div class="fighter-name"><span>${esc(f.name)} <small>${esc(f.className)}</small></span><span>${f.alive ? f.hp : "KO"}</span></div>
+          <div class="fighter-name"><span>${esc(f.name)} <small>${esc(f.className)}</small></span><span>${f.alive ? f.hp : "KO"}${f.alive && f.shield > 0 ? ` <span class="shield-num">+${f.shield}</span>` : ""}</span></div>
           <div class="bar"><span class="hp" style="width:${hp}%"></span><span class="shield" style="left:${hp}%;width:${shield}%"></span></div>
+          ${f.talents && f.talents.length ? `<div class="talents">${f.talents.map(esc).join(" · ")}</div>` : ""}
         </div>`;
       }).join("");
       body = `<div class="battle-teams">
@@ -292,7 +293,11 @@ function renderLive(tournament) {
       </div>`;
     }
     const phase = battle.phase === "PLACEMENT" ? "Placement" : battle.phase === "FIGHT" ? `Tour ${battle.round}` : "";
-    return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}</div>`;
+    // Classes interdites à chaque équipe par le bannissement.
+    const forbidden = battle.forbidden
+      ? `<div class="forbidden">Interdit : ${[0, 1].map((i) => `${esc(battle.teams[i])} <strong>${esc(battle.forbidden[i] || "rien")}</strong>`).join(" · ")}</div>`
+      : "";
+    return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}${forbidden}</div>`;
   }).join("");
 }
 
@@ -312,7 +317,8 @@ function renderRecent(tournament) {
     const winner = b.teams[b.winner - 1] || "";
     const mvp = b.mvp && b.mvp.name
       ? `<div class="mvp"><span class="star">★ MVP</span> <strong>${esc(b.mvp.name)}</strong> <small>${esc(b.mvp.class)}</small>
-          <div class="mvp-stats">${b.mvp.dealt} dégâts · ${b.mvp.healed} soins · ${b.mvp.shielded} boucliers · ${b.mvp.kills} KO</div></div>`
+          <div class="mvp-stats">${b.mvp.dealt} dégâts · ${b.mvp.healed} soins · ${b.mvp.shielded} boucliers · ${b.mvp.kills} KO</div>
+          ${b.mvp.badges && b.mvp.badges.length ? `<div class="mvp-badges">${b.mvp.badges.map(esc).join(" · ")}</div>` : ""}</div>`
       : "";
     return `<div class="recent-battle">
       <div class="battle-head"><span>${esc(label || "")}</span><span>${esc(REASONS[b.reason] || "")}</span></div>

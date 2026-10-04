@@ -17,6 +17,7 @@ namespace
 	{
 		bool cast = false;
 		std::map<int, int> damage;
+		std::map<int, int> absorbed;
 		std::map<int, int> heal;
 		std::map<int, int> shield;
 		std::set<int> dead;
@@ -67,7 +68,17 @@ namespace
 			return outcome;
 		// Un lancer qui épuise les PA et les PM terminerait le tour et ferait jouer le suivant.
 		caster->mp = std::max(caster->mp, 1);
+		// Effets posés par le sort : identifiants après ceux déjà en place. L'état miroir des clients ne
+		// suit pas le compteur du serveur : il est recalé sur les effets et glyphes existants.
 		int firstUid = copy.nextUid;
+		for (const Fighter & fighter : copy.fighters)
+		{
+			for (const ActiveEffect & effect : fighter.effects)
+				firstUid = std::max(firstUid, effect.uid + 1);
+		}
+		for (const Glyph & glyph : copy.glyphs)
+			firstUid = std::max(firstUid, glyph.uid + 1);
+		copy.nextUid = firstUid;
 
 		BattleEngine engine(data, map, copy, 1);
 		engine.setRollMode(mode);
@@ -83,6 +94,7 @@ namespace
 			if (type == "damage")
 			{
 				outcome.damage[fighterId] += event.value("amount", 0);
+				outcome.absorbed[fighterId] += event.value("absorbed", 0);
 				if (event.value("kind", std::string()) == "collision")
 					addNote(outcome, fighterId, "Collision");
 			}
@@ -209,6 +221,8 @@ std::vector<TargetPreview> tw::battle::previewSpell(const BattleState & state, c
 		preview.fighterId = id;
 		preview.minDamage = std::min(valueOf(low.damage, id), valueOf(high.damage, id));
 		preview.maxDamage = std::max(valueOf(low.damage, id), valueOf(high.damage, id));
+		preview.minAbsorbed = std::min(valueOf(low.absorbed, id), valueOf(high.absorbed, id));
+		preview.maxAbsorbed = std::max(valueOf(low.absorbed, id), valueOf(high.absorbed, id));
 		preview.minHeal = std::min(valueOf(low.heal, id), valueOf(high.heal, id));
 		preview.maxHeal = std::max(valueOf(low.heal, id), valueOf(high.heal, id));
 		preview.minShield = std::min(valueOf(low.shield, id), valueOf(high.shield, id));

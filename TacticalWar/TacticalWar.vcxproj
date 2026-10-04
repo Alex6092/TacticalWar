@@ -158,6 +158,11 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TutorialScript.cpp" />
+    <ClCompile Include="TutorialScreen.cpp" />
+    <ClCompile Include="SpellPicker.cpp" />
+    <ClCompile Include="TalentPicker.cpp" />
+    <ClCompile Include="BattleEventView.cpp" />
     <ClCompile Include="LocalBattleScreen.cpp" />
     <ClCompile Include="TrainingScreen.cpp" />
     <ClCompile Include="TrainingSetupScreen.cpp" />
@@ -226,6 +231,11 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="TutorialScript.h" />
+    <ClInclude Include="TutorialScreen.h" />
+    <ClInclude Include="SpellPicker.h" />
+    <ClInclude Include="TalentPicker.h" />
+    <ClInclude Include="BattleEventView.h" />
     <ClInclude Include="LocalBattleScreen.h" />
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />

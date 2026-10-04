@@ -42,6 +42,8 @@ public:
 		int healed = 0;
 		int shielded = 0;
 		int kills = 0;
+		sf::String badges;			// Hauts faits (noms), sous la ligne
+		sf::String badgeDetails;	// Leurs descriptions, au survol
 	};
 	void showEnd(const sf::String & title, const sf::String & details, bool victory, const std::vector<EndRow> & rows);
 
@@ -49,6 +51,8 @@ public:
 	void setSpectator(const sf::String & banner);
 	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
 	void showLeaveButton(const sf::String & text);
+	// Secondes restantes du placement et des tours (masquées quand il n'y a pas de minuteur : tutoriel).
+	void showTimers(bool shown) { timersShown = shown; }
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
 	void setEndButtonText(const sf::String & text);
 
@@ -60,7 +64,13 @@ private:
 		tgui::Panel::Ptr panel;
 		tgui::Label::Ptr name;
 		tgui::Label::Ptr life;
+		tgui::Label::Ptr shield;	// "+20" en bleu après les PV
+		tgui::Label::Ptr stats;		// PA et PM
 		tgui::Label::Ptr details;
+		// Barre de vie : PV en rouge, bouclier en bleu à la suite.
+		tgui::Panel::Ptr barBack;
+		tgui::Panel::Ptr barLife;
+		tgui::Panel::Ptr barShield;
 	};
 
 	struct SpellButton
@@ -105,6 +115,7 @@ private:
 	tgui::Button::Ptr replayButton;
 
 	bool spectator;
+	bool timersShown = true;
 	tgui::Label::Ptr bannerLabel;
 	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;

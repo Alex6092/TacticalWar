@@ -1,5 +1,7 @@
 ﻿#include "BattleSession.h"
 
+#include <algorithm>
+
 #include <EnvironmentMap.h>
 
 #include <random>
@@ -36,14 +38,55 @@ tw::Player * BattleSession::playerOfFighter(int fighterId) const
 	return fighterId >= 0 && fighterId < (int)participants.size() ? participants[fighterId] : NULL;
 }
 
-bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells)
+int BattleSession::teamOf(tw::Player * player) const
+{
+	if (fighterIdOf(player) < 0)
+		return 0;
+	return match->playerIsInTeam1(player) ? 1 : 2;
+}
+
+int BattleSession::talentSlots(tw::Player * player) const
+{
+	int team = teamOf(player);
+	return team != 0 ? talentSlotsByTeam[team] : 0;
+}
+
+void BattleSession::startBanPhase(std::int64_t deadline)
+{
+	if (phase != Phase::CLASS_SELECTION || banPhase)
+		return;
+	phase = Phase::BAN;
+	banPhase = true;
+	banDeadline = deadline;
+}
+
+bool BattleSession::ban(tw::Player * player, int classId)
+{
+	int team = teamOf(player);
+	if (phase != Phase::BAN || team == 0 || bans[team] != 0 || data.findClass(classId) == nullptr)
+		return false;
+	bans[team] = classId;
+	return true;
+}
+
+void BattleSession::endBanPhase(std::int64_t deadline)
+{
+	if (phase != Phase::BAN)
+		return;
+	phase = Phase::CLASS_SELECTION;
+	classSelectionDeadline = deadline;
+}
+
+bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells, const std::vector<std::string> & talents)
 {
 	const tw::battle::ClassDef * classDef = data.findClass(classId);
-	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || classDef == nullptr)
+	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || classDef == nullptr
+		|| classId == forbiddenClass(teamOf(player)))
 		return false;
 
 	classes[player] = classId;
 	spellChoices[player] = tw::battle::validSpellChoice(*classDef, spells);
+	talentChoices[player] = tw::battle::validTalentChoice(data, talents, talentSlots(player));
 	return true;
 }
 
@@ -70,16 +113,36 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 	{
 		tw::Player * player = participants[i];
 		// Classe (et sorts) non choisis à temps : classe au hasard, sorts par défaut.
+		int team = teamOf(player);
 		int classId = chosenClass(player);
 		std::vector<int> spells;
 		if (classId == 0)
-			classId = data.classes[rng() % data.classes.size()].id;
+		{
+			// Au hasard parmi les classes que l'adversaire n'a pas interdites.
+			std::vector<int> allowed;
+			for (const tw::battle::ClassDef & classDef : data.classes)
+			{
+				if (classDef.id != forbiddenClass(team))
+					allowed.push_back(classDef.id);
+			}
+			classId = allowed[rng() % allowed.size()];
+		}
 		else
+		{
 			spells = spellChoices[player];
+		}
 
-		int team = match->playerIsInTeam1(player) ? 1 : 2;
 		auto name = names.find(player);
-		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells);
+		// Talents : ceux choisis, puis des talents au hasard pour les emplacements restés vides.
+		std::vector<std::string> talents = talentChoices[player];
+		for (const std::string & id : tw::battle::randomTalentChoice(data, (int)data.talents.size(), rng))
+		{
+			if ((int)talents.size() >= talentSlots(player))
+				break;
+			if (std::find(talents.begin(), talents.end(), id) == talents.end())
+				talents.push_back(id);
+		}
+		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells, talents);
 	}
 
 	if (zonePoints > 0)

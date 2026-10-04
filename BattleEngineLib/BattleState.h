@@ -45,6 +45,12 @@ namespace tw
 			bool blocksSight(const Cell & cell) const;
 			void setCell(const Cell & cell, bool walkable, bool blocksSight);
 
+			// Effet de la case au début du tour de qui s'y trouve (braises, source) : 0 si aucun.
+			int turnDamage(const Cell & cell) const;
+			int turnHeal(const Cell & cell) const;
+			void setTurnEffect(const Cell & cell, int damage, int heal);
+			bool hasTurnEffects() const { return !turnEffects.empty(); }
+
 			// Cellules de départ de chaque équipe (1 et 2).
 			std::vector<Cell> startCells[3];
 			// Zone à tenir peinte dans l'éditeur (vide : zone calculée, voir objectiveZone).
@@ -54,6 +60,7 @@ namespace tw
 			int width = 0;
 			int height = 0;
 			std::vector<std::uint8_t> flags;
+			std::map<int, std::pair<int, int>> turnEffects;	// Index de case -> dégâts, soins
 		};
 
 		struct ActiveEffect
@@ -84,6 +91,10 @@ namespace tw
 			int shielded = 0;	// Boucliers donnés
 			int kills = 0;		// Ennemis mis hors combat
 			int casts = 0;		// Sorts lancés
+			int combos = 0;		// Combinaisons déclenchées
+			int zonePoints = 0;	// Points de zone marqués en étant dans la zone
+			// Hauts faits (identifiants de Achievements.h), décernés à la fin du combat.
+			std::vector<std::string> badges;
 		};
 
 		struct Fighter
@@ -106,6 +117,8 @@ namespace tw
 			// Sorts emportés : indices dans les sorts de la classe, dans l'ordre de la barre de sorts
 			// (emplacements 0 à 3). Vide (ancien instantané) : les sorts de la classe dans l'ordre.
 			std::vector<int> spells;
+			// Talents de tournoi (identifiants), déjà ajoutés aux caractéristiques de base.
+			std::vector<std::string> talents;
 			std::map<std::string, int> cooldowns;			// sort -> tours restants
 			std::map<std::string, int> castsThisTurn;
 			std::map<std::string, std::map<int, int>> castsOnTarget;	// sort -> combattant -> lancers ce tour
@@ -171,6 +184,7 @@ namespace tw
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
 			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
+			int firstBloodFighterId = -1;	// Auteur du premier KO du combat
 			ZoneState zone;
 			int nextUid = 1;
 
