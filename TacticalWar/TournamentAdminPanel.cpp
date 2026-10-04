@@ -61,6 +61,13 @@ namespace
 		if (reason == "BYE") return L"exempt";
 		return fromServerText(reason);
 	}
+
+	// Ouvre une page du site web du serveur (port HTTP 8080) dans le navigateur.
+	void openWebPage(const std::string & page)
+	{
+		std::string url = "http://" + ClientConfig::get().serverHost + ":8080/" + page;
+		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	}
 }
 
 TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & font)
@@ -241,10 +248,15 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 		if (selectedMatchId() != 0)
 			send("UX", { { "id", selectedId }, { "match", selectedMatchId() } });
 	});
+	// Pages web du serveur, ouvertes dans le navigateur.
 	webButton = createButton(L"Vue projetée");
-	webButton->connect("pressed", []() {
-		std::string url = "http://" + ClientConfig::get().serverHost + ":8080/";
-		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	webButton->connect("pressed", []() { openWebPage(""); });
+	diplomasButton = createButton(L"Diplômes");
+	diplomasButton->connect("pressed", [this]() {
+		if (selectedId != 0)
+			openWebPage("diplomes.html?tournament=" + std::to_string(selectedId));
+		else
+			status->setText(L"Sélectionnez un tournoi.");
 	});
 	watchButton = createButton(L"Regarder");
 	watchButton->connect("pressed", [this]() {
@@ -263,7 +275,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 		}
 		status->setText(L"Sélectionnez un match en cours.");
 	});
-	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton })
+	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton, diplomasButton })
 		group->add(button);
 
 	standings = createLabel("", 13);
@@ -397,9 +409,9 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float right = margin + 380 + margin;
 	float rightWidth = width - right - margin;
 	header->setPosition(right, top);
-	float buttonWidth = (rightWidth - 60) / 7;
-	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton };
-	for (int i = 0; i < 7; i++)
+	float buttonWidth = (rightWidth - 50) / 6;
+	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton };
+	for (int i = 0; i < 6; i++)
 	{
 		buttons[i]->setPosition(right + i * (buttonWidth + 10), top + 32);
 		buttons[i]->setSize(buttonWidth, 32);
@@ -412,6 +424,15 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	standings->setPosition(right, height - margin - standingsHeight - 30);
 	standings->setSize(rightWidth, standingsHeight);
 	status->setPosition(right, height - margin - 24);
+
+	// Pages web : à droite de la ligne d'état.
+	tgui::Button::Ptr webButtons[] = { webButton, diplomasButton };
+	const float webWidth = 140;
+	for (int i = 0; i < 2; i++)
+	{
+		webButtons[i]->setPosition(right + rightWidth - (2 - i) * webWidth - (1 - i) * 10, height - margin - 26);
+		webButtons[i]->setSize(webWidth, 26);
+	}
 }
 
 void TournamentAdminPanel::send(const std::string & op, const nlohmann::json & body)

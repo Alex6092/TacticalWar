@@ -56,4 +56,12 @@
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
 | Les émotes des joueurs gênent | Mettre `"emotes": false` dans `server.json`, puis relancer le serveur. |
 
-Sauvegarder le dossier `data\` du serveur après l'événement, puis supprimer les fiches d'identifiants.
+## Après le tournoi
+
+1. La page projetée passe sur la **cérémonie** : podium, MVP du tournoi, hauts faits les plus rares.
+2. **Diplômes** : onglet Tournoi, sélectionner le tournoi, bouton « Diplômes » (ou
+   `http://<IP>:8080/diplomes.html?tournament=<numéro>`). Une page A4 par joueur : équipe et classement,
+   matchs joués et gagnés, bilan, classes jouées, hauts faits et titres de MVP. Bouton « Imprimer »
+   (ou impression vers PDF) ; les en-têtes et pieds de page du navigateur peuvent être désactivés dans
+   ses options d'impression.
+3. Sauvegarder le dossier `data\` du serveur, puis supprimer les fiches d'identifiants.
