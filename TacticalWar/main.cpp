@@ -32,6 +32,11 @@ int main(int argc, char** argv)
 		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
+		if (config.classScreenSolo)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false}");
+			screen->onMessageReceived("PO4");
+		}
 		if (config.classScreenMate > 0)
 		{
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": " + std::to_string(config.classScreenMate)
@@ -52,6 +57,7 @@ int main(int argc, char** argv)
 	{
 		tw::TrainingSettings & settings = tw::TrainingSettings::current();
 		settings.duo = !config.trainingDuel;
+		settings.controlAlly = config.trainingDuoControl;
 		settings.playerClass = config.trainingClass;
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;

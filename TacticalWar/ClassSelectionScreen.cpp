@@ -261,7 +261,7 @@ void ClassSelectionScreen::refreshMate()
 		return;
 
 	mateTitle->setText(L"Votre coéquipier : " + mateName);
-	sf::String status = !matePresent ? sf::String(L"Absent pour le moment.")
+	sf::String status = !matePresent ? sf::String(L"Absent pour le moment : vous jouerez aussi son personnage.")
 		: mateLocked ? L"A choisi : " + classLabel(mateClass) + L" (verrouillé)"
 		: mateViewing != 0 ? L"Regarde : " + classLabel(mateViewing)
 		: sf::String(L"Choisit sa classe...");
@@ -310,9 +310,33 @@ void ClassSelectionScreen::refreshLock()
 	}
 	bool forbidden = forbiddenClass != 0 && currentClassId() == forbiddenClass;
 	bool complete = spellPicker->isComplete() && talentPicker->isComplete();
+	if (forMate)
+	{
+		lockButton->setEnabled(complete && !forbidden && !mateSent);
+		lockButton->setText(mateSent ? L"Choix envoyé" : forbidden ? L"Interdite par l'adversaire"
+			: complete ? L"Verrouiller pour " + mateName : !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez ses talents");
+		return;
+	}
 	lockButton->setEnabled(!locked && complete && !forbidden);
-	lockButton->setText(locked ? L"Choix verrouillé" : forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
+	lockButton->setText(locked ? (mateLocked && !matePresent ? sf::String(L"Choix verrouillés pour vous deux") : sf::String(L"Choix verrouillé"))
+		: forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
 		: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez vos talents");
+}
+
+void ClassSelectionScreen::updateMatePick()
+{
+	// Coéquipier absent sans classe : après son propre choix, le joueur choisit aussi pour lui.
+	bool needed = locked && mateKnown && !matePresent && !mateLocked && !banMode;
+	if (needed == forMate)
+		return;
+	forMate = needed;
+	mateSent = false;
+	spellPicker->setLocked(!forMate);
+	talentPicker->setLocked(!forMate);
+	previousButton->setVisible(forMate);
+	nextButton->setVisible(forMate);
+	refreshBan();
+	refreshLock();
 }
 
 void ClassSelectionScreen::refreshBan()
@@ -326,7 +350,8 @@ void ClassSelectionScreen::refreshBan()
 	classIcon->getRenderer()->setOpacity(forbidden ? 0.3f : 1.f);
 	characterPicture->setVisible(!forbidden);
 
-	sf::String subtitleText = banMode ? L"Bannissement" : L"Sélection de la classe";
+	sf::String subtitleText = banMode ? sf::String(L"Bannissement") : forMate ? L"Personnage de " + mateName
+		: sf::String(L"Sélection de la classe");
 	if (subtitle.getString() != subtitleText)
 	{
 		subtitle.setString(subtitleText);
@@ -476,6 +501,15 @@ void ClassSelectionScreen::update(float deltatime)
 		refreshLock();
 	}
 
+	if (readyToLock && forMate)
+	{
+		// Choix pour le coéquipier absent : il sera joué par ce joueur pendant le combat.
+		readyToLock = false;
+		mateSent = true;
+		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", currentClassId() }, { "spells", spellPicker->getChosen() },
+			{ "talents", talentPicker->getChosen() }, { "teammate", true } }).dump());
+		refreshLock();
+	}
 	if (readyToLock)
 	{
 		readyToLock = false;
@@ -529,6 +563,7 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		previousButton->setVisible(false);
 		nextButton->setVisible(false);
 		refreshLock();
+		updateMatePick();
 	}
 	else if (m.substring(0, 2) == "PT")
 	{
@@ -543,6 +578,8 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 			mateLocked = mate.value("locked", false);
 			matePresent = mate.value("present", true);
 			refreshMate();
+			updateMatePick();
+			refreshLock();
 		}
 	}
 	else if (m.substring(0, 2) == "BB")

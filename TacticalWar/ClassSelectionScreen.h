@@ -21,6 +21,8 @@ class PictureCharacterView;
 // - en bas : le bouton de verrouillage, actif quand les sorts et les talents sont complets.
 // Certains matchs de tournoi commencent par un bannissement : le même écran sert à choisir la classe
 // interdite à l'adversaire (bandeau au-dessus du bouton, qui devient « Bannir cette classe »).
+// Coéquipier absent : après son propre choix, le joueur choisit aussi le personnage de son coéquipier,
+// qu'il jouera pendant le combat (seconde étape, PC{..., "teammate": true}).
 class ClassSelectionScreen : public tw::Screen, ServerMessageListener
 {
 public:
@@ -42,6 +44,7 @@ private:
 	void refreshLock();
 	void refreshBan();
 	void refreshMate();
+	void updateMatePick();
 	sf::String classLabel(int classId) const;
 	int currentClassId() const;
 
@@ -100,4 +103,7 @@ private:
 	bool mateLocked = false;
 	bool matePresent = false;
 	int viewSent = -1;
+	// Seconde étape : choix pour le coéquipier absent (envoyé, puis verrouillé).
+	bool forMate = false;
+	bool mateSent = false;
 };

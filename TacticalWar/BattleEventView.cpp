@@ -106,8 +106,9 @@ float BattleEventView::onTurn(const Context & c)
 {
 	if (c.fighter == NULL)
 		return 0;
-	bool mine = c.fighterId == screen.you;
-	sf::String text = mine ? sf::String(L"À vous de jouer !") : L"Tour de " + fromServerText(c.fighter->name);
+	bool mine = screen.controls(c.fighterId);
+	sf::String text = c.fighterId == screen.you ? sf::String(L"À vous de jouer !")
+		: mine ? L"À vous de jouer " + fromServerText(c.fighter->name) + L" !" : L"Tour de " + fromServerText(c.fighter->name);
 	screen.hud->showMessage(text, mine ? sf::Color(120, 255, 120) : sf::Color(255, 220, 80), 1.2f);
 	screen.hud->log(L"--- Tour " + num(screen.shown.round) + L" : " + fromServerText(c.fighter->name), sf::Color(255, 220, 80));
 	screen.selectSpell(-1);
@@ -123,7 +124,9 @@ float BattleEventView::onTimeout(const Context & c)
 float BattleEventView::onConnection(const Context & c)
 {
 	bool connected = c.event.value("connected", true);
-	screen.hud->log(screen.fighterName(c.fighterId) + (connected ? L" est revenu." : L" s'est déconnecté."), sf::Color(200, 200, 200));
+	bool piloted = c.event.value("piloted", false);
+	screen.hud->log(screen.fighterName(c.fighterId) + (connected ? L" est revenu."
+		: piloted ? L" est absent : son coéquipier le joue." : L" s'est déconnecté."), sf::Color(200, 200, 200));
 	return 0;
 }
 

@@ -51,6 +51,7 @@ public:
 	int trainingClass = 0;
 	int trainingMap = 0;
 	bool trainingDuel = false;
+	bool trainingDuoControl = false;
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
 	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
@@ -64,6 +65,8 @@ public:
 	int classScreenForbidden = 0;
 	// Coéquipier simulé, qui a verrouillé cette classe (--class-screen-mate <id>, 0 : aucun).
 	int classScreenMate = 0;
+	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
+	bool classScreenSolo = false;
 	int trainingTalents = 0;
 
 	static ClientConfig & get();

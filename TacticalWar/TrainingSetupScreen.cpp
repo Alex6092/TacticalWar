@@ -55,8 +55,9 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 
 	format = addRow(L"Format");
 	format->addItem(L"2 contre 2 (avec un allié IA)", "2");
+	format->addItem(L"2 contre 2 (vous jouez les deux)", "2c");
 	format->addItem(L"1 contre 1", "1");
-	format->setSelectedItemById(settings.duo ? "2" : "1");
+	format->setSelectedItemById(!settings.duo ? "1" : settings.controlAlly ? "2c" : "2");
 	format->connect("ItemSelected", [this]() { refresh(); });
 
 	playerClass = addClassRow(L"Votre classe", settings.playerClass);
@@ -195,7 +196,7 @@ int TrainingSetupScreen::selectedId(const tgui::ComboBox::Ptr & box)
 void TrainingSetupScreen::refresh()
 {
 	// En 1 contre 1, pas d'allié ni de second adversaire.
-	bool duo = format->getSelectedItemId() == "2";
+	bool duo = format->getSelectedItemId() != "1";
 	allyClass->setEnabled(duo);
 	enemyClasses[1]->setEnabled(duo);
 	enemyClasses[0]->setEnabled(true);
@@ -234,7 +235,8 @@ void TrainingSetupScreen::refreshPlay()
 void TrainingSetupScreen::save()
 {
 	TrainingSettings & settings = TrainingSettings::current();
-	settings.duo = format->getSelectedItemId() == "2";
+	settings.duo = format->getSelectedItemId() != "1";
+	settings.controlAlly = format->getSelectedItemId() == "2c";
 	settings.playerClass = selectedId(playerClass);
 	settings.allyClass = selectedId(allyClass);
 	settings.enemyClasses[0] = selectedId(enemyClasses[0]);

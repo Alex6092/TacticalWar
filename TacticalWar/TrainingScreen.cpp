@@ -63,7 +63,8 @@ int TrainingScreen::chooseMap(int requested)
 }
 
 TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & settings)
-	: LocalBattleScreen(gui, chooseMap(settings.mapId)), settings(settings), replay(false), replayRemaining(0)
+	: LocalBattleScreen(gui, chooseMap(settings.mapId)), settings(settings), replay(false), replayRemaining(0),
+	autoRng(std::random_device{}())
 {
 	timers = true;
 	botOptions.mistakePercent = settings.easy ? EASY_MISTAKE_PERCENT : 0;
@@ -104,10 +105,12 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	std::unique_ptr<battle::BattleEngine> created(new battle::BattleEngine(data, map, rng()));
 	int playerClass = pick(settings.playerClass);
 	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents);
+	bool allyControlled = settings.duo && settings.controlAlly;
 	if (settings.duo)
 	{
 		int allyClass = pick(settings.allyClass);
-		created->addFighter(1, allyClass, u8"Allié (IA)", aiSpells(allyClass), aiTalents());
+		created->addFighter(1, allyClass, allyControlled ? u8"Allié (vous)" : u8"Allié (IA)",
+			allyControlled ? playerSpells(allyClass) : aiSpells(allyClass), aiTalents());
 	}
 	int enemyClass = pick(settings.enemyClasses[0]);
 	created->addFighter(2, enemyClass, settings.duo ? u8"Adversaire 1" : u8"Adversaire", aiSpells(enemyClass), aiTalents());
@@ -123,10 +126,20 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	// Les combattants de l'IA se placent au hasard sur les cases de départ de leur équipe, puis sont prêts.
 	for (const battle::Fighter & fighter : created->getState().fighters)
 	{
-		if (fighter.id != 0 || settings.autoplay)
+		if (fighter.id != 0)
 			bots.insert(fighter.id);
 	}
-	for (int id : bots)
+	// Allié joué par le joueur : placé automatiquement, puis piloté comme le personnage d'un coéquipier absent.
+	// Démonstration : le personnage du joueur est placé lui aussi.
+	std::set<int> autoPlaced = bots;
+	if (settings.autoplay)
+		autoPlaced.insert(0);
+	if (allyControlled)
+	{
+		bots.erase(1);
+		created->setPiloted(1, true, nowMs);
+	}
+	for (int id : autoPlaced)
 	{
 		const battle::Fighter * fighter = created->getState().findFighter(id);
 		std::vector<battle::Cell> cells = { fighter->position };
@@ -148,8 +161,51 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	hud->showLeaveButton(L"Quitter");
 }
 
+void TrainingScreen::playAsPlayer(float deltatime)
+{
+	if (!engine || !isInteractive() || !idle() || awaitingServer)
+	{
+		autoWait = 0;
+		return;
+	}
+	const battle::BattleState & state = engine->getState();
+	int turn = state.round * 100 + state.turnIndex;
+	if (turn != autoTurn)
+	{
+		autoTurn = turn;
+		autoActions = 0;
+	}
+	autoWait += deltatime;
+	if (autoWait < botDelay)
+		return;
+	autoWait = 0;
+
+	// Au plus 12 actions par tour, comme l'IA des adversaires.
+	battle::BotAction action;
+	if (autoActions++ < 12)
+		action = battle::chooseBotAction(truth, map, engine->getData(), actor(), autoRng, botOptions);
+	if (action.kind == battle::BotAction::Kind::CAST)
+	{
+		sendAction("CL", { { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } });
+	}
+	else if (action.kind == battle::BotAction::Kind::MOVE)
+	{
+		nlohmann::json path = nlohmann::json::array();
+		for (const battle::Cell & cell : action.path)
+			path.push_back(nlohmann::json::array({ cell.x, cell.y }));
+		sendAction("Cm", { { "path", path } });
+	}
+	else
+	{
+		sendAction("Ct", nlohmann::json::object());
+	}
+}
+
 void TrainingScreen::update(float deltatime)
 {
+	if (settings.autoplay)
+		playAsPlayer(deltatime);
+
 	if (replayRemaining > 0)
 	{
 		replayRemaining -= deltatime;

@@ -93,6 +93,22 @@ ne voient rien de ces choix.
 Messages : `PV{"class"}` (classe regardée) et `PT{"name", "class", "viewing", "locked", "present"}`,
 relayé aux seuls coéquipiers.
 
+## Coéquipier absent : un joueur, deux personnages
+
+Si l'un des deux joueurs d'une équipe est absent (jamais connecté, ou déconnecté), son coéquipier joue
+les deux personnages :
+- **choix de classe** : après avoir verrouillé son choix, il choisit aussi celui de son coéquipier
+  (« Personnage de <nom> »). Sans choix, la classe de l'absent est tirée au hasard ;
+- **combat** : le personnage de l'absent est « piloté ». À son tour (« À vous de jouer <nom> ! »), la
+  barre de sorts, la visée et les déplacements sont les siens, avec un tour complet (au lieu des 5 s
+  d'un joueur déconnecté) ;
+- si l'absent revient, il reprend la main sur son personnage ;
+- une équipe entièrement absente perd toujours par forfait.
+
+À l'entraînement, le format « 2 contre 2 (vous jouez les deux) » fait de même avec l'allié
+(`--training-duo-control`). Avec `--training-autoplay`, l'ordinateur joue les personnages du joueur
+en passant par les mêmes commandes qu'un joueur.
+
 ## Talents de tournoi
 
 Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour toutes les classes :

@@ -87,6 +87,10 @@ namespace tw
 		// C'est le tour du joueur (état de référence et état affiché) : il peut déjà choisir un sort
 		// pendant une animation ; viser et agir attendent isInteractive().
 		bool isMyTurn() const;
+		// Combattants que le joueur fait agir : le sien, et celui de son coéquipier absent qu'il pilote.
+		bool controls(int fighterId) const;
+		// Combattant joué en ce moment : le combattant actif s'il est contrôlé par le joueur, sinon le sien.
+		int actor() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
 		// Action de jeu du joueur (une seule à la fois, en attendant la réponse du serveur).

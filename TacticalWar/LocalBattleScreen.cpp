@@ -81,18 +81,18 @@ void LocalBattleScreen::sendToServer(const std::string & op, const json & body)
 		onPlayerAction();
 		if (op == "CL")
 		{
-			result = engine->cast(you, body.value("slot", -1), { body.value("x", 0), body.value("y", 0) }, nowMs);
+			result = engine->cast(actor(), body.value("slot", -1), { body.value("x", 0), body.value("y", 0) }, nowMs);
 		}
 		else if (op == "Cm")
 		{
 			std::vector<battle::Cell> path;
 			for (const json & cell : body.value("path", json::array()))
 				path.push_back({ cell.at(0).get<int>(), cell.at(1).get<int>() });
-			result = engine->move(you, path, nowMs);
+			result = engine->move(actor(), path, nowMs);
 		}
 		else if (op == "Ct")
 		{
-			result = engine->endTurn(you, nowMs);
+			result = engine->endTurn(actor(), nowMs);
 		}
 		else if (op == "CP")
 		{

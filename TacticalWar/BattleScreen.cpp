@@ -237,7 +237,7 @@ void BattleScreen::update(float deltatime)
 	if (hasSnapshot)
 	{
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
-		hud->refresh(shown, ClientGameData::get().data(), you, hoveredFighter, selectedSpell, isMyTurn(), remaining);
+		hud->refresh(shown, ClientGameData::get().data(), actor(), hoveredFighter, selectedSpell, isMyTurn(), remaining);
 		refreshPreview();
 	}
 
@@ -726,13 +726,30 @@ void BattleScreen::leave()
 bool BattleScreen::isInteractive() const
 {
 	return hasSnapshot && !awaitingServer && truth.phase == battle::BattlePhase::FIGHT
-		&& truth.activeFighterId() == you && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
+		&& controls(truth.activeFighterId()) && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
 }
 
 bool BattleScreen::isMyTurn() const
 {
-	return hasSnapshot && mode == Mode::PLAYER && truth.phase == battle::BattlePhase::FIGHT && truth.activeFighterId() == you
-		&& shown.phase == battle::BattlePhase::FIGHT && shown.activeFighterId() == you;
+	return hasSnapshot && mode == Mode::PLAYER && truth.phase == battle::BattlePhase::FIGHT && controls(truth.activeFighterId())
+		&& shown.phase == battle::BattlePhase::FIGHT && shown.activeFighterId() == truth.activeFighterId();
+}
+
+bool BattleScreen::controls(int fighterId) const
+{
+	if (mode != Mode::PLAYER || fighterId < 0)
+		return false;
+	if (fighterId == you)
+		return true;
+	const battle::Fighter * fighter = truth.findFighter(fighterId);
+	const battle::Fighter * me = truth.findFighter(you);
+	return fighter != NULL && me != NULL && fighter->piloted && fighter->team == me->team;
+}
+
+int BattleScreen::actor() const
+{
+	int active = truth.activeFighterId();
+	return truth.phase == battle::BattlePhase::FIGHT && active != you && controls(active) ? active : you;
 }
 
 bool BattleScreen::isMouseOverHud() const
@@ -761,7 +778,7 @@ void BattleScreen::selectSpell(int slot)
 	if (slot < 0 || !isMyTurn())
 		return;
 
-	const battle::Fighter * me = truth.findFighter(you);
+	const battle::Fighter * me = truth.findFighter(actor());
 	const battle::SpellDef * spell = me != NULL ? battle::spellOf(ClientGameData::get().data(), *me, slot) : NULL;
 	if (spell == NULL)
 		return;
@@ -829,7 +846,7 @@ void BattleScreen::showPing(int fighterId, const battle::Cell & cell)
 void BattleScreen::refreshPreview()
 {
 	colorator->clearPreview();
-	const battle::Fighter * me = truth.findFighter(you);
+	const battle::Fighter * me = truth.findFighter(actor());
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
 	hud->setHint("");
 	const tw::battle::GameData & data = ClientGameData::get().data();
@@ -856,7 +873,7 @@ void BattleScreen::refreshPreview()
 		// Combattant survolé : où il pourra aller à son prochain tour (orange pour un ennemi, turquoise
 		// pour un allié). Pendant son propre tour, le joueur voit déjà ses déplacements possibles.
 		const battle::Fighter * hovered = truth.findFighter(hoveredFighter);
-		if (hovered != NULL && hovered->alive && truth.phase == battle::BattlePhase::FIGHT && (hovered->id != you || !isInteractive()))
+		if (hovered != NULL && hovered->alive && truth.phase == battle::BattlePhase::FIGHT && (me == NULL || hovered->id != me->id || !isInteractive()))
 		{
 			bool enemy = me == NULL || hovered->team != me->team;
 			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
@@ -996,6 +1013,8 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 	const battle::Fighter * me = truth.findFighter(you);
 	if (me == NULL)
 		return;
+	// Déplacement et sorts : pour le combattant joué (le sien, ou celui de son coéquipier absent).
+	const battle::Fighter * acting = truth.findFighter(actor());
 
 	// Alt+clic : signal pour son équipe.
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) || sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
@@ -1026,7 +1045,7 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 	if (colorator->isReachable(cell))
 	{
 		json path = json::array();
-		for (const battle::Cell & step : battle::findPath(truth, map, *me, cell))
+		for (const battle::Cell & step : battle::findPath(truth, map, *acting, cell))
 			path.push_back(json::array({ step.x, step.y }));
 		sendAction("Cm", { { "path", path } });
 	}

@@ -166,6 +166,11 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 			training = trainingStart = true;
 			trainingMap = std::atoi(argv[++i]);
 		}
+		else if (arg == "--training-duo-control")
+		{
+			training = trainingStart = true;
+			trainingDuoControl = true;
+		}
 		else if (arg == "--training-1v1")
 		{
 			training = trainingStart = true;
@@ -192,6 +197,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--class-screen-ban" && hasValue)
 		{
 			classScreenBan = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-solo")
+		{
+			classScreenSolo = true;
 		}
 		else if (arg == "--class-screen-mate" && hasValue)
 		{

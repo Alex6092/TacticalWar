@@ -13,6 +13,8 @@ namespace tw
 	{
 		// 2 contre 2 (le joueur et un allié joué par l'IA), sinon 1 contre 1.
 		bool duo = true;
+		// En 2 contre 2 : le joueur joue aussi son allié (comme un joueur dont le coéquipier est absent).
+		bool controlAlly = false;
 		// Classes (0 : au hasard).
 		int playerClass = 0;
 		int allyClass = 0;
@@ -54,10 +56,17 @@ namespace tw
 
 	private:
 		static int chooseMap(int requested);
+		// Démonstration : l'IA choisit l'action du personnage joué (le sien ou l'allié piloté), envoyée
+		// comme par un joueur (mêmes messages qu'un clic).
+		void playAsPlayer(float deltatime);
 
 		TrainingSettings settings;
 		bool replay;
 		// Démonstration : délai avant le combat suivant.
 		float replayRemaining;
+		float autoWait = 0;
+		int autoTurn = -1;
+		int autoActions = 0;
+		std::mt19937 autoRng;
 	};
 }
