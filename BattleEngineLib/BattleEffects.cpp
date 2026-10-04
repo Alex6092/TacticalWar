@@ -55,6 +55,8 @@ void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, co
 			emit({ { "t", "swap" }, { "f", caster.id }, { "other", ally.id },
 				{ "x", caster.position.x }, { "y", caster.position.y },
 				{ "ox", ally.position.x }, { "oy", ally.position.y } });
+			pickUpOrb(caster, caster.position);
+			pickUpOrb(ally, ally.position);
 		}
 		return;
 	}
@@ -501,6 +503,7 @@ void BattleEngine::moveFighterTo(Fighter & fighter, const Cell & cell, const std
 {
 	fighter.position = cell;
 	emit({ { "t", "slide" }, { "f", fighter.id }, { "kind", kind }, { "x", cell.x }, { "y", cell.y } });
+	pickUpOrb(fighter, cell);
 }
 
 void BattleEngine::pushFighter(Fighter & caster, Fighter & target, int distance, bool towardsCaster)

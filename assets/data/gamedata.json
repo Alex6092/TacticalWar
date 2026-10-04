@@ -13,6 +13,14 @@
     "collisionDamageToHit": 3,
     "tackleApFactor": 0.5
   },
+  "bonuses": {
+    "firstRound": 3, "every": 3,
+    "orbs": [
+      { "id": "soin", "name": "Orbe de soin", "heal": 15, "icon": "./assets/ui/orbs/soin.png" },
+      { "id": "energie", "name": "Orbe d'énergie", "ap": 1, "icon": "./assets/ui/orbs/energie.png" },
+      { "id": "protection", "name": "Orbe de protection", "shield": 15, "turns": 2, "icon": "./assets/ui/orbs/protection.png" }
+    ]
+  },
   "classes": [
     {
       "id": 4,

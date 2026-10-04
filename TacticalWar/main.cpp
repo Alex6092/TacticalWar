@@ -78,6 +78,7 @@ int main(int argc, char** argv)
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;
 		settings.zone = config.trainingZone;
+		settings.bonuses = config.trainingBonuses;
 		settings.talentCount = config.trainingTalents;
 		settings.talents = config.talentChoice;
 		if (config.trainingStart)

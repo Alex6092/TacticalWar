@@ -153,6 +153,9 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fresh.glyphs.push_back(glyphFromJson(glyph));
 	for (const json & block : snapshot.value("blocks", json::array()))
 		fresh.blocks.push_back(blockFromJson(block));
+	fresh.bonuses = snapshot.value("bonuses", false);
+	for (const json & orb : snapshot.value("orbs", json::array()))
+		fresh.orbs.push_back({ orb.value("uid", 0), orb.value("kind", std::string()), { orb.value("x", 0), orb.value("y", 0) } });
 
 	const json & zone = snapshot.contains("zone") ? snapshot["zone"] : json();
 	if (zone.is_object())
@@ -319,6 +322,17 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		int uid = event.value("uid", 0);
 		state.glyphs.erase(std::remove_if(state.glyphs.begin(), state.glyphs.end(),
 			[uid](const Glyph & glyph) { return glyph.uid == uid; }), state.glyphs.end());
+	}
+	else if (type == "orb+")
+	{
+		for (const json & orb : event.value("orbs", json::array()))
+			state.orbs.push_back({ orb.value("uid", 0), orb.value("kind", std::string()), { orb.value("x", 0), orb.value("y", 0) } });
+	}
+	else if (type == "orb-")
+	{
+		int uid = event.value("uid", 0);
+		state.orbs.erase(std::remove_if(state.orbs.begin(), state.orbs.end(),
+			[uid](const Orb & orb) { return orb.uid == uid; }), state.orbs.end());
 	}
 	else if (type == "block+")
 	{

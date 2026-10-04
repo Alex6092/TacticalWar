@@ -56,6 +56,8 @@ BattleEventView::BattleEventView(BattleScreen & screen)
 		{ "block+", &BattleEventView::onBlockAdded },
 		{ "blockhit", &BattleEventView::onBlockHit },
 		{ "block-", &BattleEventView::onBlockRemoved },
+		{ "orb+", &BattleEventView::onOrbAdded },
+		{ "orb-", &BattleEventView::onOrbTaken },
 		{ "death", &BattleEventView::onDeath },
 		{ "emote", &BattleEventView::onEmote },
 		{ "timeout", &BattleEventView::onTimeout },
@@ -484,6 +486,37 @@ float BattleEventView::onBlockRemoved(const Context & c)
 	}
 	screen.hud->log(name + L" disparaît.", sf::Color(190, 200, 215));
 	return 0;
+}
+
+//----------------------------------------------------------
+// Orbes bonus (bonus sur la carte)
+//----------------------------------------------------------
+
+float BattleEventView::onOrbAdded(const Context & c)
+{
+	const json & orbs = c.event.value("orbs", json::array());
+	if (orbs.empty())
+		return 0;
+	std::string kind = orbs[0].value("kind", std::string());
+	for (const json & orb : orbs)
+	{
+		if (!c.fast)
+			screen.fx.playEffect("sparkles", sf::Vector2f((float)orb.value("x", 0), (float)orb.value("y", 0)));
+	}
+	sf::String label = screen.orbLabel(kind);
+	sf::String text = (orbs.size() > 1 ? L"Nouveaux orbes au centre : " : L"Nouvel orbe au centre : ") + label;
+	screen.hud->showMessage(text, sf::Color(150, 230, 255), 1.6f);
+	screen.hud->log(text, sf::Color(150, 230, 255));
+	return c.fast ? 0 : 0.5f;
+}
+
+float BattleEventView::onOrbTaken(const Context & c)
+{
+	sf::String label = screen.orbLabel(c.event.value("kind", std::string()));
+	if (!c.fast)
+		screen.fx.playEffect("sparkles", sf::Vector2f((float)c.event.value("x", 0), (float)c.event.value("y", 0)));
+	screen.hud->log(screen.fighterName(c.fighterId) + L" ramasse " + label, sf::Color(150, 230, 255));
+	return c.fast ? 0 : 0.2f;
 }
 
 //----------------------------------------------------------

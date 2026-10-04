@@ -166,6 +166,14 @@ namespace tw
 			bool blocksSight = true;
 		};
 
+		// Orbe bonus posé sur une case (combat avec bonus sur la carte).
+		struct Orb
+		{
+			int uid = 0;
+			std::string kind;			// Identifiant de l'orbe (gamedata.json, "bonuses")
+			Cell cell;
+		};
+
 		enum class BattlePhase
 		{
 			PLACEMENT,
@@ -205,6 +213,9 @@ namespace tw
 			int round = 0;
 			std::vector<Glyph> glyphs;
 			std::vector<Block> blocks;
+			// Bonus sur la carte : des orbes apparaissent pendant le combat.
+			bool bonuses = false;
+			std::vector<Orb> orbs;
 			std::int64_t deadlineMs = 0;	// Fin du tour (ou du placement) en cours
 			std::int64_t turnStartMs = 0;	// Début du tour en cours (réserve de temps)
 			int winnerTeam = 0;
@@ -219,6 +230,7 @@ namespace tw
 			const Fighter * findFighter(int id) const;
 			const Fighter * fighterAt(const Cell & cell) const;	// Combattant vivant sur la cellule
 			const Block * blockAt(const Cell & cell) const;		// Bloc de mur sur la cellule
+			const Orb * orbAt(const Cell & cell) const;
 			Block * findBlock(int uid);
 			const Block * findBlock(int uid) const;
 		};

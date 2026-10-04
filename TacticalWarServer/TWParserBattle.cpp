@@ -32,6 +32,7 @@ void TWParser::createSession(tw::Match * match)
 	BattleSession * session = new BattleSession(nextSessionId++, match, gameData, match->getEnvironment(), deadline);
 	// Matchs amicaux : mode de server.json (un match de tournoi prend ensuite le réglage du tournoi).
 	session->setZonePoints(config.battleMode == "ZONE" ? config.zonePoints : 0);
+	session->setMapBonuses(config.mapBonuses);
 	sessions[session->getId()] = session;
 	match->setBattlePayload(session);
 }

@@ -117,6 +117,16 @@ const Block * BattleState::blockAt(const Cell & cell) const
 	return nullptr;
 }
 
+const Orb * BattleState::orbAt(const Cell & cell) const
+{
+	for (const Orb & orb : orbs)
+	{
+		if (orb.cell == cell)
+			return &orb;
+	}
+	return nullptr;
+}
+
 Block * BattleState::findBlock(int uid)
 {
 	for (Block & block : blocks)

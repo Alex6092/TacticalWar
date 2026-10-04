@@ -767,6 +767,64 @@ std::vector<Cell> tw::battle::objectiveZone(const BattleMap & map)
 	return zone;
 }
 
+std::vector<std::vector<Cell>> tw::battle::orbSpots(const BattleMap & map)
+{
+	std::vector<Cell> zone = objectiveZone(map);
+
+	// Centre et symétrie de la carte, comme pour la zone : à mi-chemin des cases de départ.
+	double centerX = (map.getWidth() - 1) / 2.0;
+	double centerY = (map.getHeight() - 1) / 2.0;
+	if (!map.startCells[1].empty() && !map.startCells[2].empty())
+	{
+		double sumX = 0;
+		double sumY = 0;
+		for (int team = 1; team <= 2; team++)
+		{
+			double x = 0;
+			double y = 0;
+			for (const Cell & start : map.startCells[team])
+			{
+				x += start.x;
+				y += start.y;
+			}
+			sumX += x / map.startCells[team].size();
+			sumY += y / map.startCells[team].size();
+		}
+		centerX = sumX / 2;
+		centerY = sumY / 2;
+	}
+	int doubledX = (int)std::lround(centerX * 2);
+	int doubledY = (int)std::lround(centerY * 2);
+	int symmetry = std::fabs(centerX * 2 - doubledX) < 1e-6 && std::fabs(centerY * 2 - doubledY) < 1e-6
+		? findSymmetry(map, doubledX, doubledY) : -1;
+
+	std::vector<std::vector<Cell>> spots;
+	std::vector<Cell> used;
+	for (const Cell & cell : zone)
+	{
+		if (std::find(used.begin(), used.end(), cell) != used.end())
+			continue;
+		Cell twin;
+		if (symmetry >= 0 && mirrorCell(symmetry, doubledX, doubledY, cell, twin))
+		{
+			if (twin == cell)
+				spots.push_back({ cell });
+			else if (std::find(zone.begin(), zone.end(), twin) != zone.end())
+				spots.push_back({ cell, twin });
+			else
+				continue;
+			used.push_back(cell);
+			used.push_back(twin);
+		}
+		else if (symmetry < 0)
+		{
+			spots.push_back({ cell });
+			used.push_back(cell);
+		}
+	}
+	return spots;
+}
+
 void tw::battle::zoneDistances(const BattleMap & map, const std::vector<Cell> & zone, int distances[3])
 {
 	std::vector<int> fromZone = walkDistances(map, zone);

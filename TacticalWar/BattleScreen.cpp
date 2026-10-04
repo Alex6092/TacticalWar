@@ -288,6 +288,17 @@ void BattleScreen::render(sf::RenderWindow * window)
 			prop.barAbove = prop.anchorY - top->second + 10.f;
 		props.push_back(prop);
 	}
+	// Orbes bonus : ils flottent au-dessus de leur case.
+	float bob = std::sin(clock.getElapsedTime().asSeconds() * 2.5f) * 4.f;
+	for (const battle::Orb & orb : shown.orbs)
+	{
+		IsometricRenderer::Prop prop;
+		prop.x = (float)orb.cell.x;
+		prop.y = (float)orb.cell.y;
+		prop.texture = orbTexture(orb.kind);
+		prop.anchorY = 120.f + bob;
+		props.push_back(prop);
+	}
 	renderer->setProps(props);
 
 	renderer->render(environment, characters, effects, getDeltatime());
@@ -1067,6 +1078,11 @@ sf::String BattleScreen::terrainName(const battle::Cell & cell) const
 
 sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
 {
+	// Orbe bonus : ramassé par le premier qui passe dessus.
+	const battle::Orb * orb = truth.orbAt(cell);
+	if (orb != NULL)
+		return orbLabel(orb->kind) + L" : pour le premier qui passe sur la case";
+
 	// Bloc de mur d'un sort de terrain : PV, durée et ce qu'il bloque.
 	const battle::Block * block = truth.blockAt(cell);
 	if (block != NULL)
@@ -1264,6 +1280,33 @@ const sf::Texture * BattleScreen::blockTexture(const std::string & spellId)
 		blockTops[spellId] = (float)row;
 	}
 	return texture.getSize().x > 0 ? &texture : NULL;
+}
+
+const sf::Texture * BattleScreen::orbTexture(const std::string & kind)
+{
+	auto cached = orbTextures.find(kind);
+	if (cached != orbTextures.end())
+		return cached->second.getSize().x > 0 ? &cached->second : NULL;
+	sf::Texture & texture = orbTextures[kind];
+	const battle::OrbDef * orb = ClientGameData::get().data().findOrb(kind);
+	if (orb != NULL && !orb->icon.empty() && texture.loadFromFile(orb->icon))
+		texture.setSmooth(true);
+	return texture.getSize().x > 0 ? &texture : NULL;
+}
+
+sf::String BattleScreen::orbLabel(const std::string & kind) const
+{
+	const battle::OrbDef * orb = ClientGameData::get().data().findOrb(kind);
+	if (orb == NULL)
+		return L"Orbe";
+	sf::String effect;
+	if (orb->heal > 0)
+		effect = L"+" + num(orb->heal) + L" PV";
+	else if (orb->ap > 0)
+		effect = L"+" + num(orb->ap) + L" PA tout de suite";
+	else if (orb->shield > 0)
+		effect = L"bouclier de " + num(orb->shield) + L" pendant " + num(orb->shieldTurns) + L" tours";
+	return fromServerText(orb->name) + L" (" + effect + L")";
 }
 
 void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String & text, const sf::Color & color)

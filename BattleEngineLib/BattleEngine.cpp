@@ -70,6 +70,13 @@ void BattleEngine::enableZone(int pointsToWin)
 	state.zone.pointsToWin = std::max(1, pointsToWin);
 }
 
+void BattleEngine::enableMapBonuses()
+{
+	if (state.phase != BattlePhase::PLACEMENT || state.round > 0)
+		return;
+	state.bonuses = !data.bonuses.orbs.empty();
+}
+
 void BattleEngine::startPlacement(std::int64_t nowMs)
 {
 	// Chaque combattant est placé sur une cellule de départ libre de son équipe
@@ -215,6 +222,7 @@ void BattleEngine::startFight(std::int64_t nowMs)
 	state.turnIndex = 0;
 
 	emit({ { "t", "fight" }, { "order", state.turnOrder } });
+	spawnOrbs();
 	beginTurn(nowMs);
 }
 
@@ -350,6 +358,7 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		scoreZone();
 		if (state.phase == BattlePhase::ENDED)
 			return;
+		spawnOrbs();
 	}
 
 	if (state.round > data.rules.maxRounds)
@@ -413,6 +422,13 @@ ActionResult BattleEngine::move(int fighterId, const std::vector<Cell> & path, s
 	fighter.ap = preview.apAfter;
 
 	emit({ { "t", "move" }, { "f", fighter.id }, { "path", pathJson }, { "tackles", tackles }, { "ap", fighter.ap }, { "mp", fighter.mp } });
+
+	// Orbes sur le chemin : ramassés au passage.
+	for (const Cell & cell : preview.path)
+	{
+		if (state.orbAt(cell) != nullptr)
+			pickUpOrb(fighter, cell);
+	}
 
 	if (fighter.ap <= 0 && fighter.mp <= 0)
 		finishTurn(nowMs);
@@ -609,6 +625,74 @@ void BattleEngine::scoreZone()
 
 	if (holder != 0 && state.zone.scores[holder] >= state.zone.pointsToWin)
 		endBattle(holder, EndReason::OBJECTIVE);
+}
+
+void BattleEngine::spawnOrbs()
+{
+	if (!state.bonuses || data.bonuses.orbs.empty() || !state.orbs.empty() || state.round < data.bonuses.firstRound
+		|| (state.round - data.bonuses.firstRound) % data.bonuses.every != 0)
+		return;
+
+	// Groupe de cases symétriques libres (praticables, sans combattant ni bloc), tiré au hasard.
+	std::vector<std::vector<Cell>> free;
+	for (const std::vector<Cell> & spot : orbSpots(map))
+	{
+		bool usable = true;
+		for (const Cell & cell : spot)
+			usable = usable && cellWalkable(state, map, cell) && state.fighterAt(cell) == nullptr && state.blockAt(cell) == nullptr;
+		if (usable)
+			free.push_back(spot);
+	}
+	if (free.empty())
+		return;
+
+	const std::vector<Cell> & spot = free[rng() % free.size()];
+	const OrbDef & kind = data.bonuses.orbs[rng() % data.bonuses.orbs.size()];
+	json orbs = json::array();
+	for (const Cell & cell : spot)
+	{
+		Orb orb;
+		orb.uid = state.nextUid++;
+		orb.kind = kind.id;
+		orb.cell = cell;
+		state.orbs.push_back(orb);
+		orbs.push_back({ { "uid", orb.uid }, { "kind", orb.kind }, { "x", cell.x }, { "y", cell.y } });
+	}
+	emit({ { "t", "orb+" }, { "orbs", orbs } });
+}
+
+void BattleEngine::pickUpOrb(Fighter & fighter, const Cell & cell)
+{
+	auto it = std::find_if(state.orbs.begin(), state.orbs.end(), [&](const Orb & orb) { return orb.cell == cell; });
+	if (it == state.orbs.end() || !fighter.alive)
+		return;
+	Orb orb = *it;
+	state.orbs.erase(it);
+	emit({ { "t", "orb-" }, { "uid", orb.uid }, { "f", fighter.id }, { "kind", orb.kind }, { "x", cell.x }, { "y", cell.y } });
+
+	// Effet de l'orbe ; un soin d'orbe ne compte pas dans le bilan.
+	const OrbDef * def = data.findOrb(orb.kind);
+	if (def == nullptr)
+		return;
+	if (def->heal > 0)
+		heal(fighter, def->heal, -1, "orb");
+	if (def->ap > 0)
+	{
+		fighter.ap += def->ap;
+		emitStats(fighter);
+	}
+	if (def->shield > 0)
+	{
+		ActiveEffect shield;
+		shield.type = EffectType::SHIELD;
+		shield.value = def->shield;
+		shield.remainingTurns = std::max(1, def->shieldTurns);
+		shield.casterId = fighter.id;
+		shield.spellId = "__orb";
+		shield.name = def->name;
+		shield.positive = true;
+		addActiveEffect(fighter, shield, true);
+	}
 }
 
 int BattleEngine::decideWinner() const
@@ -862,6 +946,10 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 	for (const Block & block : state.blocks)
 		blocks.push_back(blockJson(block));
 
+	json orbs = json::array();
+	for (const Orb & orb : state.orbs)
+		orbs.push_back({ { "uid", orb.uid }, { "kind", orb.kind }, { "x", orb.cell.x }, { "y", orb.cell.y } });
+
 	json startCells = json::object();
 	for (int team = 1; team <= 2; team++)
 	{
@@ -884,6 +972,8 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 		{ "fighters", fighters },
 		{ "glyphs", glyphs },
 		{ "blocks", blocks },
+		{ "bonuses", state.bonuses },
+		{ "orbs", orbs },
 		{ "startCells", startCells },
 		{ "winner", state.winnerTeam },
 		{ "reason", toString(state.endReason) },

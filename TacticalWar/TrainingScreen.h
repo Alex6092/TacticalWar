@@ -26,6 +26,8 @@ namespace tw
 		// Mode "zone à tenir" (premier à ZONE_POINTS points), sinon au KO.
 		bool zone = false;
 		static const int ZONE_POINTS = 5;
+		// Bonus sur la carte (orbes au centre).
+		bool bonuses = false;
 		// Talents de tournoi : autant pour chaque combattant ; ceux du joueur sont choisis, ceux de
 		// l'ordinateur tirés au hasard.
 		int talentCount = 0;

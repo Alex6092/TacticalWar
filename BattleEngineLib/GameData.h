@@ -245,6 +245,27 @@ namespace tw
 			double tackleApFactor = 0.5;	// Part de la perte de PA par rapport à la perte de PM
 		};
 
+		// Bonus sur la carte : orbe ramassé par le premier combattant qui passe sur sa case.
+		struct OrbDef
+		{
+			std::string id;
+			std::string name;
+			std::string icon;
+			int heal = 0;			// PV rendus
+			int ap = 0;				// PA en plus, tout de suite
+			int shield = 0;			// Bouclier, pendant shieldTurns tours
+			int shieldTurns = 0;
+		};
+
+		// Apparition des orbes (combat avec bonus) : au tour firstRound, puis tous les "every" tours,
+		// quand aucun orbe n'est en jeu.
+		struct BonusRules
+		{
+			int firstRound = 3;
+			int every = 3;
+			std::vector<OrbDef> orbs;
+		};
+
 		// Talent de tournoi : bonus gagné au fil du tournoi (un par match joué) et choisi avant chaque
 		// match, valable pour toutes les classes.
 		struct TalentDef
@@ -260,6 +281,7 @@ namespace tw
 		{
 			int version = 1;
 			BattleRules rules;
+			BonusRules bonuses;
 			std::vector<ClassDef> classes;
 			std::vector<TalentDef> talents;
 
@@ -267,6 +289,7 @@ namespace tw
 			const TalentDef * findTalent(const std::string & id) const;
 			// Sort de n'importe quelle classe, par son identifiant (nullptr si inconnu).
 			const SpellDef * findSpell(const std::string & id) const;
+			const OrbDef * findOrb(const std::string & id) const;
 
 			// Charge les données (assets/data/gamedata.json). Retourne false et renseigne error en cas de problème.
 			bool loadFromJsonText(const std::string & text, std::string & error);

@@ -266,6 +266,16 @@ const SpellDef * GameData::findSpell(const std::string & id) const
 	return nullptr;
 }
 
+const OrbDef * GameData::findOrb(const std::string & id) const
+{
+	for (const OrbDef & orb : bonuses.orbs)
+	{
+		if (orb.id == id)
+			return &orb;
+	}
+	return nullptr;
+}
+
 const ClassDef * GameData::findClass(int classId) const
 {
 	for (const ClassDef & classDef : classes)
@@ -300,6 +310,25 @@ bool GameData::loadFromJsonText(const std::string & text, std::string & error)
 			r.collisionDamagePerCell = rules.value("collisionDamagePerCell", r.collisionDamagePerCell);
 			r.collisionDamageToHit = rules.value("collisionDamageToHit", r.collisionDamageToHit);
 			r.tackleApFactor = rules.value("tackleApFactor", r.tackleApFactor);
+		}
+
+		if (root.contains("bonuses"))
+		{
+			const json & bonuses = root["bonuses"];
+			loaded.bonuses.firstRound = std::max(1, bonuses.value("firstRound", loaded.bonuses.firstRound));
+			loaded.bonuses.every = std::max(1, bonuses.value("every", loaded.bonuses.every));
+			for (const json & orbJson : bonuses.value("orbs", json::array()))
+			{
+				OrbDef orb;
+				orb.id = orbJson.at("id").get<std::string>();
+				orb.name = orbJson.value("name", orb.id);
+				orb.icon = orbJson.value("icon", std::string());
+				orb.heal = orbJson.value("heal", 0);
+				orb.ap = orbJson.value("ap", 0);
+				orb.shield = orbJson.value("shield", 0);
+				orb.shieldTurns = orbJson.value("turns", 0);
+				loaded.bonuses.orbs.push_back(orb);
+			}
 		}
 
 		for (const json & classJson : root.at("classes"))

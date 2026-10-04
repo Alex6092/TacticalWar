@@ -77,6 +77,8 @@ public:
 
 	// Zone à tenir : score à atteindre (0 : combat au KO). À régler avant le début du combat.
 	void setZonePoints(int points) { zonePoints = points; }
+	// Bonus sur la carte (orbes). À régler avant le début du combat.
+	void setMapBonuses(bool enabled) { mapBonuses = enabled; }
 
 	// Match de tournoi joué par cette session (0 : match amical).
 	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
@@ -114,4 +116,5 @@ private:
 	int tournamentId = 0;
 	int tournamentMatchId = 0;
 	int zonePoints = 0;
+	bool mapBonuses = false;
 };

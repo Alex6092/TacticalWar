@@ -44,6 +44,7 @@ namespace tw
 		tgui::ComboBox::Ptr enemyClasses[2];
 		tgui::ComboBox::Ptr map;
 		tgui::ComboBox::Ptr mode;
+	tgui::ComboBox::Ptr bonuses;
 		tgui::ComboBox::Ptr difficulty;
 		tgui::ComboBox::Ptr talentCount;
 		tgui::Label::Ptr description;

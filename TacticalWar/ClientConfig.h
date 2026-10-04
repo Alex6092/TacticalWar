@@ -57,6 +57,8 @@ public:
 	bool trainingDuoControl = false;
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
+	// Entraînement avec bonus sur la carte (--training-bonuses).
+	bool trainingBonuses = false;
 	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
 	// (--class-screen N), pour les captures. -1 : désactivé. Bannissement en cours pendant S secondes
 	// (--class-screen-ban S), ou terminé avec la classe interdite (--class-screen-forbidden <id>).

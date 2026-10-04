@@ -52,6 +52,8 @@ namespace tw
 
 			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
 			void enableZone(int pointsToWin);
+			// Bonus sur la carte (avant le placement) : des orbes apparaissent au centre pendant le combat.
+			void enableMapBonuses();
 
 			void startPlacement(std::int64_t nowMs);
 
@@ -103,6 +105,10 @@ namespace tw
 			void endBattle(int winnerTeam, EndReason reason);
 			// Fin d'un tour complet : point de la zone à tenir.
 			void scoreZone();
+			// Début d'un tour complet : apparition des orbes (bonus sur la carte).
+			void spawnOrbs();
+			// Le combattant arrive (ou passe) sur la case : il ramasse l'orbe qui s'y trouve.
+			void pickUpOrb(Fighter & fighter, const Cell & cell);
 			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.
 			int decideWinner() const;
 

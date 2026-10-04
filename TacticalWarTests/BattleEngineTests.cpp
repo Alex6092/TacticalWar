@@ -70,7 +70,7 @@ namespace
 
 		// spells : sorts emportés par chaque combattant, dans l'ordre de création (par défaut, ceux de la classe).
 		Arena(const std::vector<std::pair<int, Cell>> & team1, const std::vector<std::pair<int, Cell>> & team2, BattleMap baseMap = openMap(), std::uint32_t seed = 1,
-			const std::vector<std::vector<int>> & spells = std::vector<std::vector<int>>())
+			const std::vector<std::vector<int>> & spells = std::vector<std::vector<int>>(), bool bonuses = false)
 			: map(baseMap)
 		{
 			for (const auto & entry : team1)
@@ -84,6 +84,8 @@ namespace
 				engine->addFighter(1, entry.first, "A" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
 			for (const auto & entry : team2)
 				engine->addFighter(2, entry.first, "B" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
+			if (bonuses)
+				engine->enableMapBonuses();
 
 			engine->startPlacement(now);
 			for (const Fighter & fighter : engine->getState().fighters)
@@ -482,7 +484,7 @@ TEST_CASE("Random battles always end and every event serializes")
 		Arena arena(
 			{ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } },
 			{ { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
-			map, (std::uint32_t)battle, spells);
+			map, (std::uint32_t)battle, spells, battle % 2 == 0);
 
 		// Copie tenue par un client : snapshot initial puis événements.
 		BattleState mirror;
@@ -500,6 +502,9 @@ TEST_CASE("Random battles always end and every event serializes")
 			REQUIRE(mirror.activeFighterId() == truth.activeFighterId());
 			REQUIRE(mirror.glyphs.size() == truth.glyphs.size());
 			REQUIRE(mirror.blocks.size() == truth.blocks.size());
+			REQUIRE(mirror.orbs.size() == truth.orbs.size());
+			for (const Orb & orb : truth.orbs)
+				REQUIRE(mirror.orbAt(orb.cell) != nullptr);
 			for (const Block & block : truth.blocks)
 			{
 				const Block * copy = mirror.findBlock(block.uid);
@@ -1685,6 +1690,77 @@ TEST_CASE("The sacred veil hides from view but lets fighters through")
 	REQUIRE(veil.engine->cast(1, veil.slotOf(1, "tir_precis"), { 4, 5 }, veil.now).ok);
 	CHECK(veil.fighter(0).hp < hp);
 	CHECK(state.blockAt({ 4, 5 })->hp < 25);
+}
+
+TEST_CASE("Bonus orbs appear on symmetric central cells and are picked up on the way")
+{
+	// Sans le réglage : jamais d'orbe.
+	Arena plain({ { GUERRIER, { 0, 4 } } }, { { ARCHER, { 12, 8 } } }, openMap(13));
+	for (int turn = 0; turn < 12; turn++)
+		REQUIRE(plain.engine->endTurn(plain.active(), plain.now).ok);
+	CHECK(plain.state().orbs.empty());
+
+	// Avec : au tour 3, sur une paire de cases symétriques de la zone centrale.
+	Arena arena({ { GUERRIER, { 0, 4 } } }, { { ARCHER, { 12, 8 } } }, openMap(13), 1, {}, true);
+	CHECK(arena.state().bonuses);
+	while (arena.state().round < gameData().bonuses.firstRound)
+		REQUIRE(arena.engine->endTurn(arena.active(), arena.now).ok);
+	const std::vector<Orb> & orbs = arena.state().orbs;
+	REQUIRE(!orbs.empty());
+	CHECK(gameData().findOrb(orbs[0].kind) != nullptr);
+	std::vector<std::vector<Cell>> spots = orbSpots(arena.map);
+	bool known = false;
+	for (const std::vector<Cell> & spot : spots)
+	{
+		bool same = spot.size() == orbs.size();
+		for (const Orb & orb : orbs)
+			same = same && std::find(spot.begin(), spot.end(), orb.cell) != spot.end();
+		known = known || same;
+		if (spot.size() == 2)
+			CHECK(spot[0].x + spot[1].x == 12);	// Carte symétrique : (x, y) et (12 - x, 8 - y + 4)
+	}
+	CHECK(known);
+}
+
+TEST_CASE("Picking up an orb applies its effect")
+{
+	Arena arena({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 12, 5 } } }, openMap(), 1, {}, true);
+	arena.playUntilTurnOf(0);
+	BattleState state = arena.state();
+	Fighter & warrior = *state.findFighter(0);
+	warrior.hp -= 30;
+	int ap = warrior.ap;
+	state.orbs.push_back({ 900, "soin", { 3, 5 } });
+	state.orbs.push_back({ 901, "energie", { 4, 5 } });
+	state.orbs.push_back({ 902, "protection", { 8, 5 } });
+	BattleEngine engine(gameData(), arena.map, state, 1);
+
+	// Deux orbes ramassés au passage (soin, puis énergie).
+	REQUIRE(engine.move(0, { { 3, 5 }, { 4, 5 }, { 5, 5 } }, 0).ok);
+	const Fighter & after = *engine.getState().findFighter(0);
+	CHECK(after.hp == warrior.hp + gameData().findOrb("soin")->heal);
+	CHECK(after.ap == ap + gameData().findOrb("energie")->ap);
+	REQUIRE(engine.getState().orbs.size() == 1);
+	CHECK(after.record.healed == 0);	// Un soin d'orbe ne compte pas dans le bilan
+
+	// L'Archer s'arrête sur l'orbe de protection : il le ramasse.
+	BattleState next = engine.getState();
+	next.findFighter(1)->position = { 10, 5 };
+	BattleEngine archer(gameData(), arena.map, next, 1);
+	REQUIRE(archer.endTurn(0, 0).ok);
+	REQUIRE(archer.getState().activeFighterId() == 1);
+	REQUIRE(archer.move(1, { { 9, 5 }, { 8, 5 } }, 0).ok);
+	CHECK(archer.getState().orbs.empty());
+	CHECK(archer.getState().findFighter(1)->shield == gameData().findOrb("protection")->shield);
+
+	// Repoussé sur un orbe : ramassé à l'arrivée.
+	BattleState pushed = arena.state();
+	pushed.orbs.push_back({ 903, "soin", { 6, 5 } });
+	pushed.findFighter(1)->position = { 3, 5 };
+	pushed.findFighter(1)->hp -= 20;
+	BattleEngine push(gameData(), arena.map, pushed, 1);
+	REQUIRE(push.cast(0, 0, { 3, 5 }, 0).ok);	// Taillade, pas de poussée : rien
+	CHECK(push.getState().orbs.size() == 1);
 }
 
 TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")

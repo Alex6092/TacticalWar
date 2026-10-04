@@ -111,6 +111,11 @@ namespace tw
 		std::map<std::string, sf::Texture> blockTextures;
 		// Haut de la partie visible de chaque image de bloc (barre de vie juste au-dessus).
 		std::map<std::string, float> blockTops;
+		// Image d'un orbe bonus (icône de l'orbe dans les données de jeu).
+		const sf::Texture * orbTexture(const std::string & kind);
+		std::map<std::string, sf::Texture> orbTextures;
+		// Orbe bonus : nom et effet, pour le journal et l'aide au survol.
+		sf::String orbLabel(const std::string & kind) const;
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
 		void showEnd();

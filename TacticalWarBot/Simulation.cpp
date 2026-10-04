@@ -47,7 +47,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses)
 {
 	GameData data;
 	std::string error;
@@ -127,6 +127,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::int64_t now = 0;
 		if (zonePoints > 0)
 			engine.enableZone(zonePoints);
+		if (bonuses)
+			engine.enableMapBonuses();
 		engine.startPlacement(now);
 		for (int team = 1; team <= 2; team++)
 		{
@@ -246,6 +248,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::cout << ", " << maps.size() << " carte(s)";
 	if (zonePoints > 0)
 		std::cout << ", zone à tenir (" << zonePoints << " points)";
+	if (bonuses)
+		std::cout << ", bonus sur la carte";
 	std::cout << " ===\n";
 	std::cout << "IA simple (BotBrain) : les écarts importants signalent un déséquilibre,\n"
 		<< "les petits écarts ne disent rien du jeu entre humains.\n";

@@ -83,6 +83,8 @@ namespace
 			firstUid = std::max(firstUid, glyph.uid + 1);
 		for (const Block & block : copy.blocks)
 			firstUid = std::max(firstUid, std::max(block.uid, block.group) + 1);
+		for (const Orb & orb : copy.orbs)
+			firstUid = std::max(firstUid, orb.uid + 1);
 		copy.nextUid = firstUid;
 
 		BattleEngine engine(data, map, copy, 1);

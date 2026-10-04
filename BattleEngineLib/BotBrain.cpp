@@ -440,6 +440,16 @@ namespace tw
 					score -= map.turnDamage(cell) * 8;
 					score += std::min(map.turnHeal(cell), std::max(0, me.maxHp - me.hp)) * 5;
 
+					// Orbe bonus : soin quand on est blessé, énergie, protection quand un ennemi est proche.
+					const Orb * orb = state.orbAt(cell);
+					const OrbDef * bonus = orb != nullptr ? data.findOrb(orb->kind) : nullptr;
+					if (bonus != nullptr)
+					{
+						score += std::min(bonus->heal, std::max(0, me.maxHp - me.hp)) * 4;
+						score += bonus->ap * 30;
+						score += bonus->shield > 0 ? (distance <= 4 ? bonus->shield * 3 : bonus->shield) : 0;
+					}
+
 					if (score > bestScore)
 					{
 						bestScore = score;

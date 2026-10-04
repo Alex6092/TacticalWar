@@ -21,6 +21,7 @@ nlohmann::json ServerConfig::toJson() const
 		{ "emotes", emotesEnabled },
 		{ "battleMode", battleMode },
 		{ "zonePoints", zonePoints },
+		{ "mapBonuses", mapBonuses },
 		{ "admin", {
 			{ "login", admin.login },
 			{ "passwordHash", admin.passwordHash },
@@ -45,6 +46,7 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.emotesEnabled = json.value("emotes", config.emotesEnabled);
 	config.battleMode = json.value("battleMode", config.battleMode) == "ZONE" ? "ZONE" : "KO";
 	config.zonePoints = json.value("zonePoints", config.zonePoints);
+	config.mapBonuses = json.value("mapBonuses", config.mapBonuses);
 	if (config.zonePoints < 1)
 		config.zonePoints = 1;
 

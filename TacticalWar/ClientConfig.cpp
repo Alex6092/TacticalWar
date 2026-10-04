@@ -237,6 +237,11 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenForbidden = std::atoi(argv[++i]);
 		}
+		else if (arg == "--training-bonuses")
+		{
+			training = true;
+			trainingBonuses = true;
+		}
 		else if (arg == "--training-zone")
 		{
 			training = trainingStart = true;

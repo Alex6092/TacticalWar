@@ -10,5 +10,6 @@
 // dataPath : autre fichier de données à essayer (réglages d'équilibrage).
 // zonePoints > 0 : mode "zone à tenir", gagné au premier à zonePoints points (0 : au KO).
 // talents > 0 : chaque combattant reçoit ce nombre de talents de tournoi, tirés au hasard.
+// bonuses : bonus sur la carte (orbes au centre).
 int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath = "./assets/data/gamedata.json",
-	int zonePoints = 0, int talents = 0);
+	int zonePoints = 0, int talents = 0, bool bonuses = false);
