@@ -125,6 +125,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	// Choix de classe en équipe : PV (classe affichée par le joueur) et PT (état d'un coéquipier :
 	// nom, classe regardée ou verrouillée, présence), relayé aux seuls coéquipiers.
 	void handleViewClass(ClientState * client, tw::Player * player, const std::string & body);
+	// Un joueur présent pilote le combattant de son coéquipier absent (et choisit sa classe).
+	bool isPresent(tw::Player * player);
+	tw::Player * absentTeammate(BattleSession * session, tw::Player * player);
+	void refreshPilots(BattleSession * session);
 	nlohmann::json teammateState(BattleSession * session, tw::Player * player);
 	void sendTeammateStates(BattleSession * session, tw::Player * about);
 	// Bannissement : BB{banned: classe interdite par l'équipe du joueur, forbidden: classe qui lui est

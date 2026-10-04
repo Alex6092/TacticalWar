@@ -38,6 +38,18 @@ tw::Player * BattleSession::playerOfFighter(int fighterId) const
 	return fighterId >= 0 && fighterId < (int)participants.size() ? participants[fighterId] : NULL;
 }
 
+int BattleSession::actingFighter(tw::Player * player) const
+{
+	int own = fighterIdOf(player);
+	if (!engine || own < 0)
+		return own;
+	const tw::battle::BattleState & state = engine->getState();
+	const tw::battle::Fighter * active = state.findFighter(state.activeFighterId());
+	if (active != nullptr && active->id != own && active->piloted && active->team == teamOf(player))
+		return active->id;
+	return own;
+}
+
 int BattleSession::teamOf(tw::Player * player) const
 {
 	if (fighterIdOf(player) < 0)

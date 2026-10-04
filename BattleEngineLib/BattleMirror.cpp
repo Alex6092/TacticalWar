@@ -115,6 +115,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.alive = value.value("alive", true);
 		fighter.ready = value.value("ready", false);
 		fighter.connected = value.value("connected", true);
+		fighter.piloted = value.value("piloted", false);
 		for (const auto & stat : intMap(value.value("stats", json::object())))
 		{
 			Stat parsed;
@@ -291,6 +292,7 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 	else if (type == "connection" && fighter != nullptr)
 	{
 		fighter->connected = event.value("connected", true);
+		fighter->piloted = event.value("piloted", false);
 	}
 	else if (type == "score")
 	{

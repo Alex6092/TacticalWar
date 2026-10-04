@@ -281,7 +281,7 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 			return;
 		}
 
-		int seconds = fighter.connected ? data.rules.turnSeconds : data.rules.disconnectedTurnSeconds;
+		int seconds = fighter.connected || fighter.piloted ? data.rules.turnSeconds : data.rules.disconnectedTurnSeconds;
 		state.deadlineMs = nowMs + (std::int64_t)seconds * 1000;
 		emit({ { "t", "timer" }, { "f", fighter.id }, { "ms", seconds * 1000 } });
 		return;
@@ -461,6 +461,27 @@ ActionResult BattleEngine::cast(int fighterId, int spellIndex, const Cell & targ
 	return ActionResult::success();
 }
 
+void BattleEngine::setPiloted(int fighterId, bool piloted, std::int64_t nowMs)
+{
+	Fighter * fighter = state.findFighter(fighterId);
+	if (fighter == nullptr || fighter->piloted == piloted)
+		return;
+
+	fighter->piloted = piloted;
+	emit({ { "t", "connection" }, { "f", fighterId }, { "connected", fighter->connected }, { "piloted", piloted } });
+
+	// Repris en main pendant son tour (raccourci par la déconnexion) : le tour retrouve sa durée.
+	if (piloted && state.phase == BattlePhase::FIGHT && state.activeFighterId() == fighterId)
+	{
+		std::int64_t full = nowMs + (std::int64_t)data.rules.turnSeconds * 1000;
+		if (full > state.deadlineMs)
+		{
+			state.deadlineMs = full;
+			emit({ { "t", "timer" }, { "f", fighterId }, { "ms", data.rules.turnSeconds * 1000 } });
+		}
+	}
+}
+
 void BattleEngine::tick(std::int64_t nowMs)
 {
 	if (state.phase == BattlePhase::PLACEMENT && state.deadlineMs > 0 && nowMs >= state.deadlineMs)
@@ -481,10 +502,10 @@ void BattleEngine::setConnected(int fighterId, bool connected, std::int64_t nowM
 		return;
 
 	fighter->connected = connected;
-	emit({ { "t", "connection" }, { "f", fighterId }, { "connected", connected } });
+	emit({ { "t", "connection" }, { "f", fighterId }, { "connected", connected }, { "piloted", fighter->piloted } });
 
 	// Le tour d'un joueur déconnecté est raccourci.
-	if (!connected && state.phase == BattlePhase::FIGHT && state.activeFighterId() == fighterId)
+	if (!connected && !fighter->piloted && state.phase == BattlePhase::FIGHT && state.activeFighterId() == fighterId)
 	{
 		std::int64_t shortened = nowMs + (std::int64_t)data.rules.disconnectedTurnSeconds * 1000;
 		if (shortened < state.deadlineMs)
@@ -778,6 +799,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "alive", fighter.alive },
 		{ "ready", fighter.ready },
 		{ "connected", fighter.connected },
+		{ "piloted", fighter.piloted },
 		{ "cooldowns", cooldowns },
 		{ "casts", casts },
 		{ "effects", effects },

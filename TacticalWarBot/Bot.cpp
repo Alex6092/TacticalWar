@@ -134,7 +134,7 @@ int Bot::run()
 	}
 }
 
-void Bot::pickClass(int forbiddenClass)
+void Bot::pickClass(int forbiddenClass, bool forTeammate)
 {
 	std::vector<int> allowed;
 	for (const ClassDef & classDef : data.classes)
@@ -149,9 +149,21 @@ void Bot::pickClass(int forbiddenClass)
 	if (const ClassDef * classDef = data.findClass(classId))
 		spells = randomSpellChoice(*classDef, rng);
 	std::vector<std::string> talents = randomTalentChoice(data, talentSlots, rng);
-	send("PC" + nlohmann::json({ { "class", classId }, { "spells", spells }, { "talents", talents } }).dump());
+	nlohmann::json pick = { { "class", classId }, { "spells", spells }, { "talents", talents } };
+	if (forTeammate)
+		pick["teammate"] = true;
+	send("PC" + pick.dump());
 	if (options.verbose)
-		log("Choix de la classe " + std::to_string(classId));
+		log(std::string(forTeammate ? "Choix pour le coequipier : classe " : "Choix de la classe ") + std::to_string(classId));
+}
+
+void Bot::pickForAbsentMate()
+{
+	if (ownPicked && mateAbsent && !mateLocked && !matePickSent)
+	{
+		matePickSent = true;
+		pickClass(forbidden, true);
+	}
 }
 
 void Bot::onLine(const std::string & line)
@@ -190,6 +202,8 @@ void Bot::onLine(const std::string & line)
 		if (!selection.is_object())
 			selection = nlohmann::json::object();
 		talentSlots = selection.value("talents", 0);
+		forbidden = 0;
+		ownPicked = mateAbsent = mateLocked = matePickSent = false;
 		if (selection.value("ban", 0) > 0 && !data.classes.empty())
 		{
 			// Bannissement d'abord : une classe au hasard ; le choix de classe suit le message BB.
@@ -201,13 +215,30 @@ void Bot::onLine(const std::string & line)
 		else
 		{
 			pickClass(0);
+			ownPicked = true;
+			pickForAbsentMate();
+		}
+	}
+	else if (op == "PT")
+	{
+		nlohmann::json mate = nlohmann::json::parse(message.payload, nullptr, false);
+		if (mate.is_object())
+		{
+			mateAbsent = !mate.value("present", true);
+			mateLocked = mate.value("locked", false);
+			pickForAbsentMate();
 		}
 	}
 	else if (op == "BB")
 	{
 		nlohmann::json ban = nlohmann::json::parse(message.payload, nullptr, false);
 		if (ban.is_object() && ban.value("done", false))
-			pickClass(ban.value("forbidden", 0));
+		{
+			forbidden = ban.value("forbidden", 0);
+			pickClass(forbidden);
+			ownPicked = true;
+			pickForAbsentMate();
+		}
 	}
 	else if (op == "HG")
 	{
@@ -295,13 +326,16 @@ void Bot::act(std::int64_t now)
 		return;
 	}
 
-	if (state.phase != BattlePhase::FIGHT || state.activeFighterId() != you)
+	// Son combattant, ou celui de son coéquipier absent, qu'il pilote.
+	const Fighter * active = state.findFighter(state.activeFighterId());
+	if (state.phase != BattlePhase::FIGHT || active == nullptr
+		|| (active->id != you && !(active->piloted && active->team == me->team)))
 		return;
 
 	nextActionAt = now + options.actionDelayMs;
 	awaiting = true;
 
-	BotAction action = chooseBotAction(state, map, data, you, rng);
+	BotAction action = chooseBotAction(state, map, data, active->id, rng);
 	if (action.kind == BotAction::Kind::CAST)
 	{
 		send("CL" + json({ { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } }).dump());

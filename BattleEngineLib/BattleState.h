@@ -113,6 +113,8 @@ namespace tw
 			bool alive = true;
 			bool ready = false;
 			bool connected = true;
+			// Joué par son coéquipier, son joueur étant absent : il garde un tour complet.
+			bool piloted = false;
 
 			// Sorts emportés : indices dans les sorts de la classe, dans l'ordre de la barre de sorts
 			// (emplacements 0 à 3). Vide (ancien instantané) : les sorts de la classe dans l'ordre.

@@ -99,7 +99,7 @@ namespace tw
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants]} (PC<classId> : sorts par défaut)" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent} (PC<classId> : sorts par défaut)" },
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PV", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class}" },
 			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present}" },

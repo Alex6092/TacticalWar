@@ -35,6 +35,9 @@ public:
 
 	const std::vector<tw::Player*> & getParticipants() const { return participants; }
 	int fighterIdOf(tw::Player * player) const;
+	// Combattant que le joueur fait agir : le combattant actif s'il s'agit du sien, ou de celui de
+	// son coéquipier absent qu'il pilote ; sinon le sien.
+	int actingFighter(tw::Player * player) const;
 	// Équipe du joueur dans ce combat : 1 ou 2 (0 : il n'y participe pas).
 	int teamOf(tw::Player * player) const;
 	tw::Player * playerOfFighter(int fighterId) const;

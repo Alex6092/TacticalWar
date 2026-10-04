@@ -69,6 +69,8 @@ namespace tw
 			void tick(std::int64_t nowMs);
 
 			void setConnected(int fighterId, bool connected, std::int64_t nowMs);
+			// Le combattant d'un joueur absent est joué par son coéquipier (tour complet).
+			void setPiloted(int fighterId, bool piloted, std::int64_t nowMs);
 			// L'équipe "team" perd par forfait.
 			void forfeit(int team, std::int64_t nowMs);
 			// Arrêt par l'admin : décision aux points de vie restants.

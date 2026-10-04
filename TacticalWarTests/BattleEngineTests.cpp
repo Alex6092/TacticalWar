@@ -740,6 +740,38 @@ TEST_CASE("Emotes are broadcast as events and rate limited per fighter")
 	CHECK(mirror.fighters.size() == before.fighters.size());
 }
 
+TEST_CASE("A fighter piloted by its teammate keeps a full turn while its player is away")
+{
+	Arena arena({ { ARCHER, { 2, 2 } }, { GUERRIER, { 3, 2 } } }, { { MAGE, { 2, 8 } } });
+	const int turnMs = gameData().rules.turnSeconds * 1000;
+	const int shortMs = gameData().rules.disconnectedTurnSeconds * 1000;
+
+	// Joueur du Guerrier absent : tour raccourci...
+	arena.engine->setConnected(1, false, arena.now);
+	arena.playUntilTurnOf(1);
+	CHECK(arena.state().deadlineMs - arena.now == shortMs);
+
+	// ... sauf si son coéquipier le pilote : tour complet, rendu aussi pendant le tour en cours.
+	arena.engine->setPiloted(1, true, arena.now);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+	CHECK(arena.fighter(1).piloted);
+	REQUIRE(arena.engine->endTurn(1, arena.now).ok);
+	arena.playUntilTurnOf(1);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+
+	// Le miroir des clients suit l'état piloté (instantané et événement).
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(0, arena.now));
+	CHECK(mirror.findFighter(1)->piloted);
+	arena.engine->flushEvents();
+	arena.engine->setPiloted(1, false, arena.now);
+	nlohmann::json batch = arena.engine->flushEvents();
+	for (const nlohmann::json & event : batch["ev"])
+		BattleMirror::applyEvent(mirror, event);
+	CHECK_FALSE(mirror.findFighter(1)->piloted);
+}
+
 TEST_CASE("Battle records credit damage, shields, casts and knockouts to the right fighter")
 {
 	Arena arena({ { ARCHER, { 2, 2 } }, { PROTECTEUR, { 3, 2 } } }, { { MAGE, { 2, 7 } } });
