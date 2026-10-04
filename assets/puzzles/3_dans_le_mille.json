@@ -1,0 +1,65 @@
+{
+  "id": "dans_le_mille",
+  "order": 3,
+  "title": "Dans le mille",
+  "goal": "Mettez le Mage hors combat. Il est provoqué : Tir précis lui fait +30 % (combinaison Dans le mille).",
+  "hint": "Le passif de l'Archer (Tireur d'élite) ajoute +15 % de dégâts à 6 cases ou plus : reculez avant de tirer.",
+  "trap": [
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 3,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 3,
+      "y": 7
+    }
+  ],
+  "map": 4,
+  "fighters": [
+    {
+      "team": 1,
+      "class": 2,
+      "name": "Archer",
+      "x": 8,
+      "y": 7
+    },
+    {
+      "team": 2,
+      "class": 1,
+      "name": "Mage",
+      "x": 3,
+      "y": 7,
+      "marks": [
+        "provoque"
+      ],
+      "hp": 32
+    }
+  ],
+  "solution": [
+    {
+      "fighter": 0,
+      "move": [
+        [
+          9,
+          7
+        ]
+      ]
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 3,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 3,
+      "y": 7
+    }
+  ]
+}

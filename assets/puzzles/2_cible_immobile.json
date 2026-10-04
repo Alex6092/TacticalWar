@@ -1,0 +1,80 @@
+{
+  "id": "cible_immobile",
+  "order": 2,
+  "title": "Cible immobile",
+  "goal": "Mettez l'Archer hors combat. Il est entravé : Éclair lui fait +30 % (combinaison Cible immobile), et chaque sort lancé augmente la puissance du Mage (Surcharge).",
+  "hint": "Éclair coûte 2 PA et se lance 3 fois par tour. L'Archer est hors de portée : avancez d'abord d'une case.",
+  "trap": [
+    {
+      "fighter": 0,
+      "move": [
+        [
+          2,
+          7
+        ]
+      ]
+    },
+    {
+      "fighter": 0,
+      "cast": 1,
+      "x": 8,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    }
+  ],
+  "map": 4,
+  "fighters": [
+    {
+      "team": 1,
+      "class": 1,
+      "name": "Mage",
+      "x": 1,
+      "y": 7
+    },
+    {
+      "team": 2,
+      "class": 2,
+      "name": "Archer",
+      "x": 8,
+      "y": 7,
+      "marks": [
+        "entrave"
+      ],
+      "hp": 39
+    }
+  ],
+  "solution": [
+    {
+      "fighter": 0,
+      "move": [
+        [
+          2,
+          7
+        ]
+      ]
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    }
+  ]
+}
