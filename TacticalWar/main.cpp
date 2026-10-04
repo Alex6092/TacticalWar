@@ -39,6 +39,12 @@ int main(int argc, char** argv)
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false}");
 			screen->onMessageReceived("PO4");
 		}
+		if (config.classScreenAlone > 0)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille (2)\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false, \"standIn\": true}");
+			if (config.classScreenAlone >= 2)
+				screen->onMessageReceived("PO3");
+		}
 		if (config.classScreenMate > 0)
 		{
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": " + std::to_string(config.classScreenMate)

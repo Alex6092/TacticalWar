@@ -102,6 +102,10 @@ private:
 	int mateViewing = 0;
 	bool mateLocked = false;
 	bool matePresent = false;
+	// Le « coéquipier » est le second personnage d'un joueur seul dans son équipe.
+	bool mateStandIn = false;
+	// Classe verrouillée par le joueur (PO), rappelée pendant le choix pour le second personnage.
+	int myClass = 0;
 	int viewSent = -1;
 	// Seconde étape : choix pour le coéquipier absent (envoyé, puis verrouillé).
 	bool forMate = false;
