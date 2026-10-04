@@ -1165,6 +1165,10 @@ void BattleScreen::onEvent(void * e)
 		case sf::Keyboard::Escape:
 			selectSpell(-1);
 			hud->closePingWheel();
+			hud->hideHelp();
+			break;
+		case sf::Keyboard::H:
+			hud->toggleHelp();
 			break;
 		case sf::Keyboard::F:
 			camera.setFollowing(!camera.isFollowing());

@@ -236,6 +236,14 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	emoteButton->connect("pressed", [this]() { emotePanel->setVisible(!emotePanel->isVisible()); });
 	gui->add(emoteButton);
 
+	// Aide des commandes, à droite des émotes (aussi par la touche H).
+	helpPanel.reset(new tw::HelpPanel(gui, font));
+	helpButton = tgui::Button::create(L"?");
+	helpButton->setInheritedFont(font);
+	helpButton->setTextSize(22);
+	helpButton->connect("pressed", [this]() { toggleHelp(); });
+	gui->add(helpButton);
+
 	emotePanel = tgui::Panel::create();
 	emotePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 225));
 	emotePanel->setVisible(false);
@@ -344,7 +352,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 	logBox->setPosition(15, height - 215);
 	logBox->setSize(440, 200);
 
-	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120;
+	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120 + SPELL_SIZE - 6;
 	float barX = (width - barWidth) / 2;
 	float barY = height - SPELL_SIZE - 18;
 	for (int i = 0; i < (int)spells.size(); i++)
@@ -361,6 +369,9 @@ void BattleHud::layout(const sf::Vector2u & size)
 	endTurnButton->setSize(170, SPELL_SIZE - 16);
 	emoteButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 190, barY + 8);
 	emoteButton->setSize(110, SPELL_SIZE - 16);
+	helpButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 310, barY + 8);
+	helpButton->setSize(SPELL_SIZE - 16, SPELL_SIZE - 16);
+	helpPanel->layout(windowSize);
 	emotePanel->setSize(220, EMOTE_COUNT * 38.f + 8);
 	emotePanel->setPosition(barX + 4 * (SPELL_SIZE + 10) + 300 - 220, barY - (EMOTE_COUNT * 38.f + 8) - 8);
 	readyButton->setSize(220, 60);
@@ -813,6 +824,23 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	endTurnButton->setVisible(false);
 	emoteButton->setVisible(false);
 	emotePanel->setVisible(false);
+	helpButton->setVisible(false);
+	helpPanel->hide();
 	for (SpellButton & button : spells)
 		button.icon->setVisible(false);
+}
+
+void BattleHud::toggleHelp()
+{
+	helpPanel->toggle();
+}
+
+void BattleHud::hideHelp()
+{
+	helpPanel->hide();
+}
+
+bool BattleHud::isHelpOpen() const
+{
+	return helpPanel->isVisible();
 }

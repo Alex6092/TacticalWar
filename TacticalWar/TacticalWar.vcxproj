@@ -158,6 +158,7 @@ exit /b 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="HelpPanel.cpp" />
     <ClCompile Include="PuzzleScreen.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClCompile Include="TutorialScript.cpp" />
@@ -233,6 +234,7 @@ exit /b 0</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="HelpPanel.h" />
     <ClInclude Include="PuzzleScreen.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
     <ClInclude Include="TutorialScript.h" />

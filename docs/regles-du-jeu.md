@@ -3,6 +3,13 @@
 Ce que les joueurs voient à l'écran pour comprendre leurs options. Les règles elles-mêmes (sorts, classes,
 équilibrage) sont dans `assets/data/gamedata.json`, voir `docs/equilibrage.md`.
 
+## Aide des commandes
+
+En combat, le bouton **« ? »** (à droite de « Émotes ») ou la touche **H** ouvre un panneau qui
+rappelle les commandes (déplacement, sorts, signaux, émotes, caméra) et les règles à retenir (PA et PM,
+relance, bouclier, tacle, ligne de vue, cases spéciales, combinaisons, réserve de temps). Il se ferme
+par « Fermer », par H ou par Échap.
+
 ## Viser un sort
 
 Sélectionner un sort (touches 1 à 4, ou clic sur la barre de sorts) affiche :
