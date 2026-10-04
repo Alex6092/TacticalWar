@@ -155,7 +155,9 @@ void TutorialScreen::playDemo(int step)
 		for (int slot = 0; slot < 2; slot++)
 		{
 			const battle::SpellDef * spell = battle::spellOf(data, *me, slot);
-			std::vector<battle::Cell> cells = spell != NULL ? battle::castableCells(truth, map, data, *me, *spell) : std::vector<battle::Cell>();
+			if (spell == NULL || !battle::checkSpellResources(*me, *spell).empty())
+				continue;
+			std::vector<battle::Cell> cells = battle::castableCells(truth, map, data, *me, *spell);
 			if (std::find(cells.begin(), cells.end(), target->position) != cells.end())
 			{
 				sendAction("CL", { { "slot", slot }, { "x", target->position.x }, { "y", target->position.y } });
