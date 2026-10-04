@@ -51,6 +51,8 @@ public:
 	void setSpectator(const sf::String & banner);
 	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
 	void showLeaveButton(const sf::String & text);
+	// Secondes restantes du placement et des tours (masquées quand il n'y a pas de minuteur : tutoriel).
+	void showTimers(bool shown) { timersShown = shown; }
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
 	void setEndButtonText(const sf::String & text);
 
@@ -113,6 +115,7 @@ private:
 	tgui::Button::Ptr replayButton;
 
 	bool spectator;
+	bool timersShown = true;
 	tgui::Label::Ptr bannerLabel;
 	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;

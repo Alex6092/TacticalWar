@@ -538,12 +538,13 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 
 	// Minuteur.
 	sf::String timer;
+	sf::String seconds = timersShown ? L" - " + num((int)remainingSeconds) + L" s" : sf::String();
 	if (state.phase == BattlePhase::PLACEMENT)
-		timer = L"Placement - " + num((int)remainingSeconds) + L" s";
+		timer = L"Placement" + seconds;
 	else if (state.phase == BattlePhase::FIGHT)
 	{
 		const Fighter * current = state.findFighter(active);
-		timer = L"Tour " + num(state.round) + L" - " + (current != nullptr ? fromServerText(current->name) : sf::String()) + L" - " + num((int)remainingSeconds) + L" s";
+		timer = L"Tour " + num(state.round) + L" - " + (current != nullptr ? fromServerText(current->name) : sf::String()) + seconds;
 	}
 	if (timerLabel->getText() != timer)
 	{

@@ -159,4 +159,10 @@
     <ClInclude Include="SpellPicker.h" />
     <ClInclude Include="TalentPicker.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TutorialScript.cpp" />
+    <ClCompile Include="TutorialScreen.cpp" />
+    <ClInclude Include="TutorialScript.h" />
+    <ClInclude Include="TutorialScreen.h" />
+  </ItemGroup>
 </Project>

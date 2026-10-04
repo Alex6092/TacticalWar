@@ -5,9 +5,11 @@
 #include "LoginScreen.h"
 #include "TrainingScreen.h"
 #include "TrainingSetupScreen.h"
+#include "TutorialScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
+#include <algorithm>
 
 int main(int argc, char** argv)
 {
@@ -36,6 +38,10 @@ int main(int argc, char** argv)
 			screen->onMessageReceived("BB{\"banned\": " + std::to_string(config.classScreenForbidden % 4 + 1) + ", \"done\": true, \"forbidden\": "
 				+ std::to_string(config.classScreenForbidden) + "}");
 		}
+	}
+	else if (config.tutorial)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TutorialScreen(&gui, tw::TutorialScreen::Origin::LOGIN, std::max(0, config.tutorialStep - 1)));
 	}
 	else if (config.training)
 	{
