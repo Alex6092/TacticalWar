@@ -115,7 +115,10 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	};
 	fx.playSound = [this](const std::string & path) { playSound(path); };
 	hud->onSpellClicked = [this](int slot) { selectSpell(selectedSpell == slot ? -1 : slot); };
-	hud->onEndTurn = [this]() { sendAction("Ct", json::object()); };
+	hud->onEndTurn = [this]() {
+		if (isMyTurn())
+			sendAction("Ct", json::object());
+	};
 	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
@@ -234,7 +237,7 @@ void BattleScreen::update(float deltatime)
 	if (hasSnapshot)
 	{
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
-		hud->refresh(shown, ClientGameData::get().data(), you, hoveredFighter, selectedSpell, isInteractive(), remaining);
+		hud->refresh(shown, ClientGameData::get().data(), you, hoveredFighter, selectedSpell, isMyTurn(), remaining);
 		refreshPreview();
 	}
 
@@ -726,6 +729,12 @@ bool BattleScreen::isInteractive() const
 		&& truth.activeFighterId() == you && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
 }
 
+bool BattleScreen::isMyTurn() const
+{
+	return hasSnapshot && mode == Mode::PLAYER && truth.phase == battle::BattlePhase::FIGHT && truth.activeFighterId() == you
+		&& shown.phase == battle::BattlePhase::FIGHT && shown.activeFighterId() == you;
+}
+
 bool BattleScreen::isMouseOverHud() const
 {
 	if (window == NULL)
@@ -734,7 +743,8 @@ bool BattleScreen::isMouseOverHud() const
 	sf::Vector2i mouse = sf::Mouse::getPosition(*window);
 	for (const tgui::Widget::Ptr & widget : gui->getWidgets())
 	{
-		if (!widget->isVisible())
+		// Les textes désactivés (messages, ligne d'aide) laissent passer les clics vers la carte.
+		if (!widget->isVisible() || !widget->isEnabled())
 			continue;
 		sf::Vector2f position = widget->getPosition();
 		sf::Vector2f size = widget->getSize();
@@ -747,7 +757,8 @@ bool BattleScreen::isMouseOverHud() const
 void BattleScreen::selectSpell(int slot)
 {
 	selectedSpell = -1;
-	if (slot < 0 || !isInteractive())
+	// Pendant son tour, même pendant une animation : la visée s'affichera à la fin de celle-ci.
+	if (slot < 0 || !isMyTurn())
 		return;
 
 	const battle::Fighter * me = truth.findFighter(you);
@@ -824,6 +835,19 @@ void BattleScreen::refreshPreview()
 	const tw::battle::GameData & data = ClientGameData::get().data();
 	sf::String terrain = terrainHint(hoveredCell);
 
+	// Sort choisi pendant une animation : revérifié sur l'état à jour avant la visée (PA dépensés
+	// entre-temps…).
+	if (selectedSpell >= 0 && isInteractive() && me != NULL)
+	{
+		const battle::SpellDef * spell = battle::spellOf(data, *me, selectedSpell);
+		std::string error = spell != NULL ? battle::checkSpellResources(*me, *spell) : std::string("Sort inconnu.");
+		if (!error.empty())
+		{
+			hud->showMessage(fromServerText(error), sf::Color(255, 110, 90), 1.5f);
+			selectedSpell = -1;
+		}
+	}
+
 	bool aiming = isInteractive() && me != NULL && selectedSpell >= 0;
 	if (!aiming)
 	{
@@ -842,6 +866,13 @@ void BattleScreen::refreshPreview()
 		{
 			hud->setHint(terrain);
 		}
+	}
+
+	if (selectedSpell >= 0 && me != NULL && !isInteractive() && isMyTurn())
+	{
+		const battle::SpellDef * spell = battle::spellOf(data, *me, selectedSpell);
+		if (spell != NULL)
+			hud->setHint(fromServerText(spell->name) + L" : visée à la fin de l'action en cours");
 	}
 
 	if (!isInteractive() || me == NULL)

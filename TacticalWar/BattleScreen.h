@@ -82,7 +82,11 @@ namespace tw
 		// Aperçu du sort visé sur "cell" (recalculé quand la case, le sort ou l'état changent).
 		void updateAimPreview(const battle::Fighter & me, const battle::Cell & cell);
 		void drawAimPreview(sf::RenderWindow * window);
+		// Le joueur peut agir maintenant (son tour, animations terminées, serveur à jour).
 		bool isInteractive() const;
+		// C'est le tour du joueur (état de référence et état affiché) : il peut déjà choisir un sort
+		// pendant une animation ; viser et agir attendent isInteractive().
+		bool isMyTurn() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
 		// Action de jeu du joueur (une seule à la fois, en attendant la réponse du serveur).

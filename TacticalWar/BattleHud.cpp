@@ -125,11 +125,14 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	messageLabel = createLabel(30, sf::Color(255, 220, 80));
 	messageLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	messageLabel->getRenderer()->setTextOutlineThickness(2);
+	// Textes seuls : ils ne doivent pas intercepter les clics (carte, barre de sorts).
+	messageLabel->setEnabled(false);
 	gui->add(messageLabel);
 
 	hintLabel = createLabel(16, sf::Color(255, 200, 120));
 	hintLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	hintLabel->getRenderer()->setTextOutlineThickness(1);
+	hintLabel->setEnabled(false);
 	gui->add(hintLabel);
 
 	detailsPanel = tgui::Panel::create();
@@ -609,11 +612,11 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 			const SpellDef & spell = *spellOf(data, *me, i);
 			auto cooldown = me->cooldowns.find(spell.id);
 			int remaining = cooldown == me->cooldowns.end() ? 0 : cooldown->second;
-			bool usable = myTurn && checkSpellResources(*me, spell).empty();
-
-			float opacity = usable || !myTurn ? 1.0f : 0.35f;
-			if (selectedSpell >= 0 && selectedSpell != i)
-				opacity *= 0.6f;
+			// Grisé : un sort en relance l'est en permanence ; un manque de PA (ou de lancers) seulement
+			// pendant son tour, les PA revenant au tour suivant. Pendant une visée, les autres sorts
+			// disponibles sont atténués.
+			bool usable = remaining <= 0 && (!myTurn || checkSpellResources(*me, spell).empty());
+			float opacity = !usable ? 0.3f : (selectedSpell >= 0 && selectedSpell != i) ? 0.65f : 1.0f;
 			button.icon->getRenderer()->setOpacity(opacity);
 			button.key->getRenderer()->setTextColor(selectedSpell == i ? sf::Color(120, 255, 120) : sf::Color(255, 230, 150));
 			button.cooldown->setText(remaining > 0 ? num(remaining) : "");
