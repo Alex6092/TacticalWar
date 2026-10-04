@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,8 @@ public:
 	std::map<int, std::vector<int>> spellChoices;
 	// Derniers talents de tournoi choisis (proposés à nouveau au match suivant et à l'entraînement).
 	std::vector<std::string> talentChoice;
+	// Énigmes tactiques réussies (identifiants), retenues d'une session à l'autre.
+	std::set<std::string> solvedPuzzles;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -60,6 +63,11 @@ public:
 	int classScreenTalents = -1;
 	// Tutoriel guidé (--tutorial), à partir d'une étape (--tutorial-step N, de 1 à 9) pour les captures.
 	bool tutorial = false;
+	// Énigmes : la liste (--puzzles), une énigme (--puzzle N, de 1 à 6), jouée par la démonstration
+	// (--puzzle-demo) pour les vérifications et les captures.
+	bool puzzleList = false;
+	int puzzle = 0;
+	bool puzzleDemo = false;
 	int tutorialStep = 1;
 	int classScreenBan = 0;
 	int classScreenForbidden = 0;

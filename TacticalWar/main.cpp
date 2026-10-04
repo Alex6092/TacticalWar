@@ -6,6 +6,8 @@
 #include "TrainingScreen.h"
 #include "TrainingSetupScreen.h"
 #include "TutorialScreen.h"
+#include "PuzzleScreen.h"
+#include "PuzzleSelectScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
@@ -48,6 +50,14 @@ int main(int argc, char** argv)
 			screen->onMessageReceived("BB{\"banned\": " + std::to_string(config.classScreenForbidden % 4 + 1) + ", \"done\": true, \"forbidden\": "
 				+ std::to_string(config.classScreenForbidden) + "}");
 		}
+	}
+	else if (config.puzzle > 0)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::PuzzleScreen(&gui, config.puzzle - 1, config.puzzleDemo));
+	}
+	else if (config.puzzleList)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::PuzzleSelectScreen(&gui));
 	}
 	else if (config.tutorial)
 	{

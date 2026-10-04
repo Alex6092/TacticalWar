@@ -11,6 +11,7 @@
 #include "ScreenManager.h"
 #include "TrainingScreen.h"
 #include "TutorialScreen.h"
+#include "PuzzleSelectScreen.h"
 
 using namespace tw;
 
@@ -127,24 +128,32 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	tgui::Button::Ptr back = tgui::Button::create(L"Retour");
 	back->setInheritedFont(font);
 	back->setTextSize(18);
-	back->setSize(180, 44);
-	back->setPosition(PANEL_WIDTH / 2 - 290, top + 170);
+	back->setSize(160, 44);
+	back->setPosition(PANEL_WIDTH / 2 - 340, top + 170);
 	back->connect("pressed", [this]() { request = Request::BACK; });
 	panel->add(back);
 
 	tgui::Button::Ptr tutorial = tgui::Button::create(L"Tutoriel");
 	tutorial->setInheritedFont(font);
 	tutorial->setTextSize(18);
-	tutorial->setSize(180, 44);
-	tutorial->setPosition(PANEL_WIDTH / 2 - 90, top + 170);
+	tutorial->setSize(160, 44);
+	tutorial->setPosition(PANEL_WIDTH / 2 - 170, top + 170);
 	tutorial->connect("pressed", [this]() { request = Request::TUTORIAL; });
 	panel->add(tutorial);
+
+	tgui::Button::Ptr puzzles = tgui::Button::create(L"Énigmes");
+	puzzles->setInheritedFont(font);
+	puzzles->setTextSize(18);
+	puzzles->setSize(160, 44);
+	puzzles->setPosition(PANEL_WIDTH / 2, top + 170);
+	puzzles->connect("pressed", [this]() { request = Request::PUZZLES; });
+	panel->add(puzzles);
 
 	playButton = tgui::Button::create(L"Jouer");
 	playButton->setInheritedFont(font);
 	playButton->setTextSize(18);
-	playButton->setSize(180, 44);
-	playButton->setPosition(PANEL_WIDTH / 2 + 110, top + 170);
+	playButton->setSize(160, 44);
+	playButton->setPosition(PANEL_WIDTH / 2 + 170, top + 170);
 	playButton->connect("pressed", [this]() { request = Request::PLAY; });
 	panel->add(playButton);
 
@@ -315,6 +324,13 @@ void TrainingSetupScreen::update(float deltatime)
 		save();
 		gui->removeAllWidgets();
 		ScreenManager::getInstance()->setCurrentScreen(new LoginScreen(gui));
+		delete this;
+	}
+	else if (request == Request::PUZZLES)
+	{
+		save();
+		gui->removeAllWidgets();
+		ScreenManager::getInstance()->setCurrentScreen(new PuzzleSelectScreen(gui));
 		delete this;
 	}
 	else if (request == Request::TUTORIAL)

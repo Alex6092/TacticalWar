@@ -165,4 +165,10 @@
     <ClInclude Include="TutorialScript.h" />
     <ClInclude Include="TutorialScreen.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PuzzleScreen.cpp" />
+    <ClCompile Include="PuzzleSelectScreen.cpp" />
+    <ClInclude Include="PuzzleScreen.h" />
+    <ClInclude Include="PuzzleSelectScreen.h" />
+  </ItemGroup>
 </Project>

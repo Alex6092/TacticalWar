@@ -342,6 +342,30 @@ la consigne est remplie.
   étapes précédentes étant jouées automatiquement ; 10 mène le combat jusqu'au bilan, 11 ouvre l'écran
   final. `--tutorial` ouvre le tutoriel au début.
 
+## Énigmes tactiques
+
+Le bouton **« Énigmes »** des réglages de l'entraînement ouvre six petits défis, sans serveur : une
+position imposée, et un objectif à atteindre pendant ses tours (mettre l'adversaire hors combat). Les
+adversaires ne jouent pas, et les sorts font leurs dégâts minimum : le résultat est toujours le même.
+
+| Énigme | Idée à trouver |
+|---|---|
+| 1. Brise-glace | Sur une cible gelée, Taillade (au contact) profite plus du gel que Charge |
+| 2. Cible immobile | Avancer pour être à portée, puis trois Éclair sur la cible entravée |
+| 3. Dans le mille | Reculer d'une case pour le bonus de distance de l'Archer, puis Tir précis |
+| 4. Jugement ardent | Se mettre à portée, puis deux Châtiment sur la cible brûlée |
+| 5. Contre le rocher | Flèche de recul contre un rocher : dégâts de collision |
+| 6. Duo : Archer et Mage | Jouer les deux : Flèche entravante, puis trois Éclair (Cible immobile) |
+
+- Panneau en haut de l'écran : objectif, « Indice », « Recommencer », « Énigmes » ; puis « Réussi ! »
+  (« Énigme suivante ») ou « Raté » (« Réessayer »). Les énigmes réussies sont retenues (`client.json`)
+  et marquées dans la liste.
+- Données : `assets/puzzles/*.json` (carte, combattants, marques posées, objectif, indice, solution et
+  « piège »). Les tests vérifient que la solution réussit, et que ne rien faire ou suivre le piège
+  échoue : une énigme impossible ou trop facile est détectée.
+- En ligne de commande : `--puzzles` (liste), `--puzzle N` (énigme N), `--puzzle-demo` (la solution
+  est jouée automatiquement, avec les mêmes commandes qu'un joueur).
+
 ## Entraînement hors ligne
 
 Le bouton **« Entraînement »** de l'écran de connexion lance un combat contre l'ordinateur, sans serveur ni

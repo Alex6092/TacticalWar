@@ -50,6 +50,11 @@ void ClientConfig::load()
 		if (talent.is_string())
 			talentChoice.push_back(talent.get<std::string>());
 	}
+	for (const nlohmann::json & puzzleId : json.value("puzzles", nlohmann::json::array()))
+	{
+		if (puzzleId.is_string())
+			solvedPuzzles.insert(puzzleId.get<std::string>());
+	}
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -77,6 +82,8 @@ void ClientConfig::save() const
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;
+	if (!solvedPuzzles.empty())
+		json["puzzles"] = solvedPuzzles;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -184,6 +191,18 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--class-screen" && hasValue)
 		{
 			classScreenTalents = std::atoi(argv[++i]);
+		}
+		else if (arg == "--puzzles")
+		{
+			puzzleList = true;
+		}
+		else if (arg == "--puzzle" && hasValue)
+		{
+			puzzle = std::atoi(argv[++i]);
+		}
+		else if (arg == "--puzzle-demo")
+		{
+			puzzleDemo = true;
 		}
 		else if (arg == "--tutorial")
 		{
