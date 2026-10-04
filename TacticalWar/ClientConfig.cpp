@@ -193,6 +193,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenBan = std::atoi(argv[++i]);
 		}
+		else if (arg == "--class-screen-mate" && hasValue)
+		{
+			classScreenMate = std::atoi(argv[++i]);
+		}
 		else if (arg == "--class-screen-forbidden" && hasValue)
 		{
 			classScreenForbidden = std::atoi(argv[++i]);

@@ -16,7 +16,8 @@ class PictureCharacterView;
 // de blocs placés selon la taille de la fenêtre (layout) :
 // - à gauche : les sorts de la classe (SpellPicker) et le bouton des talents (TalentPicker) ;
 // - au centre : la carte de la classe, son personnage animé et les flèches pour changer de classe ;
-// - à droite : les caractéristiques, la description et le passif ;
+// - à droite : les caractéristiques, la description et le passif, puis le coéquipier (classe
+//   regardée ou verrouillée, combinaisons possibles entre vos deux classes) ;
 // - en bas : le bouton de verrouillage, actif quand les sorts et les talents sont complets.
 // Certains matchs de tournoi commencent par un bannissement : le même écran sert à choisir la classe
 // interdite à l'adversaire (bandeau au-dessus du bouton, qui devient « Bannir cette classe »).
@@ -40,6 +41,7 @@ private:
 	void layout(const sf::Vector2u & size);
 	void refreshLock();
 	void refreshBan();
+	void refreshMate();
 	sf::String classLabel(int classId) const;
 	int currentClassId() const;
 
@@ -72,6 +74,10 @@ private:
 	tgui::Panel::Ptr descriptionPanel;
 	tgui::Label::Ptr descriptionLabel;
 	tgui::Label::Ptr banLabel;
+	tgui::Panel::Ptr matePanel;
+	tgui::Label::Ptr mateTitle;
+	tgui::Label::Ptr mateStatus;
+	tgui::Label::Ptr mateCombos;
 
 	bool readyToLock;
 	bool locked;
@@ -85,4 +91,13 @@ private:
 	int banSecondsShown = -1;
 	int bannedClass = 0;		// Interdite par notre équipe à l'adversaire
 	int forbiddenClass = 0;		// Interdite à notre équipe par l'adversaire
+
+	// Coéquipier (message PT du serveur) et dernière classe regardée envoyée (PV).
+	bool mateKnown = false;
+	sf::String mateName;
+	int mateClass = 0;
+	int mateViewing = 0;
+	bool mateLocked = false;
+	bool matePresent = false;
+	int viewSent = -1;
 };

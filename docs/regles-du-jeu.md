@@ -82,6 +82,17 @@ pour chaque classe est retenu (`client.json`) et proposé la fois suivante. Sans
 - Le message `PC` envoie la classe et les sorts : `PC{"class": 4, "spells": [0, 1, 4, 5]}`. Un choix non
   valable donne les sorts par défaut.
 
+## Choix de classe en équipe
+
+Sur l'écran de choix de classe, le bloc **« Votre coéquipier »** (en bas à droite) montre en direct la
+classe que regarde son coéquipier, puis celle qu'il a verrouillée, et s'il est absent. Il liste les
+**combinaisons possibles** entre la classe affichée et celle du coéquipier (« Brise-glace : marquez avec
+Glyphe de givre ou Prison de glace, puis votre coéquipier frappe avec Taillade... »). Les adversaires
+ne voient rien de ces choix.
+
+Messages : `PV{"class"}` (classe regardée) et `PT{"name", "class", "viewing", "locked", "present"}`,
+relayé aux seuls coéquipiers.
+
 ## Talents de tournoi
 
 Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour toutes les classes :

@@ -32,6 +32,11 @@ int main(int argc, char** argv)
 		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
+		if (config.classScreenMate > 0)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": " + std::to_string(config.classScreenMate)
+				+ ", \"viewing\": " + std::to_string(config.classScreenMate) + ", \"locked\": true, \"present\": true}");
+		}
 		// Fin de bannissement simulée : la classe donnée est interdite, la suivante bannie par notre équipe.
 		if (config.classScreenForbidden > 0)
 		{

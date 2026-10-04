@@ -154,6 +154,28 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	banLabel->setVisible(banMode);
 	gui->add(banLabel);
 
+	// Coéquipier : affiché dès que le serveur en donne l'état.
+	matePanel = createPanel();
+	mateTitle = tgui::Label::create();
+	mateTitle->setInheritedFont(textFont);
+	mateTitle->setTextSize(18);
+	mateTitle->getRenderer()->setTextColor(sf::Color(255, 215, 0));
+	mateTitle->setPosition(14, 8);
+	matePanel->add(mateTitle);
+	mateStatus = tgui::Label::create();
+	mateStatus->setInheritedFont(textFont);
+	mateStatus->setTextSize(16);
+	mateStatus->setPosition(14, 36);
+	matePanel->add(mateStatus);
+	mateCombos = tgui::Label::create();
+	mateCombos->setInheritedFont(textFont);
+	mateCombos->setTextSize(15);
+	mateCombos->getRenderer()->setTextColor(sf::Color(235, 235, 235));
+	mateCombos->setPosition(14, 64);
+	matePanel->add(mateCombos);
+	matePanel->setVisible(false);
+	gui->add(matePanel);
+
 	showClass(0);
 }
 
@@ -220,6 +242,53 @@ void ClassSelectionScreen::showClass(int index)
 
 	refreshBan();
 	refreshLock();
+	refreshMate();
+	if (windowSize.x > 0)
+		layout(windowSize);
+
+	// Le coéquipier voit la classe regardée (tant que le choix n'est pas verrouillé).
+	if (!locked && classDef != NULL && classDef->id != viewSent)
+	{
+		viewSent = classDef->id;
+		LinkToServer::getInstance()->Send("PV" + nlohmann::json({ { "class", classDef->id } }).dump());
+	}
+}
+
+void ClassSelectionScreen::refreshMate()
+{
+	matePanel->setVisible(mateKnown);
+	if (!mateKnown)
+		return;
+
+	mateTitle->setText(L"Votre coéquipier : " + mateName);
+	sf::String status = !matePresent ? sf::String(L"Absent pour le moment.")
+		: mateLocked ? L"A choisi : " + classLabel(mateClass) + L" (verrouillé)"
+		: mateViewing != 0 ? L"Regarde : " + classLabel(mateViewing)
+		: sf::String(L"Choisit sa classe...");
+	mateStatus->setText(status);
+	mateStatus->getRenderer()->setTextColor(mateLocked ? sf::Color(130, 255, 130) : matePresent ? sf::Color::White : sf::Color(255, 160, 140));
+
+	// Combinaisons entre la classe affichée et celle du coéquipier (verrouillée, sinon regardée).
+	auto join = [](const std::vector<std::string> & names) {
+		sf::String text;
+		for (std::size_t i = 0; i < names.size(); i++)
+			text += (i == 0 ? sf::String() : i + 1 == names.size() ? sf::String(L" ou ") : sf::String(L", ")) + fromServerText(names[i]);
+		return text;
+	};
+	int other = mateLocked ? mateClass : mateViewing;
+	sf::String combos;
+	if (other != 0)
+	{
+		for (const tw::battle::ComboLink & link : tw::battle::combosBetween(ClientGameData::get().data(), currentClassId(), other))
+		{
+			bool mine = link.setterClass == currentClassId();
+			combos += L"\n- " + fromServerText(link.name) + L" (+" + num(link.percent) + L" %) : "
+				+ (mine ? L"marquez avec " + join(link.setters) + L", puis votre coéquipier frappe avec " + join(link.finishers)
+					: L"votre coéquipier marque avec " + join(link.setters) + L", puis frappez avec " + join(link.finishers)) + L".";
+		}
+		combos = combos.isEmpty() ? sf::String(L"Pas de combinaison entre vos deux classes.") : L"Combinaisons possibles :" + combos;
+	}
+	mateCombos->setText(combos);
 	if (windowSize.x > 0)
 		layout(windowSize);
 }
@@ -333,9 +402,19 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	float rightWidth = width - rightX - margin;
 	statsPanel->setPosition(rightX, top);
 	statsPanel->setSize(rightWidth, 200);
-	descriptionPanel->setPosition(rightX, top + 214);
-	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - (top + 214)));
 	descriptionLabel->setMaximumTextWidth(rightWidth - 28);
+	// Coéquipier, sous la description.
+	float mateHeight = 0;
+	if (matePanel->isVisible())
+	{
+		mateCombos->setMaximumTextWidth(rightWidth - 28);
+		mateHeight = 64 + mateCombos->getSize().y + 12;
+		matePanel->setSize(rightWidth, mateHeight);
+		matePanel->setPosition(rightX, bottom - 16 - mateHeight);
+		mateHeight += 12;
+	}
+	descriptionPanel->setPosition(rightX, top + 214);
+	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - mateHeight - (top + 214)));
 
 	lockButton->setSize(400, 54);
 	lockButton->setPosition(width / 2 - 200, lockY);
@@ -450,6 +529,21 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		previousButton->setVisible(false);
 		nextButton->setVisible(false);
 		refreshLock();
+	}
+	else if (m.substring(0, 2) == "PT")
+	{
+		// État du coéquipier : nom, classe regardée ou verrouillée, présence.
+		nlohmann::json mate = nlohmann::json::parse(msg.substr(2), nullptr, false);
+		if (mate.is_object())
+		{
+			mateKnown = true;
+			mateName = fromServerText(mate.value("name", std::string()));
+			mateClass = mate.value("class", 0);
+			mateViewing = mate.value("viewing", 0);
+			mateLocked = mate.value("locked", false);
+			matePresent = mate.value("present", true);
+			refreshMate();
+		}
 	}
 	else if (m.substring(0, 2) == "BB")
 	{

@@ -62,6 +62,8 @@ public:
 	int tutorialStep = 1;
 	int classScreenBan = 0;
 	int classScreenForbidden = 0;
+	// Coéquipier simulé, qui a verrouillé cette classe (--class-screen-mate <id>, 0 : aucun).
+	int classScreenMate = 0;
 	int trainingTalents = 0;
 
 	static ClientConfig & get();
