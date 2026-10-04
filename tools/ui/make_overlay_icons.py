@@ -4,6 +4,7 @@ Usage (depuis la racine du dépôt) : py tools/ui/make_overlay_icons.py
 
 Le cœur (PV), l'étoile (PA) et le carré (PM) sont d'origine. Le script dessine l'écusson du bouclier
 (shield_bg.png, 64 x 64) dans le même style plat : forme pleine, léger dégradé, contour sombre.
+Il dessine aussi les icônes des signaux d'équipe (assets/ui/pings : here, attack, retreat, danger).
 Dessiné à 4 fois la taille finale puis réduit (Lanczos).
 """
 import math
@@ -70,6 +71,59 @@ def make_shield(path):
     print(os.path.relpath(path, ROOT))
 
 
+PING_SIZE = 48
+PINGS = {
+    # Type de signal : (couleur du disque, dessin du symbole blanc).
+    'here': (255, 200, 40),
+    'attack': (225, 60, 50),
+    'retreat': (70, 150, 240),
+    'danger': (245, 140, 30),
+}
+
+
+def make_ping_icon(kind, path):
+    """Signaux d'équipe (assets/ui/pings) : disque coloré cerné de sombre, symbole blanc."""
+    size = PING_SIZE * K
+    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    color = PINGS[kind]
+    c = size / 2
+    r = size * 0.46
+    dark = tuple(int(v * 0.45) for v in color) + (255,)
+    white = (255, 255, 255, 255)
+    if kind == 'danger':
+        # Triangle d'avertissement.
+        outer = [(c, c - r), (c + r, c + r * 0.82), (c - r, c + r * 0.82)]
+        inner = [(c, c - r + 7 * K), (c + r - 8 * K, c + r * 0.82 - 4 * K), (c - r + 8 * K, c + r * 0.82 - 4 * K)]
+        draw.polygon(outer, fill=dark)
+        draw.polygon(inner, fill=color + (255,))
+        draw.rounded_rectangle((c - 3 * K, c - r * 0.45, c + 3 * K, c + r * 0.25), radius=3 * K, fill=white)
+        draw.ellipse((c - 3.5 * K, c + r * 0.38, c + 3.5 * K, c + r * 0.38 + 7 * K), fill=white)
+    else:
+        draw.ellipse((c - r, c - r, c + r, c + r), fill=dark)
+        draw.ellipse((c - r + 3 * K, c - r + 3 * K, c + r - 3 * K, c + r - 3 * K), fill=color + (255,))
+        if kind == 'here':
+            # Repère de carte : goutte renversée percée d'un rond.
+            draw.ellipse((c - 9 * K, c - 13 * K, c + 9 * K, c + 5 * K), fill=white)
+            draw.polygon([(c - 8 * K, c - 1 * K), (c + 8 * K, c - 1 * K), (c, c + 14 * K)], fill=white)
+            draw.ellipse((c - 4 * K, c - 8 * K, c + 4 * K, c), fill=color + (255,))
+        elif kind == 'attack':
+            # Viseur : cercle et croix.
+            draw.ellipse((c - 11 * K, c - 11 * K, c + 11 * K, c + 11 * K), outline=white, width=3 * K)
+            for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+                draw.line((c + dx * 5 * K, c + dy * 5 * K, c + dx * 16 * K, c + dy * 16 * K), fill=white, width=3 * K)
+        elif kind == 'retreat':
+            # Flèche de repli, vers l'arrière.
+            draw.polygon([(c - 14 * K, c), (c - 2 * K, c - 11 * K), (c - 2 * K, c + 11 * K)], fill=white)
+            draw.rectangle((c - 3 * K, c - 4 * K, c + 13 * K, c + 4 * K), fill=white)
+    image.resize((PING_SIZE, PING_SIZE), Image.LANCZOS).save(path, optimize=True)
+    print(os.path.relpath(path, ROOT))
+
+
 if __name__ == '__main__':
     os.makedirs(OUTPUT, exist_ok=True)
     make_shield(os.path.join(OUTPUT, 'shield_bg.png'))
+    pings = os.path.join(ROOT, 'assets', 'ui', 'pings')
+    os.makedirs(pings, exist_ok=True)
+    for kind in PINGS:
+        make_ping_icon(kind, os.path.join(pings, kind + '.png'))

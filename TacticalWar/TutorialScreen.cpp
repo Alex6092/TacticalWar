@@ -107,7 +107,8 @@ void TutorialScreen::playDemo(int step)
 	// réussite est vérifiée comme en jeu. Une action par étape, sauf pour finir le combat.
 	const battle::Fighter * me = truth.findFighter(you);
 	const battle::Fighter * target = truth.findFighter(dummy);
-	if (me == NULL || target == NULL || (step == demoActed && step != 8))
+	// Une action par étape, sauf pour finir le combat (8) et pour la roue des signaux (7 : ouverte, puis un choix).
+	if (me == NULL || target == NULL || (step == demoActed && step != 8 && step != 7))
 		return;
 	if (step >= 1 && !isInteractive())
 		return;
@@ -146,7 +147,18 @@ void TutorialScreen::playDemo(int step)
 		hoveredFighter = dummy;
 		break;
 	case 7:
-		sendPing({ target->position.x - 1, target->position.y });
+		// Roue des signaux ouverte au milieu de l'écran, puis « Attaquez » sur le mannequin.
+		if (!hud->isPingWheelOpen())
+		{
+			pingCell = target->position;
+			hud->openPingWheel(sf::Vector2f(gui->getView().getSize().x / 2, gui->getView().getSize().y / 2));
+			demoWait = -1.5f;
+		}
+		else if (hud->onPing)
+		{
+			hud->closePingWheel();
+			hud->onPing(1);
+		}
 		break;
 	default:
 	{

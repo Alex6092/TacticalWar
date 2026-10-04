@@ -120,8 +120,8 @@ namespace tw
 			{ "CL", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Lancer de sort {slot (0 à 3), x, y}" },
 			{ "Ct", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Fin de tour" },
 			{ "CE", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote" },
-			{ "CG", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Signal à son équipe sur une case {x, y} (3 au plus toutes les 5 s)" },
-			{ "BG", Direction::SERVER_TO_CLIENT, Role::ANY, "Signal d'un coéquipier {f, x, y} : jamais envoyé aux adversaires ni aux spectateurs" },
+			{ "CG", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s)" },
+			{ "BG", Direction::SERVER_TO_CLIENT, Role::ANY, "Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs" },
 		};
 
 		inline const OpcodeInfo * findOpcode(const char * op)

@@ -122,5 +122,5 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `CL` | C → S | joueur | Lancer de sort {slot (0 à 3), x, y} |
 | `Ct` | C → S | joueur | Fin de tour |
 | `CE` | C → S | joueur | Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote |
-| `CG` | C → S | joueur | Signal à son équipe sur une case {x, y} (3 au plus toutes les 5 s) |
-| `BG` | S → C | tous | Signal d'un coéquipier {f, x, y} : jamais envoyé aux adversaires ni aux spectateurs |
+| `CG` | C → S | joueur | Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s) |
+| `BG` | S → C | tous | Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs |

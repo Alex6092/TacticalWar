@@ -60,7 +60,7 @@ void LocalBattleScreen::sendToServer(const std::string & op, const json & body)
 	// Signal d'équipe : les coéquipiers sont joués par l'IA, il n'est montré qu'au joueur.
 	if (op == "CG")
 	{
-		onMessageReceived("BG" + json({ { "f", you }, { "x", body.value("x", -1) }, { "y", body.value("y", -1) } }).dump());
+		onMessageReceived("BG" + json({ { "f", you }, { "x", body.value("x", -1) }, { "y", body.value("y", -1) }, { "kind", body.value("kind", 0) } }).dump());
 		return;
 	}
 	// Resynchronisation : état complet du moteur local.

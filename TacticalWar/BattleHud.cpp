@@ -185,6 +185,41 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 		spells.push_back(button);
 	}
 
+	// Roue des signaux : Ici (haut), Attaquez (droite), Danger (gauche), Repli (bas).
+	pingWheel = tgui::Panel::create();
+	pingWheel->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+	pingWheel->setSize(320, 170);
+	pingWheel->setVisible(false);
+	const char * pingIcons[4] = { "here", "attack", "retreat", "danger" };
+	const wchar_t * pingNames[4] = { L"Ici", L"Attaquez", L"Repli", L"Danger" };
+	const sf::Vector2f pingPlaces[4] = { { 95, 0 }, { 190, 65 }, { 95, 130 }, { 0, 65 } };
+	for (int kind = 0; kind < 4; kind++)
+	{
+		tgui::BitmapButton::Ptr choice = tgui::BitmapButton::create(pingNames[kind]);
+		choice->setInheritedFont(font);
+		choice->setTextSize(16);
+		if (pingTextures[kind].loadFromFile(std::string("./assets/ui/pings/") + pingIcons[kind] + ".png"))
+		{
+			pingTextures[kind].setSmooth(true);
+			choice->setImage(pingTextures[kind]);
+			choice->setImageScaling(0.75f);
+		}
+		choice->setSize(130, 40);
+		choice->setPosition(pingPlaces[kind].x, pingPlaces[kind].y);
+		choice->getRenderer()->setBackgroundColor(sf::Color(25, 25, 35, 225));
+		choice->getRenderer()->setBackgroundColorHover(sf::Color(60, 60, 80, 240));
+		choice->getRenderer()->setTextColor(sf::Color::White);
+		choice->getRenderer()->setTextColorHover(sf::Color(255, 230, 150));
+		choice->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
+		choice->connect("pressed", [this, kind]() {
+			closePingWheel();
+			if (onPing)
+				onPing(kind);
+		});
+		pingWheel->add(choice);
+	}
+	gui->add(pingWheel);
+
 	endTurnButton = tgui::Button::create(L"Passer le tour");
 	endTurnButton->setInheritedFont(font);
 	endTurnButton->setTextSize(16);
@@ -373,6 +408,27 @@ void BattleHud::setHint(const sf::String & text)
 		hintLabel->setText(text);
 		layout(windowSize);
 	}
+}
+
+void BattleHud::openPingWheel(const sf::Vector2f & position)
+{
+	// Centrée sur le clic, sans sortir de la fenêtre.
+	sf::Vector2f size = pingWheel->getSize();
+	float x = std::max(0.f, std::min(windowSize.x - size.x, position.x - size.x / 2));
+	float y = std::max(0.f, std::min(windowSize.y - size.y, position.y - size.y / 2));
+	pingWheel->setPosition(x, y);
+	pingWheel->setVisible(true);
+	pingWheel->moveToFront();
+}
+
+void BattleHud::closePingWheel()
+{
+	pingWheel->setVisible(false);
+}
+
+bool BattleHud::isPingWheelOpen() const
+{
+	return pingWheel->isVisible();
 }
 
 void BattleHud::log(const sf::String & line, const sf::Color & color)

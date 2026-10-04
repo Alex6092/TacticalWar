@@ -99,8 +99,10 @@ namespace tw
 		virtual void sendToServer(const std::string & op, const nlohmann::json & body);
 		// Émote prédéfinie, et signal pour son équipe sur une case (Alt+clic ou clic molette).
 		void sendEmote(int emoteId);
-		void sendPing(const battle::Cell & cell);
-		void showPing(int fighterId, const battle::Cell & cell);
+		// Types de signal : 0 ici, 1 attaquez, 2 repli, 3 danger.
+		void sendPing(const battle::Cell & cell, int kind = 0);
+		void showPing(int fighterId, const battle::Cell & cell, int kind = 0);
+		void drawPingMarkers(sf::RenderWindow * window);
 		void drawBubbles(sf::RenderWindow * window);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
 		void playSound(const std::string & path);
@@ -155,6 +157,16 @@ namespace tw
 			float age = 0;
 		};
 		std::vector<SpeechBubble> bubbles;
+		// Repères des signaux reçus (icône et mot au-dessus de la case), et case de la roue ouverte.
+		struct PingMarker
+		{
+			battle::Cell cell;
+			int kind = 0;
+			float age = 0;
+		};
+		std::vector<PingMarker> pingMarkers;
+		sf::Texture pingTextures[4];
+		battle::Cell pingCell = { -1, -1 };
 		float emoteCooldown = 0;
 		float pingCooldown = 0;
 		std::vector<battle::TargetPreview> aimPreviews;

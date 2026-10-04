@@ -356,7 +356,9 @@ void TWParser::handlePing(ClientState * client, const nlohmann::json & body)
 		return;
 	recent.push_back(now);
 
-	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y } });
+	// Type de signal : 0 ici, 1 attaquez, 2 repli, 3 danger (absent : ici, pour les anciens clients).
+	int kind = std::max(0, std::min(3, body.value("kind", 0)));
+	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y }, { "kind", kind } });
 	for (tw::Player * mate : session->getParticipants())
 	{
 		const tw::battle::Fighter * other = state.findFighter(session->fighterIdOf(mate));

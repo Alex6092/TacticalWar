@@ -52,8 +52,18 @@ possibles du joueur sont en vert.
 
 ## Communiquer avec son équipe
 
-- **Signal** : Alt+clic (ou clic molette) sur une case. Un anneau doré et une flèche apparaissent sur la
-  case, avec un son, et le journal indique « Léa signale une case » ou « Léa désigne Cible ».
+- **Signal** : Alt+clic sur une case ouvre une roue de 4 signaux ; le clic molette envoie directement « Ici ».
+
+  | Signal | Couleur | Journal |
+  |---|---|---|
+  | Ici | doré | « Léa désigne Cible » ou « Léa signale une case » |
+  | Attaquez | rouge | « Léa : attaquez Cible ! » |
+  | Repli | bleu | « Léa : repli ! » |
+  | Danger | orange | « Léa : attention à Cible ! » ou « Léa : danger ici ! » |
+
+  Un anneau et une flèche de la couleur du signal apparaissent sur la case, avec son icône et son nom
+  pendant 3 secondes. Échap ou un clic ailleurs referme la roue.
+  Message : `CG{"x", "y", "kind"}` (0 ici, 1 attaquez, 2 repli, 3 danger).
   - Seuls les coéquipiers le voient : ni les adversaires ni les spectateurs (l'écran projeté est
     visible des joueurs), et il n'est pas enregistré dans les rediffusions.
   - Au plus un signal par seconde (trois toutes les cinq secondes côté serveur).
