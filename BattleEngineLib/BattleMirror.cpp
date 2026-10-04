@@ -116,6 +116,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.ready = value.value("ready", false);
 		fighter.connected = value.value("connected", true);
 		fighter.piloted = value.value("piloted", false);
+		fighter.timeBankMs = value.value("bank", (std::int64_t)0);
 		for (const auto & stat : intMap(value.value("stats", json::object())))
 		{
 			Stat parsed;
@@ -288,6 +289,10 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		int uid = event.value("uid", 0);
 		state.glyphs.erase(std::remove_if(state.glyphs.begin(), state.glyphs.end(),
 			[uid](const Glyph & glyph) { return glyph.uid == uid; }), state.glyphs.end());
+	}
+	else if (type == "timer" && fighter != nullptr && event.contains("bank"))
+	{
+		fighter->timeBankMs = event.value("bank", (std::int64_t)0);
 	}
 	else if (type == "connection" && fighter != nullptr)
 	{

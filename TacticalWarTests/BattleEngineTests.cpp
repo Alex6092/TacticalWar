@@ -217,8 +217,8 @@ TEST_CASE("Turn order follows initiative and alternates teams")
 	CHECK(arena.state().round == 1);
 	CHECK(arena.active() == order[0]);
 
-	// Fin de tour au minuteur.
-	arena.now += 41000;
+	// Fin de tour au minuteur (durée du tour, puis réserve de temps).
+	arena.now += (gameData().rules.turnSeconds + gameData().rules.timeBankSeconds) * 1000 + 1000;
 	arena.engine->tick(arena.now);
 	CHECK(arena.active() == order[1]);
 	REQUIRE(arena.engine->endTurn(order[1], arena.now).ok);
@@ -740,6 +740,46 @@ TEST_CASE("Emotes are broadcast as events and rate limited per fighter")
 	CHECK(mirror.fighters.size() == before.fighters.size());
 }
 
+TEST_CASE("A long turn eats into the fighter's time bank, and an empty bank ends the turn on time")
+{
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } });
+	const std::int64_t turnMs = gameData().rules.turnSeconds * 1000;
+	const std::int64_t bankMs = gameData().rules.timeBankSeconds * 1000;
+	REQUIRE(bankMs > 10000);
+	arena.playUntilTurnOf(0);
+	CHECK(arena.fighter(0).timeBankMs == bankMs);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
+
+	// Tour fini 10 s après la durée normale : 10 s de moins dans la réserve.
+	arena.now += turnMs + 10000;
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	CHECK(arena.fighter(0).timeBankMs == bankMs - 10000);
+
+	// Un tour plus court que la durée normale ne touche pas à la réserve.
+	arena.playUntilTurnOf(0);
+	arena.now += 5000;
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	CHECK(arena.fighter(0).timeBankMs == bankMs - 10000);
+
+	// Réserve épuisée : le tour s'arrête à son échéance, et la réserve reste vide.
+	arena.playUntilTurnOf(0);
+	std::int64_t deadline = arena.state().deadlineMs;
+	CHECK(deadline - arena.now == turnMs + bankMs - 10000);
+	arena.now = deadline;
+	arena.engine->tick(arena.now);
+	CHECK(arena.active() != 0);
+	CHECK(arena.fighter(0).timeBankMs == 0);
+	arena.playUntilTurnOf(0);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+
+	// Les clients lisent la réserve dans l'état complet.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(0, arena.now));
+	CHECK(mirror.findFighter(0)->timeBankMs == 0);
+	CHECK(mirror.findFighter(1)->timeBankMs == arena.fighter(1).timeBankMs);
+}
+
 TEST_CASE("A fighter piloted by its teammate keeps a full turn while its player is away")
 {
 	Arena arena({ { ARCHER, { 2, 2 } }, { GUERRIER, { 3, 2 } } }, { { MAGE, { 2, 8 } } });
@@ -751,13 +791,14 @@ TEST_CASE("A fighter piloted by its teammate keeps a full turn while its player 
 	arena.playUntilTurnOf(1);
 	CHECK(arena.state().deadlineMs - arena.now == shortMs);
 
-	// ... sauf si son coéquipier le pilote : tour complet, rendu aussi pendant le tour en cours.
+	// ... sauf si son coéquipier le pilote : tour complet (avec sa réserve), rendu aussi pendant le tour en cours.
+	const int bankMs = gameData().rules.timeBankSeconds * 1000;
 	arena.engine->setPiloted(1, true, arena.now);
-	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
 	CHECK(arena.fighter(1).piloted);
 	REQUIRE(arena.engine->endTurn(1, arena.now).ok);
 	arena.playUntilTurnOf(1);
-	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
 
 	// Le miroir des clients suit l'état piloté (instantané et événement).
 	BattleState mirror;

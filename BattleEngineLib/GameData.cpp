@@ -267,6 +267,7 @@ bool GameData::loadFromJsonText(const std::string & text, std::string & error)
 			r.turnSeconds = rules.value("turnSeconds", r.turnSeconds);
 			r.placementSeconds = rules.value("placementSeconds", r.placementSeconds);
 			r.disconnectedTurnSeconds = rules.value("disconnectedTurnSeconds", r.disconnectedTurnSeconds);
+			r.timeBankSeconds = std::max(0, rules.value("timeBankSeconds", r.timeBankSeconds));
 			r.suddenDeathRound = rules.value("suddenDeathRound", r.suddenDeathRound);
 			r.suddenDeathPercentPerRound = rules.value("suddenDeathPercentPerRound", r.suddenDeathPercentPerRound);
 			r.maxRounds = rules.value("maxRounds", r.maxRounds);

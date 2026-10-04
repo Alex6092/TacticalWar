@@ -52,6 +52,7 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name, co
 	fighter.ap = fighter.baseStats.get(Stat::AP);
 	fighter.mp = fighter.baseStats.get(Stat::MP);
 	fighter.position = { -1, -1 };
+	fighter.timeBankMs = (std::int64_t)data.rules.timeBankSeconds * 1000;
 
 	for (const SpellDef & spell : classDef->spells)
 		fighter.cooldowns[spell.id] = spell.initialCooldown;
@@ -281,9 +282,13 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 			return;
 		}
 
-		int seconds = fighter.connected || fighter.piloted ? data.rules.turnSeconds : data.rules.disconnectedTurnSeconds;
-		state.deadlineMs = nowMs + (std::int64_t)seconds * 1000;
-		emit({ { "t", "timer" }, { "f", fighter.id }, { "ms", seconds * 1000 } });
+		// Tour normal, plus la réserve de temps du combattant (pas pour un joueur absent non piloté).
+		bool present = fighter.connected || fighter.piloted;
+		int seconds = present ? data.rules.turnSeconds : data.rules.disconnectedTurnSeconds;
+		std::int64_t bank = present ? fighter.timeBankMs : 0;
+		state.turnStartMs = nowMs;
+		state.deadlineMs = nowMs + (std::int64_t)seconds * 1000 + bank;
+		emit({ { "t", "timer" }, { "f", fighter.id }, { "ms", (std::int64_t)seconds * 1000 + bank }, { "bank", bank } });
 		return;
 	}
 }
@@ -294,6 +299,11 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		return;
 
 	Fighter & fighter = *state.findFighter(state.activeFighterId());
+
+	// Réserve de temps : le dépassement de la durée normale du tour est retranché.
+	std::int64_t over = nowMs - state.turnStartMs - (std::int64_t)data.rules.turnSeconds * 1000;
+	if (over > 0)
+		fighter.timeBankMs = std::max<std::int64_t>(0, fighter.timeBankMs - over);
 
 	// Durée des effets du combattant (voir Annexe A : le tour d'application ne compte pas).
 	for (ActiveEffect & effect : fighter.effects)
@@ -473,11 +483,12 @@ void BattleEngine::setPiloted(int fighterId, bool piloted, std::int64_t nowMs)
 	// Repris en main pendant son tour (raccourci par la déconnexion) : le tour retrouve sa durée.
 	if (piloted && state.phase == BattlePhase::FIGHT && state.activeFighterId() == fighterId)
 	{
-		std::int64_t full = nowMs + (std::int64_t)data.rules.turnSeconds * 1000;
+		std::int64_t full = nowMs + (std::int64_t)data.rules.turnSeconds * 1000 + fighter->timeBankMs;
 		if (full > state.deadlineMs)
 		{
 			state.deadlineMs = full;
-			emit({ { "t", "timer" }, { "f", fighterId }, { "ms", data.rules.turnSeconds * 1000 } });
+			state.turnStartMs = nowMs;
+			emit({ { "t", "timer" }, { "f", fighterId }, { "ms", full - nowMs }, { "bank", fighter->timeBankMs } });
 		}
 	}
 }
@@ -800,6 +811,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "ready", fighter.ready },
 		{ "connected", fighter.connected },
 		{ "piloted", fighter.piloted },
+		{ "bank", fighter.timeBankMs },
 		{ "cooldowns", cooldowns },
 		{ "casts", casts },
 		{ "effects", effects },

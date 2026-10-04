@@ -73,6 +73,18 @@ possibles du joueur sont en vert.
   - Pas de texte libre ; une émote toutes les trois secondes au plus.
   - L'organisateur peut les couper : `"emotes": false` dans `server.json`.
 
+## Réserve de temps
+
+Un tour dure 40 secondes. Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout
+le combat :
+- au-delà des 40 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
+- le temps utilisé est perdu pour les tours suivants ; la réserve restante figure dans les détails du
+  combattant (« Réserve 18 s ») ;
+- réserve épuisée : le tour s'arrête à la fin des 40 secondes, comme avant ;
+- un joueur absent (5 secondes par tour) n'utilise pas sa réserve, sauf si son coéquipier le pilote.
+
+Réglage : `"timeBankSeconds"` dans les règles de `assets/data/gamedata.json` (0 : pas de réserve).
+
 ## Sorts au choix
 
 Chaque classe a **6 sorts** ; chaque joueur en emporte **4** dans son combat, choisis sur l'écran de choix

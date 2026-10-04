@@ -115,6 +115,8 @@ namespace tw
 			bool connected = true;
 			// Joué par son coéquipier, son joueur étant absent : il garde un tour complet.
 			bool piloted = false;
+			// Réserve de temps restante (ms), entamée quand son tour dépasse la durée normale.
+			std::int64_t timeBankMs = 0;
 
 			// Sorts emportés : indices dans les sorts de la classe, dans l'ordre de la barre de sorts
 			// (emplacements 0 à 3). Vide (ancien instantané) : les sorts de la classe dans l'ordre.
@@ -183,6 +185,7 @@ namespace tw
 			int round = 0;
 			std::vector<Glyph> glyphs;
 			std::int64_t deadlineMs = 0;	// Fin du tour (ou du placement) en cours
+			std::int64_t turnStartMs = 0;	// Début du tour en cours (réserve de temps)
 			int winnerTeam = 0;
 			EndReason endReason = EndReason::NONE;
 			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat

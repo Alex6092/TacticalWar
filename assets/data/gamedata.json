@@ -4,6 +4,7 @@
     "turnSeconds": 40,
     "placementSeconds": 30,
     "disconnectedTurnSeconds": 5,
+    "timeBankSeconds": 30,
     "suddenDeathRound": 15,
     "suddenDeathPercentPerRound": 5,
     "maxRounds": 30,

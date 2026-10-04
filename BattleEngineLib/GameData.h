@@ -226,6 +226,8 @@ namespace tw
 			int turnSeconds = 40;
 			int placementSeconds = 30;
 			int disconnectedTurnSeconds = 5;
+			// Réserve de temps de chaque combattant, entamée quand un tour dépasse turnSeconds.
+			int timeBankSeconds = 30;
 			int suddenDeathRound = 15;
 			int suddenDeathPercentPerRound = 5;
 			int maxRounds = 30;				// Décision aux PV au-delà

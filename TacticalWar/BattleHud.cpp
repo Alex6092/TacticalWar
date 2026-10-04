@@ -467,6 +467,8 @@ sf::String BattleHud::fighterSummary(const BattleState & state, const GameData &
 	if (fighter.shield > 0)
 		text += L"\nBouclier " + num(fighter.shield) + L" : absorbe les dégâts en premier";
 	text += L"\nPA " + num(fighter.ap) + L"   PM " + num(fighter.mp);
+	if (fighter.timeBankMs > 0)
+		text += L"   Réserve " + num((int)(fighter.timeBankMs / 1000)) + L" s";
 	text += L"\nPuissance " + num(effectiveStat(state, data, fighter, Stat::POWER))
 		+ L"%   Résistance " + num(effectiveStat(state, data, fighter, Stat::RESISTANCE)) + L"%";
 	text += L"\nTacle " + num(effectiveStat(state, data, fighter, Stat::LOCK))
@@ -598,6 +600,16 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	// Minuteur.
 	sf::String timer;
 	sf::String seconds = timersShown ? L" - " + num((int)remainingSeconds) + L" s" : sf::String();
+	// Tour en cours : temps normal, puis réserve de temps (en orange) une fois celui-ci écoulé.
+	bool inReserve = false;
+	if (timersShown && state.phase == BattlePhase::FIGHT)
+	{
+		const Fighter * current = state.findFighter(active);
+		float bank = current != nullptr ? current->timeBankMs / 1000.f : 0.f;
+		inReserve = bank > 0 && remainingSeconds <= bank;
+		seconds = inReserve ? L" - réserve " + num((int)std::ceil(remainingSeconds)) + L" s"
+			: L" - " + num((int)std::ceil(remainingSeconds - bank)) + L" s";
+	}
 	if (state.phase == BattlePhase::PLACEMENT)
 		timer = L"Placement" + seconds;
 	else if (state.phase == BattlePhase::FIGHT)
@@ -608,7 +620,7 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	if (timerLabel->getText() != timer)
 	{
 		timerLabel->setText(timer);
-		timerLabel->getRenderer()->setTextColor(myTurn ? sf::Color(120, 255, 120) : sf::Color::White);
+		timerLabel->getRenderer()->setTextColor(inReserve ? sf::Color(255, 170, 60) : myTurn ? sf::Color(120, 255, 120) : sf::Color::White);
 		layout(windowSize);
 	}
 
