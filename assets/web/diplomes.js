@@ -32,8 +32,11 @@ function playerSummaries(tournament) {
         players.set(key, { name: p.name, team, matches: 0, wins: 0, classes: new Set(), dealt: 0, healed: 0, shielded: 0, kills: 0, mvp: 0, badges: new Map() });
       }
       const s = players.get(key);
-      s.matches++;
-      if (result.winner === team) s.wins++;
+      // Joueur seul dans son équipe : son second personnage (standIn) compte, mais pas une seconde fois le match.
+      if (!p.standIn) {
+        s.matches++;
+        if (result.winner === team) s.wins++;
+      }
       if (p.class) s.classes.add(p.class);
       s.dealt += p.dealt || 0;
       s.healed += p.healed || 0;

@@ -422,8 +422,8 @@ PAGE = """<!doctype html>
           <li>puis « Verrouiller mon choix ».</li>
         </ul>
         <ul>
-          <li><b>Coéquipier absent</b> : vous jouez les deux personnages (et vous choisissez aussi sa classe). S'il
-            revient, il reprend la main.</li>
+          <li><b>Seul dans l'équipe, ou coéquipier absent</b> : vous jouez les deux personnages (vous choisissez
+            aussi la classe du second). Un coéquipier qui revient reprend la main.</li>
           <li><b>Déconnecté ?</b> Reconnectez-vous avec les mêmes identifiants : vous retrouvez votre combat.</li>
           <li><b>Après le combat</b> : le bilan désigne le <b>MVP</b> et décerne des <b>hauts faits</b> (Premier
             sang, Coup double, Maître des combos…). Ils figurent sur votre diplôme !</li>

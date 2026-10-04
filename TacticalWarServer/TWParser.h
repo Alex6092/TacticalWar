@@ -44,6 +44,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::map<std::string, tw::Player*> allPlayers;
 	// Joueurs des équipes actives (login -> joueur) :
 	std::map<std::string, tw::Player*> playersMap;
+	// Équipe d'un seul joueur : son second personnage occupe la place vide (par numéro d'équipe). Sans
+	// compte, il n'est jamais connecté : il est donc toujours piloté par le joueur de l'équipe.
+	std::map<int, tw::Player*> standIns;
+	bool isStandIn(tw::Player * player) const;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
 	std::map<int, std::vector<tw::Player*>> teamIdToPlayerList;
 

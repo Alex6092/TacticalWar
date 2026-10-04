@@ -71,7 +71,7 @@ bool CredentialSheet::save(const std::vector<Team> & teams, std::string * error)
 		for (const PlayerAccount & player : team.players)
 		{
 			std::map<std::string, std::string>::const_iterator it = passwords.find(player.login);
-			if (it != passwords.end())
+			if (!player.login.empty() && it != passwords.end())
 				current[it->first] = it->second;
 		}
 	}
@@ -118,6 +118,8 @@ std::string CredentialSheet::renderHtml(const std::vector<Team> & teams, const s
 
 		for (const PlayerAccount & player : team.players)
 		{
+			if (player.login.empty())
+				continue;	// Équipe d'un seul joueur
 			std::map<std::string, std::string>::const_iterator it = passwords.find(player.login);
 			std::string password = it == passwords.end() ? "(inconnu : réinitialiser)" : it->second;
 			html += "<tr><td>" + escapeHtml(player.displayName) + "</td><td>" + escapeHtml(player.login)

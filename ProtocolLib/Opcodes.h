@@ -99,10 +99,10 @@ namespace tw
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent} (PC<classId> : sorts par défaut)" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC<classId> : sorts par défaut)" },
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PV", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class}" },
-			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present}" },
+			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present, standIn : second personnage d'un joueur seul dans son équipe}" },
 			{ "PB", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte)" },
 			{ "BB", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)}" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },

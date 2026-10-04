@@ -139,6 +139,10 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 		for (const PlayerRecord & player : match.result->players)
 		{
 			int team = player.side == 1 ? match.teamA : match.teamB;
+			// Joueur seul dans son équipe : seul son premier personnage est classé, pour rester comparable aux
+			// autres joueurs (son diplôme compte les deux).
+			if (player.standIn)
+				continue;
 			Leader & leader = leaders[{ team, player.name }];
 			leader.name = player.name;
 			leader.className = player.className;

@@ -105,6 +105,9 @@ namespace tw
 			int kills = 0;
 			bool mvp = false;
 			std::vector<std::string> badges;	// Hauts faits du combat (identifiants)
+			// Second personnage d'un joueur seul dans son équipe : name est celui de ce joueur, et le
+			// match ne lui est compté qu'une fois.
+			bool standIn = false;
 		};
 
 		struct MatchResult

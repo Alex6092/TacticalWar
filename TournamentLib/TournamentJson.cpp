@@ -127,6 +127,8 @@ nlohmann::json tw::tournament::toJson(const MatchResult & result)
 			};
 			if (!player.badges.empty())
 				value["badges"] = player.badges;
+			if (player.standIn)
+				value["standIn"] = true;
 			players.push_back(value);
 		}
 		json["players"] = players;
@@ -153,6 +155,7 @@ MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
 		player.shielded = value.value("shielded", 0);
 		player.kills = value.value("kills", 0);
 		player.mvp = value.value("mvp", false);
+		player.standIn = value.value("standIn", false);
 		for (const nlohmann::json & badge : value.value("badges", nlohmann::json::array()))
 		{
 			if (badge.is_string())

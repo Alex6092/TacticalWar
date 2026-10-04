@@ -262,7 +262,7 @@ void TutorialScreen::showFinal()
 		L"-  Bannissement, si l'organisateur l'a prévu : chaque équipe interdit une classe à l'autre avant le match.\n"
 		L"-  On gagne en mettant l'équipe adverse hors combat, ou en tenant la zone dorée au centre de la carte.\n"
 		+ time +
-		L"-  Si votre coéquipier est absent, vous jouez les deux personnages.\n"
+		L"-  Seul dans votre équipe, ou si votre coéquipier est absent : vous jouez les deux personnages.\n"
 		L"-  En combat, H affiche l'aide des commandes. Parlez avec votre coéquipier : les signaux (Alt + clic : "
 		L"Ici, Attaquez, Repli, Danger) et les combinaisons de sorts font la différence.\n\n"
 		L"Entraînez-vous contre l'ordinateur, résolvez les énigmes tactiques, et gardez le guide du joueur "

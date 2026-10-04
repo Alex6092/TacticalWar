@@ -10,7 +10,9 @@
 - [ ] Sur le PC serveur, lancer `Ouvrir-pare-feu.bat` en administrateur (ports 12345 et 8080).
 - [ ] Lancer le serveur une première fois et **noter le mot de passe admin** affiché.
 - [ ] Créer les équipes (client connecté en `admin`, onglet Équipes), puis imprimer les fiches
-      d'identifiants générées dans `data\exports\fiches-equipes.html`.
+      d'identifiants générées dans `data\exports\fiches-equipes.html`. Nombre impair d'élèves : une
+      équipe peut n'avoir qu'un joueur (champs du joueur 2 laissés vides), qui joue alors les deux
+      personnages.
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
 - [ ] Proposer aux élèves de faire le **tutoriel** (bouton « Tutoriel » de l'écran de connexion,

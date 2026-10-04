@@ -98,10 +98,10 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent} (PC&lt;classId&gt; : sorts par défaut) |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
 | `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
-| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present} |
+| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
 | `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |

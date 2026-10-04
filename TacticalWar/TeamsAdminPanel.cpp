@@ -87,7 +87,8 @@ TeamsAdminPanel::TeamsAdminPanel(tgui::Gui * gui, const sf::Font & font)
 	for (int i = 0; i < 2; i++)
 	{
 		PlayerFields & fields = players[i];
-		fields.title = createLabel("Joueur " + std::to_string(i + 1));
+		// Le joueur 2 est facultatif : un joueur seul joue les deux personnages de l'équipe.
+		fields.title = createLabel(i == 0 ? sf::String(L"Joueur 1") : sf::String(L"Joueur 2 (facultatif)"));
 		fields.title->getRenderer()->setTextColor(sf::Color(240, 139, 27));
 		fields.login = createEditBox("Login");
 		fields.displayName = createEditBox(L"Nom affiché");
@@ -269,6 +270,13 @@ void TeamsAdminPanel::refreshList()
 		{
 			nlohmann::json player = team["players"].size() > (std::size_t)p ? team["players"][p] : nlohmann::json::object();
 			sf::String login = jsonText(player, "login");
+			if (login.isEmpty())
+			{
+				// Équipe d'un seul joueur.
+				row.push_back(L"(aucun)");
+				row.push_back("");
+				continue;
+			}
 			if (player.value("connected", false))
 				login += " [en ligne]";
 			row.push_back(login);

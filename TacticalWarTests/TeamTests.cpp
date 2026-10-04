@@ -122,6 +122,58 @@ TEST_CASE("TeamStore rejects invalid or conflicting teams")
 	CHECK(store.getTeams().size() == 1);
 }
 
+TEST_CASE("A team may have a single player, who then plays both characters")
+{
+	TempFile file("teams.json");
+	tw::TeamStore store(file.str());
+	std::map<std::string, std::string> passwords;
+	int id = 0;
+
+	// Second joueur laissé vide : équipe d'un seul joueur, sans mot de passe pour la place vide.
+	REQUIRE(store.createTeam(makeInput("Solo", "lea", ""), id, passwords) == "");
+	const tw::Team * team = store.findTeam(id);
+	REQUIRE(team != nullptr);
+	CHECK(tw::playerCount(*team) == 1);
+	CHECK(team->players[0].login == "lea");
+	CHECK(team->players[1].login.empty());
+	CHECK(passwords.size() == 1);
+	CHECK(store.authenticate("lea", passwords["lea"]));
+
+	// La place vide n'est pas un compte : aucun login vide ne s'authentifie.
+	CHECK(store.findTeamByLogin("") == nullptr);
+	CHECK_FALSE(store.authenticate("", ""));
+
+	// Seul le second emplacement rempli : le joueur passe en premier.
+	int otherId = 0;
+	REQUIRE(store.createTeam(makeInput("Duo", "", "max"), otherId, passwords) == "");
+	CHECK(store.findTeam(otherId)->players[0].login == "max");
+
+	// Au moins un joueur, et pas de nom affiché ni de mot de passe sans login.
+	CHECK(store.createTeam(makeInput("Vide", "", ""), otherId, passwords) != "");
+	tw::TeamInput nameOnly = makeInput("Nom", "tom", "");
+	nameOnly.players[1].displayName = "Sam";
+	CHECK(store.createTeam(nameOnly, otherId, passwords) != "");
+
+	// Un second joueur ajouté plus tard reçoit un mot de passe ; le premier garde le sien.
+	std::string firstHash = store.findTeam(id)->players[0].passwordHash;
+	std::map<std::string, std::string> updated;
+	REQUIRE(store.updateTeam(id, makeInput("Solo", "lea", "sam"), updated) == "");
+	CHECK(tw::playerCount(*store.findTeam(id)) == 2);
+	CHECK(store.findTeam(id)->players[0].passwordHash == firstHash);
+	CHECK(updated.count("sam") == 1);
+	CHECK(updated.count("lea") == 0);
+
+	// Le premier retiré : le second prend sa place, avec son mot de passe.
+	std::string samHash = store.findTeam(id)->players[1].passwordHash;
+	updated.clear();
+	REQUIRE(store.updateTeam(id, makeInput("Solo", "", "sam"), updated) == "");
+	CHECK(store.findTeam(id)->players[0].login == "sam");
+	CHECK(store.findTeam(id)->players[0].passwordHash == samHash);
+	CHECK(store.findTeam(id)->players[1].login.empty());
+	CHECK(updated.empty());
+	CHECK(store.findTeamByLogin("lea") == nullptr);
+}
+
 TEST_CASE("TeamStore updates teams, resets passwords and deactivates teams")
 {
 	TempFile file("teams.json");
@@ -154,7 +206,7 @@ TEST_CASE("TeamStore updates teams, resets passwords and deactivates teams")
 
 TEST_CASE("The legacy equipe.txt file is fully imported")
 {
-	// Ancien format, avec un nom en Windows-1252 et une équipe incomplète.
+	// Ancien format, avec un nom en Windows-1252 et une équipe d'un seul joueur.
 	std::string content = "/Mattei,Fresi,1,/Gregoire,Colbert,1,/Edouard,Flaquet,2,/Apol\xEEne,Vast,2,/Seul,pwd1,3,";
 
 	std::vector<tw::LegacyPlayer> players = tw::parseLegacyTeamFile(content);
@@ -167,14 +219,23 @@ TEST_CASE("The legacy equipe.txt file is fully imported")
 	std::map<std::string, std::string> passwords;
 	std::string report = tw::importLegacyTeams(content, store, passwords);
 
-	CHECK(store.getTeams().size() == 2);
-	CHECK(report.find(u8"Équipe 3 ignorée") != std::string::npos);
+	CHECK(store.getTeams().size() == 3);
+	CHECK(report.find(u8"ignorée") == std::string::npos);
 	CHECK(store.authenticate("Mattei", "Fresi"));
 	CHECK(passwords["Gregoire"] == "Colbert");
+	CHECK(store.authenticate("Seul", "pwd1"));
+	CHECK(tw::playerCount(store.getTeams()[2]) == 1);
 
 	// Un second import ne crée pas de doublons.
 	tw::importLegacyTeams(content, store, passwords);
-	CHECK(store.getTeams().size() == 2);
+	CHECK(store.getTeams().size() == 3);
+
+	// Plus de deux joueurs : équipe ignorée.
+	TempFile other("teams.json");
+	tw::TeamStore crowded(other.str());
+	report = tw::importLegacyTeams("/a1,p1,1,/a2,p2,1,/a3,p3,1,", crowded, passwords);
+	CHECK(crowded.getTeams().empty());
+	CHECK(report.find(u8"Équipe 1 ignorée") != std::string::npos);
 }
 
 TEST_CASE("The credential sheet lists active teams with escaped names")
@@ -199,4 +260,14 @@ TEST_CASE("The credential sheet lists active teams with escaped names")
 	CHECK(html.find("abc234") != std::string::npos);
 	CHECK(html.find(u8"réinitialiser") != std::string::npos);	// mot de passe de bob inconnu
 	CHECK(html.find("Inactive") == std::string::npos);
+
+	// Équipe d'un seul joueur : une ligne, pas de ligne vide « à réinitialiser ».
+	tw::Team solo;
+	solo.id = 3;
+	solo.name = "Solo";
+	solo.players[0].login = "lea";
+	solo.players[0].displayName = "Lea";
+	std::string soloHtml = tw::CredentialSheet::renderHtml({ solo }, { { "lea", "xyz789" } });
+	CHECK(soloHtml.find("xyz789") != std::string::npos);
+	CHECK(soloHtml.find(u8"réinitialiser") == std::string::npos);
 }

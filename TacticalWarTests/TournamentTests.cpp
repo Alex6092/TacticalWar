@@ -495,10 +495,17 @@ TEST_CASE("Match results keep the players' records through JSON")
 	healer.side = 2;
 	healer.healed = 45;
 	healer.shielded = 40;
-	result.players = { archer, healer };
+	// Second personnage d'un joueur seul dans son équipe : bilan au nom de ce joueur.
+	PlayerRecord second = archer;
+	second.className = "Mage";
+	second.standIn = true;
+	result.players = { archer, healer, second };
 
 	MatchResult restored = resultFromJson(toJson(result));
-	REQUIRE(restored.players.size() == 2);
+	REQUIRE(restored.players.size() == 3);
+	CHECK(restored.players[2].standIn);
+	CHECK_FALSE(restored.players[0].standIn);
+	CHECK_FALSE(toJson(result)["players"][0].contains("standIn"));
 	CHECK(restored.players[0].name == archer.name);
 	CHECK(restored.players[0].className == "Archer");
 	CHECK(restored.players[0].side == 1);

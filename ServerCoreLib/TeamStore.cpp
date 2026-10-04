@@ -35,6 +35,15 @@ namespace
 	{
 		return text.find_first_of(";\n\r") != std::string::npos;
 	}
+
+	// Joueurs saisis dans l'ordre, emplacements vides à la fin : un joueur seul est toujours le premier.
+	TeamInput withPlayersFirst(const TeamInput & input)
+	{
+		TeamInput ordered = input;
+		std::stable_partition(ordered.players.begin(), ordered.players.end(),
+			[](const PlayerInput & player) { return !trim(player.login).empty(); });
+		return ordered;
+	}
 }
 
 nlohmann::json tw::teamToJson(const Team & team, bool includePasswordHashes)
@@ -174,6 +183,8 @@ Team * TeamStore::findTeamMutable(int id)
 const Team * TeamStore::findTeamByLogin(const std::string & login, int * playerIndex) const
 {
 	std::string wanted = toLower(trim(login));
+	if (wanted.empty())
+		return nullptr;	// Emplacement vide d'une équipe d'un seul joueur : aucun compte.
 	for (const Team & team : teams)
 	{
 		for (int i = 0; i < (int)team.players.size(); i++)
@@ -226,9 +237,17 @@ std::string TeamStore::validate(const TeamInput & input, int ignoredTeamId) cons
 	}
 
 	std::set<std::string> logins;
-	for (const PlayerInput & player : input.players)
+	for (std::size_t i = 0; i < input.players.size(); i++)
 	{
+		const PlayerInput & player = input.players[i];
 		std::string login = trim(player.login);
+		// Emplacement laissé vide : équipe d'un seul joueur (le login est obligatoire si le reste est saisi).
+		if (login.empty())
+		{
+			if (!trim(player.displayName).empty() || !player.password.empty())
+				return "Le joueur " + std::to_string(i + 1) + " n'a pas de login : saisissez-le, ou videz tous ses champs.";
+			continue;
+		}
 		std::string error = validateLogin(login);
 		if (!error.empty())
 			return error;
@@ -249,6 +268,8 @@ std::string TeamStore::validate(const TeamInput & input, int ignoredTeamId) cons
 		}
 	}
 
+	if (logins.empty())
+		return "Une équipe a au moins un joueur : saisissez un login.";
 	return "";
 }
 
@@ -264,11 +285,14 @@ std::string TeamStore::createTeam(const TeamInput & input, int & newTeamId, std:
 	team.tag = trim(input.tag);
 	team.seed = input.seed;
 
+	TeamInput ordered = withPlayersFirst(input);
 	for (std::size_t i = 0; i < team.players.size(); i++)
 	{
-		const PlayerInput & playerInput = input.players[i];
+		const PlayerInput & playerInput = ordered.players[i];
 		PlayerAccount & account = team.players[i];
 		account.login = trim(playerInput.login);
+		if (account.login.empty())
+			continue;	// Équipe d'un seul joueur
 		account.displayName = trim(playerInput.displayName).empty() ? account.login : trim(playerInput.displayName);
 
 		std::string password = playerInput.password.empty() ? PasswordHasher::generatePassword() : playerInput.password;
@@ -295,26 +319,35 @@ std::string TeamStore::updateTeam(int teamId, const TeamInput & input, std::map<
 	team->tag = trim(input.tag);
 	team->seed = input.seed;
 
+	std::array<PlayerAccount, PLAYERS_PER_TEAM> previous = team->players;
+	TeamInput ordered = withPlayersFirst(input);
 	for (std::size_t i = 0; i < team->players.size(); i++)
 	{
-		const PlayerInput & playerInput = input.players[i];
-		PlayerAccount & account = team->players[i];
-		std::string newLogin = trim(playerInput.login);
-		bool loginChanged = toLower(newLogin) != toLower(account.login);
-
-		account.login = newLogin;
-		account.displayName = trim(playerInput.displayName).empty() ? account.login : trim(playerInput.displayName);
-
-		// Un nouveau joueur sans mot de passe fourni reçoit un mot de passe généré.
-		std::string password = playerInput.password;
-		if (password.empty() && (loginChanged || account.passwordHash.empty()))
-			password = PasswordHasher::generatePassword();
-
-		if (!password.empty())
+		const PlayerInput & playerInput = ordered.players[i];
+		PlayerAccount account;
+		account.login = trim(playerInput.login);
+		if (!account.login.empty())
 		{
-			account.passwordHash = PasswordHasher::hash(password);
-			clearPasswords[account.login] = password;
+			account.displayName = trim(playerInput.displayName).empty() ? account.login : trim(playerInput.displayName);
+			// Un joueur déjà dans l'équipe (même login) garde son mot de passe, même s'il change de place.
+			for (const PlayerAccount & old : previous)
+			{
+				if (!old.login.empty() && toLower(old.login) == toLower(account.login))
+					account.passwordHash = old.passwordHash;
+			}
+
+			// Un nouveau joueur sans mot de passe fourni reçoit un mot de passe généré.
+			std::string password = playerInput.password;
+			if (password.empty() && account.passwordHash.empty())
+				password = PasswordHasher::generatePassword();
+
+			if (!password.empty())
+			{
+				account.passwordHash = PasswordHasher::hash(password);
+				clearPasswords[account.login] = password;
+			}
 		}
+		team->players[i] = account;
 	}
 
 	return "";

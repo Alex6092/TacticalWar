@@ -111,7 +111,9 @@ nlohmann::json TWParser::teammateState(BattleSession * session, tw::Player * pla
 		{ "class", chosen },
 		{ "viewing", session->viewingClass(player) },
 		{ "locked", chosen != 0 },
-		{ "present", getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle() }
+		{ "present", getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle() },
+		// Second personnage d'un joueur seul dans son équipe (jamais présent : il le joue aussi).
+		{ "standIn", isStandIn(player) }
 	};
 }
 
@@ -420,6 +422,14 @@ void TWParser::finishBattle(BattleSession * session)
 		const tw::battle::ClassDef * classDef = gameData.findClass(fighter.classId);
 		tw::tournament::PlayerRecord player;
 		player.name = fighter.name;
+		// Second personnage d'un joueur seul : son bilan revient à ce joueur (sur un nom à lui).
+		tw::Player * account = session->playerOfFighter(fighter.id);
+		if (isStandIn(account))
+		{
+			const tw::Team * team = teamStore.findTeam(account->getTeamNumber());
+			player.name = team != NULL ? team->players[0].displayName : fighter.name;
+			player.standIn = true;
+		}
 		player.className = classDef != nullptr ? classDef->name : std::string();
 		player.side = fighter.team;
 		player.dealt = fighter.record.dealt;

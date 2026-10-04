@@ -124,8 +124,8 @@ relayé aux seuls coéquipiers.
 
 ## Coéquipier absent : un joueur, deux personnages
 
-Si l'un des deux joueurs d'une équipe est absent (jamais connecté, ou déconnecté), son coéquipier joue
-les deux personnages :
+Si l'un des deux joueurs d'une équipe est absent (jamais connecté, ou déconnecté), ou si l'équipe n'a
+qu'un joueur, ce joueur joue les deux personnages :
 - **choix de classe** : après avoir verrouillé son choix, il choisit aussi celui de son coéquipier
   (« Personnage de <nom> »). Sans choix, la classe de l'absent est tirée au hasard ;
 - **combat** : le personnage de l'absent est « piloté ». À son tour (« À vous de jouer <nom> ! »), la
@@ -133,6 +133,19 @@ les deux personnages :
   d'un joueur déconnecté) ;
 - si l'absent revient, il reprend la main sur son personnage ;
 - une équipe entièrement absente perd toujours par forfait.
+
+**Équipe d'un seul joueur** (nombre impair d'élèves) : à la création de l'équipe (onglet Équipes), laisser
+vides les champs du « Joueur 2 (facultatif) » ; dans `equipe.txt`, une seule ligne pour cette équipe.
+- Le second personnage s'appelle comme le joueur, suivi de « (2) » (« Léa (2) »). Sans compte, il est
+  toujours joué par lui : le joueur choisit sa classe juste après la sienne (« Votre second
+  personnage »), puis le joue à son tour en combat.
+- Sur l'écran de choix de classe, le bloc « Votre second personnage » rappelle la classe du premier et
+  liste leurs combinaisons ; la seconde étape propose d'abord une autre classe.
+- Bilan : ce que fait le second personnage revient au joueur (diplôme, hauts faits), sans compter le
+  match deux fois. Le classement « Meilleurs joueurs » ne compte que son premier personnage, pour rester
+  comparable aux autres joueurs.
+- Un second joueur peut être ajouté plus tard (équipe sans match en cours) : il reçoit un mot de passe,
+  le premier garde le sien.
 
 À l'entraînement, le format « 2 contre 2 (vous jouez les deux) » fait de même avec l'allié
 (`--training-duo-control`). Avec `--training-autoplay`, l'ordinateur joue les personnages du joueur

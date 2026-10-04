@@ -90,17 +90,18 @@ std::string tw::importLegacyTeams(const std::string & content, TeamStore & store
 
 	for (const auto & entry : byTeam)
 	{
+		// Une équipe d'un seul joueur est acceptée : il jouera les deux personnages.
 		const std::vector<LegacyPlayer> & members = entry.second;
-		if (members.size() != PLAYERS_PER_TEAM)
+		if (members.size() > PLAYERS_PER_TEAM)
 		{
-			report += "Équipe " + std::to_string(entry.first) + " ignorée : " + std::to_string(members.size()) + " joueur(s) au lieu de 2.\n";
+			report += "Équipe " + std::to_string(entry.first) + " ignorée : " + std::to_string(members.size()) + " joueurs (2 au plus).\n";
 			continue;
 		}
 
 		TeamInput input;
 		input.name = "Équipe " + std::to_string(entry.first);
 		input.seed = 0;
-		for (int i = 0; i < PLAYERS_PER_TEAM; i++)
+		for (std::size_t i = 0; i < members.size(); i++)
 		{
 			input.players[i].login = members[i].login;
 			input.players[i].displayName = members[i].login;
