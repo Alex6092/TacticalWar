@@ -3,6 +3,9 @@
 #include "TWParser.h"
 
 #include <iostream>
+#include <set>
+
+#include <Achievements.h>
 
 #include <Message.h>
 #include <PlayerManager.h>
@@ -164,6 +167,45 @@ nlohmann::json TWParser::tournamentStateJson(int id)
 		});
 	}
 	state["leaders"] = leaderRows;
+
+	// Cérémonie de fin : joueurs de chaque équipe, et hauts faits du tournoi (nombre, et par qui), du
+	// plus rare au plus fréquent.
+	std::map<int, std::set<std::string>> teamPlayers;
+	std::map<std::string, std::pair<int, std::set<std::string>>> badgeCounts;
+	for (const auto & entry : tournament.matches)
+	{
+		const TMatch & match = entry.second;
+		if (!match.result)
+			continue;
+		for (const PlayerRecord & player : match.result->players)
+		{
+			teamPlayers[player.side == 1 ? match.teamA : match.teamB].insert(player.name);
+			for (const std::string & badge : player.badges)
+			{
+				badgeCounts[badge].first++;
+				badgeCounts[badge].second.insert(player.name);
+			}
+		}
+	}
+	nlohmann::json players = nlohmann::json::object();
+	for (const auto & entry : teamPlayers)
+		players[std::to_string(entry.first)] = std::vector<std::string>(entry.second.begin(), entry.second.end());
+	state["teamPlayers"] = players;
+	std::vector<std::pair<std::string, std::pair<int, std::set<std::string>>>> sortedBadges(badgeCounts.begin(), badgeCounts.end());
+	std::stable_sort(sortedBadges.begin(), sortedBadges.end(), [](const auto & a, const auto & b) { return a.second.first < b.second.first; });
+	nlohmann::json badgeRows = nlohmann::json::array();
+	for (const auto & entry : sortedBadges)
+	{
+		const tw::battle::AchievementDef * achievement = tw::battle::findAchievement(entry.first);
+		badgeRows.push_back({
+			{ "id", entry.first },
+			{ "name", achievement != nullptr ? std::string(achievement->name) : entry.first },
+			{ "description", achievement != nullptr ? std::string(achievement->description) : std::string() },
+			{ "count", entry.second.first },
+			{ "players", std::vector<std::string>(entry.second.second.begin(), entry.second.second.end()) }
+		});
+	}
+	state["badges"] = badgeRows;
 
 	return state;
 }

@@ -128,6 +128,30 @@ html, body {
 .bar .shield { background: #6eb4ff; }
 .shield-num { color: #8cc4ff; font-weight: 700; }
 .battle .forbidden { font-size: 0.75rem; color: #ff9b85; margin-top: 0.35rem; text-align: center; }
+/* Cérémonie de fin */
+.ceremony { position: relative; overflow: hidden; text-align: center; padding: 0.5rem 0.5rem 1rem; min-height: 100%; }
+.ceremony h2 { color: var(--gold); font-size: 1.6rem; margin: 0.4rem 0 1rem; position: relative; z-index: 1; }
+.big-podium { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 0.8rem; max-width: 900px; margin: 0 auto 1.2rem; position: relative; z-index: 1; }
+.big-podium .step { border-radius: 10px 10px 0 0; padding: 0.7rem 0.5rem; font-weight: 700; animation: rise 1.2s ease-out both; }
+.big-podium .step .place { display: block; font-size: 2.6rem; line-height: 1; margin-bottom: 0.3rem; }
+.big-podium .step .team { font-size: 1.25rem; }
+.big-podium .step .players { font-size: 0.85rem; font-weight: 400; opacity: 0.85; margin-top: 0.2rem; }
+.big-podium .s1 { background: linear-gradient(#ffd34d, #c99a10); color: #241a00; min-height: 14rem; order: 2; animation-delay: 0.6s; }
+.big-podium .s2 { background: linear-gradient(#d7deef, #8f9ab5); color: #141a2b; min-height: 11rem; order: 1; animation-delay: 0.3s; }
+.big-podium .s3 { background: linear-gradient(#e2a46d, #9b5a26); color: #24130a; min-height: 8.5rem; order: 3; }
+@keyframes rise { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
+.ceremony-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+.mvp-card, .rare-card { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold); border-radius: 10px; padding: 0.8rem 1.2rem; min-width: 260px; text-align: left; }
+.mvp-card .label, .rare-card .label { color: var(--gold); font-weight: 700; margin-bottom: 0.3rem; }
+.mvp-card .name { font-size: 1.5rem; font-weight: 700; }
+.mvp-card .sub, .mvp-card .stats { opacity: 0.85; font-size: 0.9rem; }
+.rare-card ol { margin: 0; padding-left: 1.2rem; }
+.rare-card li { margin: 0.25rem 0; }
+.rare-card .count { opacity: 0.75; font-size: 0.85rem; margin-left: 0.4rem; }
+.rare-card .who { font-size: 0.85rem; color: var(--gold); }
+.confetti { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.confetti span { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: 0.85; animation: fall linear infinite; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
 .badge-count { color: var(--gold); font-weight: 700; }
 .mvp-badges { font-size: 0.75rem; color: var(--gold); margin-top: 0.15rem; }
 .fighter .talents { font-size: 0.7rem; color: var(--gold); opacity: 0.85; margin-top: 0.1rem; }

@@ -298,7 +298,10 @@ Le bilan s'affiche sur l'écran de fin (joueurs, spectateurs, rediffusions). Les
 tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
 - **les derniers combats**, avec le vainqueur et le MVP ;
 - **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
-  titres de MVP et de hauts faits.
+  titres de MVP et de hauts faits ;
+- **l'onglet « Cérémonie »**, une fois le tournoi terminé (affiché en premier) : podium des trois
+  premières équipes avec leurs joueurs, MVP du tournoi (meilleur bilan cumulé) et hauts faits les plus
+  rares, avec ceux qui les ont obtenus.
 
 ### Hauts faits
 

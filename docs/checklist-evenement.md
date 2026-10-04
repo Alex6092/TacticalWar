@@ -30,7 +30,8 @@
    (l'adresse du serveur se règle sur l'écran de connexion).
 3. **Écran projeté** :
    - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11).
-     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs » ;
+     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs ».
+     À la fin du tournoi, elle passe sur la « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
    - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré) ;
    - temps forts : chaque combat est enregistré (`data\replays\`) et peut être revu depuis l'écran
      spectateur, onglet « Rediffusions » (client connecté sans identifiants).
