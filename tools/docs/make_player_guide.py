@@ -320,9 +320,9 @@ PAGE = """<!doctype html>
     .class-card .role { font-size: 8.4pt; font-weight: 400; font-style: italic; color: var(--ink); }
     .class-card .passive { margin: 0.6mm 0 0.8mm; font-size: 8.1pt; line-height: 1.22; }
     .spells { list-style: none; padding: 0; margin: 0; }
-    .spells li { display: flex; gap: 1.6mm; align-items: flex-start; margin-bottom: 0.6mm; font-size: 7.7pt; line-height: 1.17; }
-    .spells img { width: 6mm; height: 6mm; border-radius: 1mm; flex: none; margin-top: 0.3mm; }
-    .chips { color: #555; font-size: 7.1pt; }
+    .spells li { display: flex; gap: 1.4mm; align-items: flex-start; margin-bottom: 0.35mm; font-size: 7.3pt; line-height: 1.12; }
+    .spells img { width: 5.4mm; height: 5.4mm; border-radius: 1mm; flex: none; margin-top: 0.2mm; }
+    .chips { color: #555; font-size: 6.8pt; }
     .tag { display: inline-block; font-size: 7.2pt; border-radius: 1mm; padding: 0 1mm; margin-left: 0.6mm; }
     .tag.mark { border: 1px solid var(--gold); color: #7a5a00; }
     .tag.combo { background: var(--gold); color: #fff; }

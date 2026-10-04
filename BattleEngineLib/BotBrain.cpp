@@ -160,6 +160,100 @@ namespace tw
 				}
 			}
 
+			// Nombre de pas pour arriver au contact de "target" (0 : déjà au contact, 99 : impossible).
+			int stepsToReach(const BattleState & state, const BattleMap & map, const Fighter & fighter, const Cell & target)
+			{
+				if (manhattan(fighter.position, target) <= 1)
+					return 0;
+				int best = 99;
+				const Cell around[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+				for (const Cell & offset : around)
+				{
+					std::vector<Cell> path = findPath(state, map, fighter, { target.x + offset.x, target.y + offset.y });
+					if (!path.empty())
+						best = std::min(best, (int)path.size());
+				}
+				return best;
+			}
+
+			// Valeur d'un mur posé sur "target" : menaces ennemies du prochain tour qu'il coupe (ligne de
+			// vue d'un tireur vers un allié, chemin d'un combattant de mêlée vers un allié).
+			int wallValue(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, const SpellDef & spell,
+				const EffectDef & effect, const Cell & target)
+			{
+				std::vector<Cell> cells = wallCells(state, map, me.position, target, spell.impact);
+				if (cells.empty())
+					return 0;
+				BattleState after = state;
+				for (const Cell & cell : cells)
+				{
+					Block block;
+					block.cell = cell;
+					block.blocksMove = effect.wallBlocksMove;
+					block.blocksSight = effect.wallBlocksSight;
+					after.blocks.push_back(block);
+				}
+
+				int value = 0;
+				for (const Fighter & enemy : state.fighters)
+				{
+					if (!enemy.alive || enemy.team == me.team)
+						continue;
+					int range = attackRange(state, data, enemy);
+					int mp = std::max(0, effectiveStat(state, data, enemy, Stat::MP));
+					for (const Fighter & ally : state.fighters)
+					{
+						if (!ally.alive || ally.team != me.team)
+							continue;
+						int distance = manhattan(enemy.position, ally.position);
+						if (range >= 4)
+						{
+							if (effect.wallBlocksSight && distance <= range + mp && hasLineOfSight(state, map, enemy.position, ally.position)
+								&& !hasLineOfSight(after, map, enemy.position, ally.position))
+								value += 6;
+						}
+						else if (effect.wallBlocksMove && distance <= mp + 3)
+						{
+							int before = stepsToReach(state, map, enemy, ally.position);
+							if (before <= mp && stepsToReach(after, map, enemy, ally.position) >= before + 2)
+								value += 6;
+						}
+					}
+				}
+				return value;
+			}
+
+			// Valeur de dégâts sur un bloc de mur : utile s'il barre le chemin (ou la vue d'un tireur) vers
+			// l'ennemi le plus proche ; abîmer un mur de son équipe coûte un peu.
+			int blockValue(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, const Block & block, int damage)
+			{
+				if (block.team == me.team)
+					return -4;
+				BattleState without = state;
+				without.blocks.erase(std::remove_if(without.blocks.begin(), without.blocks.end(),
+					[&](const Block & other) { return other.uid == block.uid; }), without.blocks.end());
+				bool inTheWay = false;
+				int range = attackRange(state, data, me);
+				for (const Fighter & enemy : state.fighters)
+				{
+					if (!enemy.alive || enemy.team == me.team)
+						continue;
+					if (range >= 4)
+					{
+						inTheWay = inTheWay || (block.blocksSight && manhattan(me.position, enemy.position) <= range
+							&& !hasLineOfSight(state, map, me.position, enemy.position) && hasLineOfSight(without, map, me.position, enemy.position));
+					}
+					else if (block.blocksMove)
+					{
+						int before = stepsToReach(state, map, me, enemy.position);
+						inTheWay = inTheWay || stepsToReach(without, map, me, enemy.position) + 2 <= before;
+					}
+				}
+				if (!inTheWay)
+					return 0;
+				return damage >= block.hp ? 8 : 3;
+			}
+
 			// Lance le sort le plus utile, d'après la valeur estimée de ses effets sur les combattants touchés.
 			bool chooseCast(const BattleState & state, const BattleMap & map, const GameData & data, const Fighter & me, std::mt19937 & rng,
 				bool mistake, BotAction & action)
@@ -210,6 +304,12 @@ namespace tw
 								continue;
 							}
 
+							if (effect.type == EffectType::WALL)
+							{
+								value += wallValue(state, map, data, me, spell, effect, cell);
+								continue;
+							}
+
 							if (effect.targets == TargetFilter::CASTER || effect.type == EffectType::DASH || effect.type == EffectType::TELEPORT)
 							{
 								value += effectValue(state, data, me, spell.id, effect, me);
@@ -221,6 +321,9 @@ namespace tw
 								const Fighter * fighter = state.fighterAt(hit);
 								if (fighter != nullptr && fighter->alive && affects(effect, me, *fighter))
 									value += effectValue(state, data, me, spell.id, effect, *fighter);
+								const Block * block = state.blockAt(hit);
+								if (block != nullptr && (effect.type == EffectType::DAMAGE || effect.type == EffectType::LIFESTEAL))
+									value += blockValue(state, map, data, me, *block, (effect.min + std::max(effect.min, effect.max)) / 2);
 							}
 						}
 

@@ -19,9 +19,21 @@ namespace tw
 		// lancer, résistance actuelle du porteur (bornée).
 		int periodicDamage(const BattleState & state, const GameData & data, const Fighter & bearer, int value, int casterPower);
 
-		// Ligne de vue entre deux cellules (extrémités exclues). Les obstacles et les
-		// combattants vivants bloquent la vue.
+		// Case praticable : terrain praticable et pas de bloc de mur infranchissable (les combattants ne
+		// sont pas comptés).
+		bool cellWalkable(const BattleState & state, const BattleMap & map, const Cell & cell);
+		// Case qui bloque la vue : obstacle du terrain, ou bloc de mur opaque.
+		bool cellBlocksSight(const BattleState & state, const BattleMap & map, const Cell & cell);
+
+		// Ligne de vue entre deux cellules (extrémités exclues). Les obstacles, les blocs de mur opaques
+		// et les combattants vivants bloquent la vue.
 		bool hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to);
+
+		// Le sort fait des dégâts directs (DAMAGE, LIFESTEAL) : il peut viser un bloc de mur et abîme
+		// ceux de sa zone.
+		bool damagesBlocks(const SpellDef & spell);
+		// Cases où un mur de ce sort se poserait : celles de la zone, praticables, sans combattant ni bloc.
+		std::vector<Cell> wallCells(const BattleState & state, const BattleMap & map, const Cell & caster, const Cell & target, const ZoneDef & zone);
 
 		// Sorts au choix : chaque combattant emporte SPELL_SLOTS sorts parmi ceux de sa classe.
 		const int SPELL_SLOTS = 4;

@@ -77,6 +77,13 @@
           "effects": [ { "type": "STAT_MOD", "targets": "ALLIES", "stat": "POWER", "min": 20, "duration": 1, "name": "Cri de guerre" } ],
           "visual": {"cast": "warcry", "status": "aura_power"},
           "sound": "./assets/sound/spells/roar1.ogg", "animation": "physical"
+        },
+        {
+          "id": "eboulis", "name": "Éboulis", "description": "Fait tomber un rocher de 40 PV sur une case libre : il bloque le passage et la vue pendant 3 tours, ou jusqu'à ce qu'on le casse.",
+          "icon": "./assets/spellicons/eboulis.png", "ap": 2, "range": [1, 3], "launch": "CIRCLE", "target": "FREE_CELL", "cooldown": 3,
+          "effects": [ { "type": "WALL", "duration": 3, "name": "Éboulis", "wall": { "hp": 40, "move": true, "sight": true } } ],
+          "visual": {"impact": "dust", "impactOn": "cells", "block": "./assets/ui/blocks/eboulis.png", "blockBreak": "death_smoke"},
+          "sound": "./assets/sound/spells/impact1.ogg", "animation": "physical"
         }
       ]
     },
@@ -153,6 +160,13 @@
             }
           ],
           "visual": {"impact": "dust", "glyph": "trap", "glyphTrigger": "trap_snap"},
+          "sound": "./assets/sound/spells/impact3.ogg", "animation": "physical"
+        },
+        {
+          "id": "palissade", "name": "Palissade", "description": "Plante 3 pieux en travers (20 PV chacun) pendant 2 tours : ils barrent le passage, mais on tire par-dessus.",
+          "icon": "./assets/spellicons/palissade.png", "ap": 2, "range": [1, 4], "launch": "CIRCLE", "target": "FREE_CELL", "cooldown": 3, "zone": { "shape": "PERPENDICULAR", "size": 1 },
+          "effects": [ { "type": "WALL", "duration": 2, "name": "Palissade", "wall": { "hp": 20, "move": true, "sight": false } } ],
+          "visual": {"impact": "root", "impactOn": "cells", "block": "./assets/ui/blocks/palissade.png", "blockBreak": "dust"},
           "sound": "./assets/sound/spells/impact3.ogg", "animation": "physical"
         }
       ]
@@ -232,6 +246,13 @@
           ],
           "visual": {"cast": "shockwave_blue", "impact": "ice_prison", "status": "aura_ice"},
           "sound": "./assets/sound/spells/ice1.ogg", "animation": "magical"
+        },
+        {
+          "id": "mur_de_glace", "name": "Mur de glace", "description": "Élève un mur de glace de 3 blocs en travers (30 PV chacun) pendant 2 tours : il bloque le passage et la vue.",
+          "icon": "./assets/spellicons/mur_de_glace.png", "ap": 3, "range": [2, 5], "launch": "CIRCLE", "target": "FREE_CELL", "cooldown": 4, "zone": { "shape": "PERPENDICULAR", "size": 1 },
+          "effects": [ { "type": "WALL", "duration": 2, "name": "Mur de glace", "wall": { "hp": 30, "move": true, "sight": true } } ],
+          "visual": {"cast": "shockwave_blue", "impact": "frost_rise", "impactOn": "cells", "block": "./assets/ui/blocks/mur_de_glace.png", "blockBreak": "frost_burst"},
+          "sound": "./assets/sound/spells/ice1.ogg", "animation": "magical"
         }
       ]
     },
@@ -293,6 +314,13 @@
           "effects": [ { "type": "HOT", "targets": "ALLIES", "min": 7, "max": 7, "duration": 3, "name": "Lien de vie" } ],
           "visual": {"cast": "sparkles", "impact": "regen", "status": "aura_regen", "tick": "heal"},
           "sound": "./assets/sound/spells/heal2.ogg", "animation": "magical"
+        },
+        {
+          "id": "voile_sacre", "name": "Voile sacré", "description": "Dresse un voile de lumière de 3 cases en travers (25 PV chacune) pendant 2 tours : il cache de la vue, mais on peut le traverser et s'y tenir.",
+          "icon": "./assets/spellicons/voile_sacre.png", "ap": 2, "range": [1, 4], "launch": "CIRCLE", "target": "FREE_CELL", "cooldown": 3, "zone": { "shape": "PERPENDICULAR", "size": 1 },
+          "effects": [ { "type": "WALL", "duration": 2, "name": "Voile sacré", "wall": { "hp": 25, "move": false, "sight": true } } ],
+          "visual": {"cast": "ward", "impact": "sparkles", "impactOn": "cells", "block": "./assets/ui/blocks/voile_sacre.png", "blockBreak": "purify_wave"},
+          "sound": "./assets/sound/spells/shield1.ogg", "animation": "magical"
         }
       ]
     }

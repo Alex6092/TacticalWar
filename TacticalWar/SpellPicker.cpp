@@ -11,7 +11,8 @@ using namespace tw;
 
 namespace
 {
-	const int MAX_SPELLS = 6;
+	// Sorts au plus par classe (7 aujourd'hui : 6 sorts et un sort de terrain).
+	const int MAX_SPELLS = 8;
 	const float ROW_ICON = 48;
 
 	sf::String num(int value)
@@ -119,7 +120,12 @@ float SpellPicker::getHeight() const
 {
 	if (layout == Layout::ROW)
 		return ROW_ICON;
-	return MAX_SPELLS * rowHeight + 30;
+	return rows() * rowHeight + 30;
+}
+
+int SpellPicker::rows() const
+{
+	return classDef != nullptr ? std::min(MAX_SPELLS, (int)classDef->spells.size()) : 6;
 }
 
 void SpellPicker::toggle(int index)
@@ -151,7 +157,7 @@ void SpellPicker::arrange()
 			labels[i]->setSize(std::max(100.f, width - icon - 12), rowHeight - 4);
 			labels[i]->setTextSize(rowHeight < 70 ? 12 : 14);
 		}
-		counter->setPosition(0, MAX_SPELLS * rowHeight + 2);
+		counter->setPosition(0, rows() * rowHeight + 2);
 		counter->setSize(width, 26);
 		group->setSize(width, getHeight());
 	}
@@ -162,7 +168,7 @@ void SpellPicker::arrange()
 			icons[i]->setSize(ROW_ICON, ROW_ICON);
 			icons[i]->setPosition(i * (ROW_ICON + 8), 0);
 		}
-		float left = MAX_SPELLS * (ROW_ICON + 8) + 10;
+		float left = rows() * (ROW_ICON + 8) + 10;
 		counter->setPosition(left, 4);
 		counter->setSize(std::max(100.f, width - left), ROW_ICON);
 		group->setSize(width, ROW_ICON);

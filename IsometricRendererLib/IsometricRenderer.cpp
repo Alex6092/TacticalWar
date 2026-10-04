@@ -312,6 +312,14 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		}
 	}
 
+	// Objets posés sur les cases (blocs de mur) : avec le décor de leur diagonale.
+	std::vector<std::vector<const Prop*>> propsByDepth(diagonals);
+	for (const Prop & prop : props)
+	{
+		int depth = (int)std::lround(prop.x) + (int)std::lround(prop.y);
+		propsByDepth[std::max(0, std::min(diagonals - 1, depth))].push_back(&prop);
+	}
+
 	for (int d = 0; d < diagonals; d++)
 	{
 		for (int x = std::max(0, d - (height - 1)); x <= std::min(width - 1, d); x++)
@@ -319,6 +327,9 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 
 		for (AbstractSpellView<sf::Sprite*> * spell : groundByDepth[d])
 			drawSpell(spell);
+
+		for (const Prop * prop : propsByDepth[d])
+			drawProp(*prop);
 
 		std::sort(byDepth[d].begin(), byDepth[d].end(), [](BaseCharacterModel * a, BaseCharacterModel * b) {
 			return a->getInterpolatedX() < b->getInterpolatedX();
@@ -330,12 +341,46 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 	for (AbstractSpellView<sf::Sprite*> * spell : onTop)
 		drawSpell(spell);
 
-	// Noms, PV, PA et PM par-dessus le décor.
+	// Noms, PV, PA et PM par-dessus le décor, et barres de vie des objets posés.
 	for (int d = 0; d < diagonals; d++)
 	{
+		for (const Prop * prop : propsByDepth[d])
+			drawPropBar(*prop);
 		for (BaseCharacterModel * model : byDepth[d])
 			drawCharacterOverlay(model);
 	}
+}
+
+void IsometricRenderer::drawProp(const Prop & prop)
+{
+	if (prop.texture == NULL)
+		return;
+	float centerX = (prop.x - prop.y) * 60.f + 60.f;
+	float centerY = (prop.x + prop.y) * 30.f + 30.f;
+	sf::Sprite sprite(*prop.texture);
+	sprite.setPosition(std::floor(centerX - prop.anchorX), std::floor(centerY - prop.anchorY));
+	sprite.setColor(sf::Color(255, 255, 255, prop.alpha));
+	window->draw(sprite);
+}
+
+void IsometricRenderer::drawPropBar(const Prop & prop)
+{
+	if (prop.maxHp <= 0)
+		return;
+	float centerX = (prop.x - prop.y) * 60.f + 60.f;
+	float centerY = (prop.x + prop.y) * 30.f + 30.f;
+	const float width = 54.f;
+	const float barHeight = 7.f;
+	float top = centerY - prop.barAbove;
+	sf::RectangleShape back(sf::Vector2f(width + 2, barHeight + 2));
+	back.setPosition(std::floor(centerX - width / 2 - 1), std::floor(top - 1));
+	back.setFillColor(sf::Color(20, 20, 25, 210));
+	window->draw(back);
+	float ratio = std::max(0.f, std::min(1.f, (float)prop.hp / prop.maxHp));
+	sf::RectangleShape fill(sf::Vector2f(width * ratio, barHeight));
+	fill.setPosition(std::floor(centerX - width / 2), std::floor(top));
+	fill.setFillColor(ratio > 0.5f ? sf::Color(200, 200, 210) : ratio > 0.25f ? sf::Color(240, 180, 70) : sf::Color(230, 80, 60));
+	window->draw(fill);
 }
 
 bool IsometricRenderer::isLiquid(Environment * environment, int x, int y)

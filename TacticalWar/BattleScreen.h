@@ -105,6 +105,12 @@ namespace tw
 		void drawPingMarkers(sf::RenderWindow * window);
 		void drawBubbles(sf::RenderWindow * window);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
+		void addFloatingTextAt(const battle::Cell & cell, const sf::String & text, const sf::Color & color);
+		// Image d'un bloc de mur du sort (visual.block), chargée à la demande.
+		const sf::Texture * blockTexture(const std::string & spellId);
+		std::map<std::string, sf::Texture> blockTextures;
+		// Haut de la partie visible de chaque image de bloc (barre de vie juste au-dessus).
+		std::map<std::string, float> blockTops;
 		void playSound(const std::string & path);
 		sf::String fighterName(int fighterId) const;
 		void showEnd();

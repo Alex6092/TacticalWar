@@ -24,6 +24,23 @@ namespace tw
 	// pour qu'un arbre ou un rocher situé devant un personnage le masque.
 	class IsometricRenderer : public AbstractRenderer<sf::Sprite>
 	{
+	public:
+		// Objet posé sur une case (bloc de mur d'un sort de terrain…) : dessiné dans l'ordre de
+		// profondeur avec le décor et les personnages, avec une barre de vie au-dessus.
+		struct Prop
+		{
+			float x = 0;
+			float y = 0;
+			const sf::Texture * texture = NULL;
+			float anchorX = 60;		// Centre de la case dans l'image
+			float anchorY = 120;
+			sf::Uint8 alpha = 255;
+			int hp = 0;				// Barre de vie (maxHp 0 : aucune)
+			int maxHp = 0;
+			float barAbove = 108;	// Hauteur de la barre de vie au-dessus du centre de la case
+		};
+
+	private:
 		bool hasFocus;
 		bool forcedFocus;
 
@@ -42,6 +59,9 @@ namespace tw
 		sf::Sprite tileSprite;
 
 		void drawCell(Environment * environment, int x, int y);
+		void drawProp(const Prop & prop);
+		void drawPropBar(const Prop & prop);
+		std::vector<Prop> props;
 		void drawCharacter(BaseCharacterModel * model, float deltatime);
 		void drawCharacterSprite(BaseCharacterModel * model, sf::RenderTarget & target, bool mirrored);
 		void drawCharacterOverlay(BaseCharacterModel * model);
@@ -76,6 +96,9 @@ namespace tw
 
 		// Oublie les textures chargées (après une modification du jeu de tuiles).
 		void reloadTiles();
+
+		// Objets posés sur les cases, pour les prochains rendus.
+		void setProps(const std::vector<Prop> & props) { this->props = props; }
 
 		// Centre (repère du monde) et facteur de zoom de la vue (> 1 : vue plus large).
 		void setCamera(const sf::Vector2f & center, float zoom)

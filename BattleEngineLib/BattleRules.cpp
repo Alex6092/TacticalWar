@@ -88,6 +88,43 @@ int tw::battle::periodicDamage(const BattleState & state, const GameData & data,
 	return std::max(0, damage);
 }
 
+bool tw::battle::cellWalkable(const BattleState & state, const BattleMap & map, const Cell & cell)
+{
+	if (!map.isWalkable(cell))
+		return false;
+	const Block * block = state.blockAt(cell);
+	return block == nullptr || !block->blocksMove;
+}
+
+bool tw::battle::cellBlocksSight(const BattleState & state, const BattleMap & map, const Cell & cell)
+{
+	if (map.blocksSight(cell))
+		return true;
+	const Block * block = state.blockAt(cell);
+	return block != nullptr && block->blocksSight;
+}
+
+bool tw::battle::damagesBlocks(const SpellDef & spell)
+{
+	for (const EffectDef & effect : spell.effects)
+	{
+		if ((effect.type == EffectType::DAMAGE || effect.type == EffectType::LIFESTEAL) && effect.targets != TargetFilter::CASTER)
+			return true;
+	}
+	return false;
+}
+
+std::vector<Cell> tw::battle::wallCells(const BattleState & state, const BattleMap & map, const Cell & caster, const Cell & target, const ZoneDef & zone)
+{
+	std::vector<Cell> cells;
+	for (const Cell & cell : impactCells(map, caster, target, zone))
+	{
+		if (map.isWalkable(cell) && state.fighterAt(cell) == nullptr && state.blockAt(cell) == nullptr)
+			cells.push_back(cell);
+	}
+	return cells;
+}
+
 bool tw::battle::hasLineOfSight(const BattleState & state, const BattleMap & map, const Cell & from, const Cell & to)
 {
 	if (from == to)
@@ -96,7 +133,7 @@ bool tw::battle::hasLineOfSight(const BattleState & state, const BattleMap & map
 	auto blocking = [&](const Cell & cell) {
 		if (cell == from || cell == to)
 			return false;
-		return map.blocksSight(cell) || state.fighterAt(cell) != nullptr;
+		return cellBlocksSight(state, map, cell) || state.fighterAt(cell) != nullptr;
 	};
 
 	// Parcours des cellules traversées par le segment reliant les centres (Amanatides & Woo).
@@ -332,7 +369,10 @@ std::string tw::battle::checkTarget(const BattleState & state, const BattleMap &
 	bool isSelf = occupant != nullptr && occupant->id == fighter.id;
 	bool isAlly = occupant != nullptr && occupant->team == fighter.team && !isSelf;
 	bool isEnemy = occupant != nullptr && occupant->team != fighter.team;
-	bool isFree = occupant == nullptr && map.isWalkable(target);
+	// Case libre : praticable, sans combattant ni bloc de mur (même traversable).
+	bool isFree = occupant == nullptr && cellWalkable(state, map, target) && state.blockAt(target) == nullptr;
+	// Un bloc de mur, de n'importe quel camp, se vise comme un ennemi avec un sort de dégâts.
+	bool isBlock = state.blockAt(target) != nullptr && damagesBlocks(spell);
 
 	switch (spell.requirement)
 	{
@@ -346,7 +386,7 @@ std::string tw::battle::checkTarget(const BattleState & state, const BattleMap &
 		if (occupant == nullptr) return "Il faut cibler un combattant.";
 		break;
 	case CellRequirement::ENEMY:
-		if (!isEnemy) return "Il faut cibler un ennemi.";
+		if (!isEnemy && !isBlock) return "Il faut cibler un ennemi.";
 		break;
 	case CellRequirement::ALLY:
 		if (!isAlly) return "Il faut cibler un allié.";
@@ -773,7 +813,7 @@ std::vector<Cell> tw::battle::reachableCells(const BattleState & state, const Ba
 		for (const Cell & offset : NEIGHBOURS)
 		{
 			Cell next = { current.x + offset.x, current.y + offset.y };
-			if (!map.isWalkable(next) || isOccupied(state, next, fighter.id) || distances.count(next) > 0)
+			if (!cellWalkable(state, map, next) || isOccupied(state, next, fighter.id) || distances.count(next) > 0)
 				continue;
 
 			distances[next] = distance + 1;
@@ -802,7 +842,7 @@ std::vector<Cell> tw::battle::findPath(const BattleState & state, const BattleMa
 		for (const Cell & offset : NEIGHBOURS)
 		{
 			Cell next = { current.x + offset.x, current.y + offset.y };
-			if (!map.isWalkable(next) || isOccupied(state, next, fighter.id) || previous.count(next) > 0)
+			if (!cellWalkable(state, map, next) || isOccupied(state, next, fighter.id) || previous.count(next) > 0)
 				continue;
 
 			previous[next] = current;
@@ -837,7 +877,7 @@ MovePreview tw::battle::previewMove(const BattleState & state, const BattleMap &
 	for (std::size_t step = 0; step < path.size(); step++)
 	{
 		const Cell & next = path[step];
-		if (manhattan(position, next) != 1 || !map.isWalkable(next) || isOccupied(state, next, fighter.id))
+		if (manhattan(position, next) != 1 || !cellWalkable(state, map, next) || isOccupied(state, next, fighter.id))
 		{
 			preview.error = "Chemin invalide.";
 			return preview;

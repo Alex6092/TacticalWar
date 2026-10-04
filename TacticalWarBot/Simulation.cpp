@@ -257,7 +257,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " participations)\n";
 	}
 
-	std::cout << "\nSorts emportés (choix au hasard, 4 sur 6) : taux de victoire quand le sort est emporté :\n";
+	std::cout << "\nSorts emportés (choix au hasard, 4 par classe) : taux de victoire quand le sort est emporté :\n";
 	for (const auto & entry : bySpell)
 	{
 		std::cout << "  " << padded(entry.first, 34)

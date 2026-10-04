@@ -255,7 +255,7 @@ void TutorialScreen::showFinal()
 		+ std::to_wstring(data.rules.timeBankSeconds) + L" s pour tout le combat s'entame.\n";
 	tgui::Label::Ptr body = tgui::Label::create(
 		L"Le jour du tournoi, vous jouerez en équipe de deux contre une autre équipe.\n\n"
-		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 6 sorts. Le bloc « Votre "
+		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 7 sorts (dont un sort de terrain). Le bloc « Votre "
 		L"coéquipier » montre sa classe et vos combinaisons possibles.\n"
 		L"-  Talents : chaque match joué vous en fait gagner un (3 au plus), à choisir avant chaque match. "
 		L"Le talent Garde, qui vous a protégé ici, en est un.\n"

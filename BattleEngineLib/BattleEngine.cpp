@@ -242,7 +242,7 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 
 		emit({ { "t", "turn" }, { "f", fighter.id }, { "round", state.round } });
 
-		// Les glyphes du combattant s'usent au début de ses tours.
+		// Les glyphes et les murs du combattant s'usent au début de ses tours.
 		for (auto it = state.glyphs.begin(); it != state.glyphs.end();)
 		{
 			if (it->casterId == fighter.id && --it->remainingTurns <= 0)
@@ -255,6 +255,12 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 				it++;
 			}
 		}
+		for (Block & block : state.blocks)
+		{
+			if (block.casterId == fighter.id)
+				block.remainingTurns--;
+		}
+		removeBlocks([&](const Block & block) { return block.casterId == fighter.id && block.remainingTurns <= 0; }, "expired");
 
 		tickEffectsAtTurnStart(fighter);
 		if (fighter.alive)
@@ -441,20 +447,24 @@ ActionResult BattleEngine::cast(int fighterId, int spellIndex, const Cell & targ
 
 	emit({ { "t", "cast" }, { "f", caster.id }, { "spell", spell->id }, { "slot", spellIndex }, { "x", target.x }, { "y", target.y } });
 
-	// Les combattants touchés sont déterminés au moment du lancer (avant poussées et bonds).
+	// Les combattants et les blocs touchés sont déterminés au moment du lancer (avant poussées et bonds).
 	std::vector<int> targetIds;
+	std::vector<int> blockIds;
 	for (const Cell & cell : impactCells(map, caster.position, target, spell->impact))
 	{
 		const Fighter * hit = state.fighterAt(cell);
 		if (hit != nullptr)
 			targetIds.push_back(hit->id);
+		const Block * block = state.blockAt(cell);
+		if (block != nullptr)
+			blockIds.push_back(block->uid);
 	}
 
 	for (const EffectDef & effect : spell->effects)
 	{
 		if (state.phase == BattlePhase::ENDED)
 			break;
-		applySpellEffect(caster, *spell, effect, target, targetIds);
+		applySpellEffect(caster, *spell, effect, target, targetIds, blockIds);
 	}
 
 	if (caster.alive)
@@ -759,6 +769,25 @@ json BattleEngine::glyphJson(const Glyph & glyph) const
 	};
 }
 
+json BattleEngine::blockJson(const Block & block)
+{
+	return {
+		{ "uid", block.uid },
+		{ "group", block.group },
+		{ "caster", block.casterId },
+		{ "team", block.team },
+		{ "spell", block.spellId },
+		{ "name", block.name },
+		{ "x", block.cell.x },
+		{ "y", block.cell.y },
+		{ "hp", block.hp },
+		{ "maxHp", block.maxHp },
+		{ "turns", block.remainingTurns },
+		{ "move", block.blocksMove },
+		{ "sight", block.blocksSight }
+	};
+}
+
 json BattleEngine::recordJson(const FighterRecord & record)
 {
 	return {
@@ -829,6 +858,10 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 	for (const Glyph & glyph : state.glyphs)
 		glyphs.push_back(glyphJson(glyph));
 
+	json blocks = json::array();
+	for (const Block & block : state.blocks)
+		blocks.push_back(blockJson(block));
+
 	json startCells = json::object();
 	for (int team = 1; team <= 2; team++)
 	{
@@ -850,6 +883,7 @@ json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 		{ "ms", remaining },
 		{ "fighters", fighters },
 		{ "glyphs", glyphs },
+		{ "blocks", blocks },
 		{ "startCells", startCells },
 		{ "winner", state.winnerTeam },
 		{ "reason", toString(state.endReason) },

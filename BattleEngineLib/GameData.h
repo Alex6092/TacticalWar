@@ -93,7 +93,8 @@ namespace tw
 			TELEPORT,		// Le lanceur se téléporte sur la cellule (ou échange avec un allié si allowSwap)
 			DISPEL,			// Retire les effets positifs ou négatifs
 			GLYPH,			// Pose un glyphe sur la zone pendant "duration" tours du lanceur
-			STATE			// Ajoute un état ("unmovable"...) pendant "duration" tours
+			STATE,			// Ajoute un état ("unmovable"...) pendant "duration" tours
+			WALL			// Pose un mur : un bloc destructible par case libre de la zone, pendant "duration" tours du lanceur
 		};
 
 		enum class DispelMode
@@ -130,6 +131,11 @@ namespace tw
 			ZoneShape glyphShape = ZoneShape::SINGLE;
 			int glyphSize = 0;
 			std::vector<EffectDef> glyphEffects;
+
+			// Mur ("wall": {"hp", "move", "sight"}) : PV de chaque bloc, et ce qu'il bloque (passage, vue).
+			int wallHp = 0;
+			bool wallBlocksMove = true;
+			bool wallBlocksSight = true;
 		};
 
 		struct ZoneDef
@@ -153,6 +159,8 @@ namespace tw
 			std::string glyph;				// En boucle sur chaque case d'un glyphe du sort
 			std::string glyphTrigger;		// Quand le glyphe se déclenche
 			std::string impactSound;		// Son joué à l'impact
+			std::string block;				// Image d'un bloc du mur (chemin d'un PNG)
+			std::string blockBreak;			// Quand un bloc du mur est détruit
 		};
 
 		struct SpellDef
@@ -257,6 +265,8 @@ namespace tw
 
 			const ClassDef * findClass(int classId) const;
 			const TalentDef * findTalent(const std::string & id) const;
+			// Sort de n'importe quelle classe, par son identifiant (nullptr si inconnu).
+			const SpellDef * findSpell(const std::string & id) const;
 
 			// Charge les données (assets/data/gamedata.json). Retourne false et renseigne error en cas de problème.
 			bool loadFromJsonText(const std::string & text, std::string & error);

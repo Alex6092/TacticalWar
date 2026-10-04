@@ -272,6 +272,24 @@ void BattleScreen::render(sf::RenderWindow * window)
 	std::vector<AbstractSpellView<sf::Sprite*>*> effects;
 	fx.collectViews(effects);
 
+	// Blocs de mur (sorts de terrain) de l'état affiché ; un bloc traversable est translucide.
+	std::vector<IsometricRenderer::Prop> props;
+	for (const battle::Block & block : shown.blocks)
+	{
+		IsometricRenderer::Prop prop;
+		prop.x = (float)block.cell.x;
+		prop.y = (float)block.cell.y;
+		prop.texture = blockTexture(block.spellId);
+		prop.alpha = block.blocksMove ? 255 : 215;
+		prop.hp = block.hp;
+		prop.maxHp = block.maxHp;
+		auto top = blockTops.find(block.spellId);
+		if (top != blockTops.end())
+			prop.barAbove = prop.anchorY - top->second + 10.f;
+		props.push_back(prop);
+	}
+	renderer->setProps(props);
+
 	renderer->render(environment, characters, effects, getDeltatime());
 
 	// Textes flottants (dégâts, soins, effets), dans le repère de la carte.
@@ -382,15 +400,19 @@ void BattleScreen::drawAimPreview(sf::RenderWindow * window)
 	// bouclier et effets (au-dessus des PV, ils passeraient sous les panneaux du haut de l'écran).
 	for (const battle::TargetPreview & preview : aimPreviews)
 	{
-		BaseCharacterModel * view = viewOf(preview.fighterId);
-		if (view == NULL)
+		// Bloc de mur visé : sa case ; sinon le combattant touché.
+		const battle::Block * block = preview.blockUid >= 0 ? truth.findBlock(preview.blockUid) : NULL;
+		BaseCharacterModel * view = block == NULL ? viewOf(preview.fighterId) : NULL;
+		if (view == NULL && block == NULL)
 			continue;
+		float cellX = block != NULL ? (float)block->cell.x : view->getInterpolatedX();
+		float cellY = block != NULL ? (float)block->cell.y : view->getInterpolatedY();
 
 		std::vector<std::pair<sf::String, sf::Color>> lines;
 		if (preview.koCertain)
-			lines.push_back({ L"KO !", sf::Color(255, 215, 60) });
+			lines.push_back({ block != NULL ? sf::String(L"Détruit !") : sf::String(L"KO !"), sf::Color(255, 215, 60) });
 		else if (preview.koPossible)
-			lines.push_back({ L"KO possible", sf::Color(255, 175, 60) });
+			lines.push_back({ block != NULL ? sf::String(L"Détruit possible") : sf::String(L"KO possible"), sf::Color(255, 175, 60) });
 		// Dégâts : PV perdus en rouge, part absorbée par le bouclier en bleu.
 		int minLost = preview.minDamage - preview.minAbsorbed;
 		int maxLost = preview.maxDamage - preview.maxAbsorbed;
@@ -405,8 +427,8 @@ void BattleScreen::drawAimPreview(sf::RenderWindow * window)
 		for (const std::string & note : preview.notes)
 			lines.push_back({ fromServerText(note), sf::Color(235, 235, 235) });
 
-		float x = (view->getInterpolatedX() - view->getInterpolatedY()) * 60.f + 60.f + 52.f;
-		float y = (view->getInterpolatedX() + view->getInterpolatedY()) * 30.f + 30.f - 100.f;
+		float x = (cellX - cellY) * 60.f + 60.f + 52.f;
+		float y = (cellX + cellY) * 30.f + 30.f - 100.f;
 		for (auto line = lines.begin(); line != lines.end(); ++line)
 		{
 			sf::Text text(line->first, font, line->second == sf::Color(235, 235, 235) ? 15 : 19);
@@ -972,7 +994,7 @@ void BattleScreen::refreshPreview()
 		std::vector<battle::Cell> range;
 		for (const battle::Cell & cell : battle::launchCells(truth, map, data, *me, *spell))
 		{
-			if (map.isWalkable(cell) || truth.fighterAt(cell) != NULL)
+			if (map.isWalkable(cell) || truth.fighterAt(cell) != NULL || truth.blockAt(cell) != NULL)
 				range.push_back(cell);
 		}
 		colorator->setRange(range);
@@ -1045,6 +1067,15 @@ sf::String BattleScreen::terrainName(const battle::Cell & cell) const
 
 sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
 {
+	// Bloc de mur d'un sort de terrain : PV, durée et ce qu'il bloque.
+	const battle::Block * block = truth.blockAt(cell);
+	if (block != NULL)
+	{
+		sf::String blocks = block->blocksMove && block->blocksSight ? sf::String(L"bloque le passage et la vue")
+			: block->blocksMove ? sf::String(L"bloque le passage, pas la vue") : sf::String(L"bloque la vue, on peut le traverser");
+		return fromServerText(block->name) + L" : " + num(block->hp) + L"/" + num(block->maxHp) + L" PV, encore " + num(block->remainingTurns)
+			+ (block->remainingTurns > 1 ? L" tours, " : L" tour, ") + blocks + L" (un sort de dégâts peut le casser)";
+	}
 	if (!map.contains(cell) || !map.isWalkable(cell))
 		return sf::String();
 	int damage = map.turnDamage(cell);
@@ -1207,14 +1238,41 @@ void BattleScreen::onEvent(void * e)
 void BattleScreen::addFloatingText(int fighterId, const sf::String & text, const sf::Color & color)
 {
 	const battle::Fighter * fighter = shown.findFighter(fighterId);
-	if (fighter == NULL)
-		return;
+	if (fighter != NULL)
+		addFloatingTextAt(fighter->position, text, color);
+}
 
+const sf::Texture * BattleScreen::blockTexture(const std::string & spellId)
+{
+	auto cached = blockTextures.find(spellId);
+	if (cached != blockTextures.end())
+		return cached->second.getSize().x > 0 ? &cached->second : NULL;
+	sf::Texture & texture = blockTextures[spellId];
+	const battle::SpellDef * spell = ClientGameData::get().data().findSpell(spellId);
+	sf::Image image;
+	if (spell != NULL && !spell->visual.block.empty() && image.loadFromFile(spell->visual.block))
+	{
+		texture.loadFromImage(image);
+		texture.setSmooth(true);
+		// Première ligne non transparente de l'image.
+		unsigned int row = 0;
+		for (bool found = false; row < image.getSize().y && !found; row++)
+		{
+			for (unsigned int x = 0; x < image.getSize().x && !found; x++)
+				found = image.getPixel(x, row).a > 40;
+		}
+		blockTops[spellId] = (float)row;
+	}
+	return texture.getSize().x > 0 ? &texture : NULL;
+}
+
+void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String & text, const sf::Color & color)
+{
 	FloatingText floating;
 	floating.text = text;
 	floating.color = color;
-	floating.x = (float)fighter->position.x;
-	floating.y = (float)fighter->position.y;
+	floating.x = (float)cell.x;
+	floating.y = (float)cell.y;
 	// Les textes simultanés sur un même combattant sont décalés.
 	for (const FloatingText & other : floatingTexts)
 	{

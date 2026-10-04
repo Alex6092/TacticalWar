@@ -102,7 +102,7 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	description->setSize(PANEL_WIDTH - 40, 56);
 	panel->add(description);
 
-	// Sorts emportés : les 6 de la classe, 4 choisis (survol : description du sort).
+	// Sorts emportés : 4 parmi ceux de la classe (survol : description du sort).
 	spellPicker.reset(new SpellPicker(font, SpellPicker::Layout::ROW));
 	spellPicker->setGeometry(PANEL_WIDTH - 40, 0);
 	spellPicker->getWidget()->setPosition(20, top + 60);

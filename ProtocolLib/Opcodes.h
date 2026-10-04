@@ -7,7 +7,7 @@ namespace tw
 	namespace protocol
 	{
 		// Version du protocole : le client et le serveur doivent être mis à jour ensemble.
-		const int PROTOCOL_VERSION = 6;
+		const int PROTOCOL_VERSION = 7;
 
 		const int DEFAULT_GAME_PORT = 12345;
 		const int DEFAULT_HTTP_PORT = 8080;

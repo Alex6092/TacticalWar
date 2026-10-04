@@ -15,6 +15,9 @@ namespace tw
 		struct TargetPreview
 		{
 			int fighterId = -1;
+			// Bloc de mur touché (uid), à la place d'un combattant (fighterId -1). koPossible / koCertain :
+			// le bloc peut être / sera détruit.
+			int blockUid = -1;
 			int minDamage = 0;			// Dégâts subis, bouclier compris
 			int maxDamage = 0;
 			int minAbsorbed = 0;		// Part des dégâts absorbée par le bouclier de la cible

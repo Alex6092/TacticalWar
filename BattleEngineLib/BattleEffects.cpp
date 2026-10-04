@@ -24,7 +24,8 @@ namespace
 	}
 }
 
-void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds)
+void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds,
+	const std::vector<int> & blockIds)
 {
 	switch (effect.type)
 	{
@@ -33,14 +34,14 @@ void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, co
 		// Bond sur la cellule adjacente à la cible, du côté du lanceur.
 		Cell direction = directionBetween(caster.position, target);
 		Cell destination = { target.x - direction.x, target.y - direction.y };
-		if (destination != caster.position && map.isWalkable(destination) && state.fighterAt(destination) == nullptr)
+		if (destination != caster.position && cellWalkable(state, map, destination) && state.fighterAt(destination) == nullptr)
 			moveFighterTo(caster, destination, "dash");
 		return;
 	}
 	case EffectType::TELEPORT:
 	{
 		const Fighter * occupant = state.fighterAt(target);
-		if (occupant == nullptr && map.isWalkable(target))
+		if (occupant == nullptr && cellWalkable(state, map, target))
 		{
 			moveFighterTo(caster, target, "teleport");
 		}
@@ -73,6 +74,9 @@ void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, co
 		emit({ { "t", "glyph+" }, { "glyph", glyphJson(glyph) } });
 		return;
 	}
+	case EffectType::WALL:
+		placeWall(caster, spell, effect, target);
+		return;
 	default:
 		break;
 	}
@@ -104,6 +108,73 @@ void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, co
 			applyEffectToTarget(caster, spell.id, effect, fighter, target);
 		if (state.phase == BattlePhase::ENDED)
 			return;
+	}
+
+	// Dégâts directs : les blocs de mur de la zone sont touchés aussi, quel que soit leur camp. Jet du
+	// sort et puissance du lanceur, sans combinaison, passif ni résistance ; le vol de vie ne rend rien.
+	if (effect.type == EffectType::DAMAGE || effect.type == EffectType::LIFESTEAL)
+	{
+		int power = effectiveStat(state, data, caster, Stat::POWER);
+		for (int uid : blockIds)
+		{
+			if (state.findBlock(uid) != nullptr)
+				damageBlock(uid, std::max(0, (int)std::lround(roll(effect.min, effect.max) * (100.0 + power) / 100.0)), caster.id, "spell");
+		}
+	}
+}
+
+void BattleEngine::placeWall(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target)
+{
+	json blocks = json::array();
+	int group = state.nextUid++;
+	for (const Cell & cell : wallCells(state, map, caster.position, target, spell.impact))
+	{
+		Block block;
+		block.uid = state.nextUid++;
+		block.group = group;
+		block.casterId = caster.id;
+		block.team = caster.team;
+		block.spellId = spell.id;
+		block.name = effect.name.empty() ? spell.name : effect.name;
+		block.cell = cell;
+		block.hp = effect.wallHp;
+		block.maxHp = effect.wallHp;
+		block.remainingTurns = effect.duration;
+		block.blocksMove = effect.wallBlocksMove;
+		block.blocksSight = effect.wallBlocksSight;
+		state.blocks.push_back(block);
+		blocks.push_back(blockJson(block));
+	}
+	if (!blocks.empty())
+		emit({ { "t", "block+" }, { "f", caster.id }, { "blocks", blocks } });
+}
+
+void BattleEngine::damageBlock(int blockUid, int amount, int sourceId, const std::string & kind)
+{
+	Block * block = state.findBlock(blockUid);
+	if (block == nullptr || amount <= 0)
+		return;
+	block->hp = std::max(0, block->hp - amount);
+	emit({ { "t", "blockhit" }, { "uid", blockUid }, { "src", sourceId }, { "kind", kind }, { "amount", amount }, { "hp", block->hp },
+		{ "x", block->cell.x }, { "y", block->cell.y } });
+	if (block->hp <= 0)
+		removeBlocks([blockUid](const Block & candidate) { return candidate.uid == blockUid; }, "destroyed");
+}
+
+void BattleEngine::removeBlocks(const std::function<bool(const Block &)> & predicate, const std::string & reason)
+{
+	for (auto it = state.blocks.begin(); it != state.blocks.end();)
+	{
+		if (predicate(*it))
+		{
+			emit({ { "t", "block-" }, { "uid", it->uid }, { "reason", reason }, { "spell", it->spellId }, { "name", it->name },
+				{ "x", it->cell.x }, { "y", it->cell.y } });
+			it = state.blocks.erase(it);
+		}
+		else
+		{
+			it++;
+		}
 	}
 }
 
@@ -339,7 +410,7 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 	{
 		emit({ { "t", "death" }, { "f", target.id } });
 
-		// Les glyphes d'un combattant mort disparaissent.
+		// Les glyphes et les murs d'un combattant mort disparaissent.
 		for (auto it = state.glyphs.begin(); it != state.glyphs.end();)
 		{
 			if (it->casterId == target.id)
@@ -352,6 +423,8 @@ int BattleEngine::dealDamage(Fighter & target, int amount, int sourceId, const s
 				it++;
 			}
 		}
+		int deadId = target.id;
+		removeBlocks([deadId](const Block & block) { return block.casterId == deadId; }, "caster");
 	}
 
 	return amount;
@@ -442,6 +515,7 @@ void BattleEngine::pushFighter(Fighter & caster, Fighter & target, int distance,
 	Cell position = target.position;
 	int remaining = distance;
 	Fighter * collided = nullptr;
+	int collidedBlock = 0;
 
 	while (remaining > 0)
 	{
@@ -450,10 +524,12 @@ void BattleEngine::pushFighter(Fighter & caster, Fighter & target, int distance,
 			break;
 
 		const Fighter * occupant = state.fighterAt(next);
-		if (!map.isWalkable(next) || occupant != nullptr)
+		if (!cellWalkable(state, map, next) || occupant != nullptr)
 		{
 			if (occupant != nullptr)
 				collided = state.findFighter(occupant->id);
+			else if (state.blockAt(next) != nullptr && map.isWalkable(next))
+				collidedBlock = state.blockAt(next)->uid;
 			break;
 		}
 
@@ -470,6 +546,9 @@ void BattleEngine::pushFighter(Fighter & caster, Fighter & target, int distance,
 		dealDamage(target, remaining * data.rules.collisionDamagePerCell, caster.id, "collision");
 		if (collided != nullptr)
 			dealDamage(*collided, remaining * data.rules.collisionDamageToHit, caster.id, "collision");
+		// Un mur percuté est abîmé aussi.
+		if (collidedBlock != 0)
+			damageBlock(collidedBlock, remaining * data.rules.collisionDamageToHit, caster.id, "collision");
 	}
 }
 

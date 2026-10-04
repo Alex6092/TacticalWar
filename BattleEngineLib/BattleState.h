@@ -146,6 +146,26 @@ namespace tw
 			std::vector<EffectDef> effects;
 		};
 
+		// Bloc d'un mur (sort de terrain) : une invocation immobile sur une case, avec ses PV. Tous les
+		// sorts de dégâts peuvent le viser ou le toucher dans leur zone, quel que soit son camp, ainsi que
+		// les collisions ; ni combinaison, ni passif, ni résistance. Il disparaît à 0 PV, au bout de
+		// "remainingTurns" tours de son lanceur, ou à la mort de celui-ci.
+		struct Block
+		{
+			int uid = 0;
+			int group = 0;				// Mur dont il fait partie (blocs posés par le même lancer)
+			int casterId = -1;
+			int team = 0;
+			std::string spellId;
+			std::string name;
+			Cell cell;
+			int hp = 0;
+			int maxHp = 0;
+			int remainingTurns = 0;		// Décompté au début des tours du lanceur
+			bool blocksMove = true;		// Infranchissable (sinon on peut s'y arrêter, comme dans des herbes hautes)
+			bool blocksSight = true;
+		};
+
 		enum class BattlePhase
 		{
 			PLACEMENT,
@@ -184,6 +204,7 @@ namespace tw
 			int turnIndex = 0;
 			int round = 0;
 			std::vector<Glyph> glyphs;
+			std::vector<Block> blocks;
 			std::int64_t deadlineMs = 0;	// Fin du tour (ou du placement) en cours
 			std::int64_t turnStartMs = 0;	// Début du tour en cours (réserve de temps)
 			int winnerTeam = 0;
@@ -197,6 +218,9 @@ namespace tw
 			Fighter * findFighter(int id);
 			const Fighter * findFighter(int id) const;
 			const Fighter * fighterAt(const Cell & cell) const;	// Combattant vivant sur la cellule
+			const Block * blockAt(const Cell & cell) const;		// Bloc de mur sur la cellule
+			Block * findBlock(int uid);
+			const Block * findBlock(int uid) const;
 		};
 
 		const char * toString(BattlePhase phase);

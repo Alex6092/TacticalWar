@@ -418,7 +418,7 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 
 	// Gauche : sorts (lignes ajustées à la hauteur disponible), puis talents.
 	float leftWidth = width * 0.36f;
-	float rowHeight = std::max(56.f, std::min(82.f, (bottom - 60 - top - 30) / 6));
+	float rowHeight = std::max(56.f, std::min(82.f, (bottom - 60 - top - 30) / std::max(6, spellPicker->rows())));
 	spellPicker->setGeometry(leftWidth, rowHeight);
 	spellPicker->getWidget()->setPosition(margin, top);
 	spellsPanel->setPosition(margin - 10, top - 8);

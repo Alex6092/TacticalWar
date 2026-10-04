@@ -57,7 +57,7 @@ namespace
 			{ "SHIELD", EffectType::SHIELD }, { "DOT", EffectType::DOT }, { "HOT", EffectType::HOT },
 			{ "STAT_MOD", EffectType::STAT_MOD }, { "PUSH", EffectType::PUSH }, { "PULL", EffectType::PULL },
 			{ "DASH", EffectType::DASH }, { "TELEPORT", EffectType::TELEPORT }, { "DISPEL", EffectType::DISPEL },
-			{ "GLYPH", EffectType::GLYPH }, { "STATE", EffectType::STATE } });
+			{ "GLYPH", EffectType::GLYPH }, { "STATE", EffectType::STATE }, { "WALL", EffectType::WALL } });
 		effect.targets = parseName<TargetFilter>(object, "targets", TargetFilter::ENEMIES, {
 			{ "ENEMIES", TargetFilter::ENEMIES }, { "ALLIES", TargetFilter::ALLIES },
 			{ "ALL", TargetFilter::ALL }, { "CASTER", TargetFilter::CASTER } });
@@ -96,6 +96,16 @@ namespace
 			for (const json & triggered : glyph.value("effects", json::array()))
 				effect.glyphEffects.push_back(parseEffect(triggered));
 		}
+
+		if (object.contains("wall"))
+		{
+			const json & wall = object["wall"];
+			effect.wallHp = wall.value("hp", 0);
+			effect.wallBlocksMove = wall.value("move", true);
+			effect.wallBlocksSight = wall.value("sight", true);
+		}
+		if (effect.type == EffectType::WALL && (effect.wallHp <= 0 || effect.duration <= 0 || (!effect.wallBlocksMove && !effect.wallBlocksSight)))
+			throw std::runtime_error("mur sans PV, sans durée ou qui ne bloque rien");
 
 		if (effect.max < effect.min)
 			throw std::runtime_error("effet avec max < min");
@@ -162,6 +172,8 @@ namespace
 			spell.visual.glyph = visual.value("glyph", std::string());
 			spell.visual.glyphTrigger = visual.value("glyphTrigger", std::string());
 			spell.visual.impactSound = visual.value("impactSound", std::string());
+			spell.visual.block = visual.value("block", std::string());
+			spell.visual.blockBreak = visual.value("blockBreak", std::string());
 		}
 
 		if (spell.launch == LaunchShape::SELF)
@@ -237,6 +249,19 @@ const TalentDef * GameData::findTalent(const std::string & id) const
 	{
 		if (talent.id == id)
 			return &talent;
+	}
+	return nullptr;
+}
+
+const SpellDef * GameData::findSpell(const std::string & id) const
+{
+	for (const ClassDef & classDef : classes)
+	{
+		for (const SpellDef & spell : classDef.spells)
+		{
+			if (spell.id == id)
+				return &spell;
+		}
 	}
 	return nullptr;
 }

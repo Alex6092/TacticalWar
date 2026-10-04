@@ -106,8 +106,15 @@ namespace tw
 			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.
 			int decideWinner() const;
 
-			// Effets (BattleEffects.cpp)
-			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds);
+			// Effets (BattleEffects.cpp). targetIds / blockIds : combattants et blocs de la zone d'impact.
+			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds,
+				const std::vector<int> & blockIds);
+			// Pose les blocs d'un mur sur les cases libres de la zone.
+			void placeWall(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target);
+			// Dégâts sur un bloc de mur (fixes : ni combinaison, ni passif, ni résistance) ; détruit à 0 PV.
+			void damageBlock(int blockUid, int amount, int sourceId, const std::string & kind);
+			// Retire les blocs qui répondent au critère ("expired", "destroyed" ou "caster").
+			void removeBlocks(const std::function<bool(const Block &)> & predicate, const std::string & reason);
 			void applyEffectToTarget(Fighter & caster, const std::string & spellId, const EffectDef & effect, Fighter & target, const Cell & targetCell);
 			int computeDamage(const Fighter & caster, const Fighter & target, int roll, int comboPercent = 0) const;
 			// Combinaison de l'effet sur la cible : bonus de dégâts en %, 0 sans combinaison.
@@ -128,6 +135,7 @@ namespace tw
 			nlohmann::json fighterJson(const Fighter & fighter) const;
 			nlohmann::json effectJson(const ActiveEffect & effect) const;
 			nlohmann::json glyphJson(const Glyph & glyph) const;
+			static nlohmann::json blockJson(const Block & block);
 			static nlohmann::json recordJson(const FighterRecord & record);
 			static nlohmann::json zoneJson(const ZoneState & zone);
 			// "Sort" des effets posés par les talents au début du combat.

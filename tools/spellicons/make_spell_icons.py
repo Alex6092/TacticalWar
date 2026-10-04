@@ -302,7 +302,47 @@ def lien_de_vie(d, accent):
         circle(d, 0.4 + 0.2 * t, 0.55 - 0.07 * t, 0.035, outline=accent, width=0.02)
 
 
+def eboulis(d, accent):
+    # Rochers qui tombent sur un tas.
+    poly(d, [(0.14, 0.86), (0.2, 0.66), (0.36, 0.56), (0.52, 0.6), (0.6, 0.74), (0.56, 0.86)], LIGHT)
+    poly(d, [(0.46, 0.86), (0.52, 0.7), (0.68, 0.62), (0.84, 0.7), (0.88, 0.86)], LIGHT)
+    poly(d, [(0.4, 0.38), (0.48, 0.24), (0.62, 0.22), (0.7, 0.34), (0.62, 0.46), (0.46, 0.48)], accent)
+    for x in (0.4, 0.55, 0.7):
+        line(d, [(x - 0.04, 0.06), (x, 0.16)], 0.025, LIGHT)
+    line(d, [(0.08, 0.9), (0.92, 0.9)], 0.03, accent)
+
+
+def palissade(d, accent):
+    # Trois pieux taillés en pointe, reliés par une traverse.
+    for x in (0.26, 0.5, 0.74):
+        poly(d, [(x - 0.08, 0.88), (x - 0.08, 0.34), (x, 0.16), (x + 0.08, 0.34), (x + 0.08, 0.88)], LIGHT)
+        line(d, [(x - 0.03, 0.4), (x - 0.03, 0.8)], 0.012, accent)
+    line(d, [(0.14, 0.6), (0.86, 0.6)], 0.045, accent)
+
+
+def mur_de_glace(d, accent):
+    # Mur de blocs de glace, éclats au sommet.
+    for row, (y0, y1) in enumerate(((0.62, 0.86), (0.38, 0.62))):
+        offset = 0.0 if row == 0 else 0.11
+        x = 0.1 + offset
+        while x < 0.86:
+            right = min(x + 0.22, 0.9)
+            poly(d, [(x + 0.01, y0 + 0.01), (right - 0.01, y0 + 0.01), (right - 0.01, y1 - 0.01), (x + 0.01, y1 - 0.01)], LIGHT)
+            x = right
+    for x in (0.26, 0.5, 0.74):
+        poly(d, [(x - 0.07, 0.38), (x, 0.14), (x + 0.07, 0.38)], accent)
+
+
+def voile_sacre(d, accent):
+    # Voile de lumière ondulé sous une étoile.
+    for x in (0.24, 0.4, 0.56, 0.72):
+        pts = [(x + 0.035 * math.sin(t * math.pi * 2), 0.3 + 0.6 * t) for t in [i / 12 for i in range(13)]]
+        line(d, pts, 0.07, LIGHT)
+    poly(d, star(0.5, 0.17, 0.13, 0.04), accent)
+
+
 SYMBOLS = {
+    'eboulis': eboulis, 'palissade': palissade, 'mur_de_glace': mur_de_glace, 'voile_sacre': voile_sacre,
     'taillade': taillade, 'charge': charge, 'rempart': rempart, 'provocation': provocation,
     'tir_precis': tir_precis, 'fleche_empoisonnee': fleche_empoisonnee, 'fleche_recul': fleche_recul,
     'fleche_entravante': fleche_entravante, 'eclair': eclair, 'boule_de_feu': boule_de_feu,
@@ -372,10 +412,11 @@ def main():
     print('%d icônes générées' % len(icons))
 
     if args.preview:
-        # Une ligne par classe (6 sorts).
-        sheet = Image.new('RGB', (6 * 110, 4 * 110), (30, 30, 40))
+        # Une ligne par classe.
+        per_class = max(len(cls['spells']) for cls in data['classes'])
+        sheet = Image.new('RGB', (per_class * 110, len(data['classes']) * 110), (30, 30, 40))
         for i, icon in enumerate(icons):
-            sheet.paste(icon.convert('RGB'), ((i % 6) * 110 + 5, (i // 6) * 110 + 5))
+            sheet.paste(icon.convert('RGB'), ((i % per_class) * 110 + 5, (i // per_class) * 110 + 5))
         sheet.save(os.path.join(os.path.dirname(__file__), 'preview.png'))
 
 
