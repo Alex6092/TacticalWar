@@ -1,7 +1,8 @@
 # Équilibrage des classes
 
 Les caractéristiques et les sorts sont dans `assets/data/gamedata.json` : on les modifie sans recompiler
-(le serveur envoie ces données aux clients à la connexion).
+(le serveur envoie ces données aux clients à la connexion). Le guide du joueur imprimable reprend ces
+chiffres : le régénérer ensuite avec `py tools/docs/make_player_guide.py` (un test le vérifie).
 
 ## Simulation
 

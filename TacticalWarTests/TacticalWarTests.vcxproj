@@ -45,6 +45,7 @@
 
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GuideTests.cpp" />
     <ClCompile Include="PuzzleTests.cpp" />
     <ClCompile Include="BattleEngineTests.cpp" />
     <ClCompile Include="FxDataTests.cpp" />
