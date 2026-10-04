@@ -9,6 +9,7 @@
 #include "MusicManager.h"
 #include "ClientConfig.h"
 #include "TrainingSetupScreen.h"
+#include "TutorialScreen.h"
 
 using namespace tw;
 
@@ -93,6 +94,17 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 		trainingRequested = true;
 	});
 
+	// Tutoriel guidé, sans serveur : à faire avant le jour du tournoi.
+	tgui::Button::Ptr tutorialButton = tgui::Button::create();
+	tutorialButton->setInheritedFont(font);
+	tutorialButton->setTextSize(formFontSize);
+	tutorialButton->setText(L"Tutoriel");
+	tutorialButton->setSize(login->getSize().x, tutorialButton->getSize().y);
+	tutorialButton->getRenderer()->setBackgroundColor(sf::Color(120, 220, 120, 180));
+	tutorialButton->connect("pressed", [this]() {
+		tutorialRequested = true;
+	});
+
 	errorMsg = tgui::Label::create();
 	errorMsg->setInheritedFont(font);
 	errorMsg->setTextSize(formFontSize);
@@ -107,6 +119,7 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 
 	gui->add(button, "connectBtn");
 	gui->add(trainingButton, "trainingBtn");
+	gui->add(tutorialButton, "tutorialBtn");
 
 	gui->add(errorMsg, "errorMsg");
 
@@ -142,6 +155,7 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	tgui::EditBox::Ptr server = gui->get<tgui::EditBox>("serverEdit");
 	tgui::Button::Ptr btn = gui->get<tgui::Button>("connectBtn");
 	tgui::Button::Ptr trainingBtn = gui->get<tgui::Button>("trainingBtn");
+	tgui::Button::Ptr tutorialBtn = gui->get<tgui::Button>("tutorialBtn");
 
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
 
@@ -159,9 +173,10 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 	btn->setPosition(formX, formY + 6 * formElementHeight + 30);
 	trainingBtn->setPosition(formX, formY + 7 * formElementHeight + 50);
+	tutorialBtn->setPosition(formX, formY + 8 * formElementHeight + 60);
 
 	errorMsg->setSize(window->getSize().x, 40);
-	errorMsg->setPosition(0, formY + 8 * formElementHeight + 60);
+	errorMsg->setPosition(0, formY + 9 * formElementHeight + 70);
 	
 
 	sf::Event event;
@@ -212,6 +227,12 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	{
 		gui->removeAllWidgets();
 		ScreenManager::getInstance()->setCurrentScreen(new TrainingSetupScreen(gui));
+		delete this;
+	}
+	else if (tutorialRequested)
+	{
+		gui->removeAllWidgets();
+		ScreenManager::getInstance()->setCurrentScreen(new TutorialScreen(gui, TutorialScreen::Origin::LOGIN));
 		delete this;
 	}
 }

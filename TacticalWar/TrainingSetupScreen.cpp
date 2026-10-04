@@ -10,6 +10,7 @@
 #include "LoginScreen.h"
 #include "ScreenManager.h"
 #include "TrainingScreen.h"
+#include "TutorialScreen.h"
 
 using namespace tw;
 
@@ -126,15 +127,23 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	back->setInheritedFont(font);
 	back->setTextSize(18);
 	back->setSize(180, 44);
-	back->setPosition(PANEL_WIDTH / 2 - 200, top + 170);
+	back->setPosition(PANEL_WIDTH / 2 - 290, top + 170);
 	back->connect("pressed", [this]() { request = Request::BACK; });
 	panel->add(back);
+
+	tgui::Button::Ptr tutorial = tgui::Button::create(L"Tutoriel");
+	tutorial->setInheritedFont(font);
+	tutorial->setTextSize(18);
+	tutorial->setSize(180, 44);
+	tutorial->setPosition(PANEL_WIDTH / 2 - 90, top + 170);
+	tutorial->connect("pressed", [this]() { request = Request::TUTORIAL; });
+	panel->add(tutorial);
 
 	playButton = tgui::Button::create(L"Jouer");
 	playButton->setInheritedFont(font);
 	playButton->setTextSize(18);
 	playButton->setSize(180, 44);
-	playButton->setPosition(PANEL_WIDTH / 2 + 20, top + 170);
+	playButton->setPosition(PANEL_WIDTH / 2 + 110, top + 170);
 	playButton->connect("pressed", [this]() { request = Request::PLAY; });
 	panel->add(playButton);
 
@@ -304,6 +313,13 @@ void TrainingSetupScreen::update(float deltatime)
 		save();
 		gui->removeAllWidgets();
 		ScreenManager::getInstance()->setCurrentScreen(new LoginScreen(gui));
+		delete this;
+	}
+	else if (request == Request::TUTORIAL)
+	{
+		save();
+		gui->removeAllWidgets();
+		ScreenManager::getInstance()->setCurrentScreen(new TutorialScreen(gui, TutorialScreen::Origin::TRAINING));
 		delete this;
 	}
 }

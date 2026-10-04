@@ -12,6 +12,7 @@ namespace tw
 		sf::Text title;
 		bool readyForConnect;
 		bool trainingRequested;
+		bool tutorialRequested = false;
 		float messageDuration;
 		tgui::Label::Ptr errorMsg;
 		tgui::Gui * gui;

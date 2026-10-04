@@ -261,6 +261,33 @@ Le bilan décerne aussi des **hauts faits**, affichés sous le nom de chaque com
   dans les derniers combats.
 - Liste et descriptions : `BattleEngineLib/Achievements.h` ; conditions : `Achievements.cpp`.
 
+## Tutoriel guidé
+
+Le bouton **« Tutoriel »** (écran de connexion, ou réglages de l'entraînement) apprend les bases en
+quelques minutes, sans serveur. Le joueur est un Guerrier avec le talent Garde ; il affronte un
+« Mannequin » (un Archer qui passe ses tours, protégé lui aussi par Garde) sur la carte 8, « Terrain
+d'exercice ». Un panneau en haut de l'écran donne la consigne ; l'étape suivante s'affiche dès que
+la consigne est remplie.
+
+| Étape | Consigne |
+|---|---|
+| 1. Placement | Choisir une case de départ, puis cliquer sur Prêt |
+| 2. Déplacement | Se déplacer sur une case verte (PM) |
+| 3. Cases spéciales | Survoler les braises, la source ou les hautes herbes (ou Continuer) |
+| 4. Sorts | Sélectionner un sort : sa portée s'affiche |
+| 5. Attaque | Lancer un sort sur le mannequin, après avoir lu l'aperçu (PV et bouclier perdus) |
+| 6. Fin du tour | Passer son tour |
+| 7. Anticiper | Survoler le mannequin : sa portée de déplacement au prochain tour |
+| 8. Signal | Envoyer un signal (Alt + clic) |
+| 9. Victoire | Mettre le mannequin hors combat : le bilan présente les hauts faits |
+
+- Pas de minuteur : chacun avance à son rythme. « Quitter » interrompt le tutoriel.
+- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts, talents,
+  bannissement, mode de victoire, jeu en équipe. Puis « Entraînement libre » ou « Retour ».
+- Captures d'écran : `TacticalWar.exe --tutorial-step N` ouvre le tutoriel à l'étape N (1 à 9), les
+  étapes précédentes étant jouées automatiquement ; 10 mène le combat jusqu'au bilan, 11 ouvre l'écran
+  final. `--tutorial` ouvre le tutoriel au début.
+
 ## Entraînement hors ligne
 
 Le bouton **« Entraînement »** de l'écran de connexion lance un combat contre l'ordinateur, sans serveur ni
