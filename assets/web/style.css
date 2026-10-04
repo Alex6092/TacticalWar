@@ -61,6 +61,8 @@ html, body {
 .pill.paused { color: var(--red); border-color: var(--red); }
 
 .meta { display: flex; align-items: center; gap: 0.8rem; font-variant-numeric: tabular-nums; font-size: 1.4rem; color: var(--muted); }
+.guide-link { font-size: 0.95rem; color: var(--gold); text-decoration: none; border: 1px solid var(--gold); border-radius: 6px; padding: 0.15rem 0.6rem; }
+.guide-link:hover { background: var(--gold); color: #000; }
 .dot { width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--red); display: inline-block; }
 .dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
 

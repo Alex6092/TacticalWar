@@ -82,6 +82,7 @@ private:
 	tgui::Button::Ptr replayButton;
 	tgui::Button::Ptr webButton;
 	tgui::Button::Ptr diplomasButton;
+	tgui::Button::Ptr guideButton;
 	tgui::Button::Ptr watchButton;
 	nlohmann::json liveSessions = nlohmann::json::array();
 	tgui::Label::Ptr standings;

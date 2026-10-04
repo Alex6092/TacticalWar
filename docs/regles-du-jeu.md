@@ -346,8 +346,9 @@ la consigne est remplie.
 | 9. Victoire | Mettre le mannequin hors combat : le bilan présente les hauts faits |
 
 - Pas de minuteur : chacun avance à son rythme. « Quitter » interrompt le tutoriel.
-- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts, talents,
-  bannissement, mode de victoire, jeu en équipe. Puis « Entraînement libre » ou « Retour ».
+- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts et bloc du
+  coéquipier, talents, bannissement, mode de victoire, réserve de temps, coéquipier absent, aide (H),
+  signaux et combinaisons. Puis « Entraînement libre », « Énigmes » ou « Retour ».
 - Captures d'écran : `TacticalWar.exe --tutorial-step N` ouvre le tutoriel à l'étape N (1 à 9), les
   étapes précédentes étant jouées automatiquement ; 10 mène le combat jusqu'au bilan, 11 ouvre l'écran
   final. `--tutorial` ouvre le tutoriel au début.
@@ -375,6 +376,24 @@ adversaires ne jouent pas, et les sorts font leurs dégâts minimum : le résult
   échoue : une énigme impossible ou trop facile est détectée.
 - En ligne de commande : `--puzzles` (liste), `--puzzle N` (énigme N), `--puzzle-demo` (la solution
   est jouée automatiquement, avec les mêmes commandes qu'un joueur).
+
+## Guide du joueur imprimable
+
+Une feuille A4 recto-verso à distribuer à chaque joueur, à lire en plus du tutoriel et de
+l'entraînement :
+- **recto** : but du jeu (KO, zone, mort subite), déroulement d'un tour (placement, PA, PM, relance,
+  réserve de temps), commandes, règles à savoir (aperçu, bouclier, résistance, tacle, ligne de vue,
+  collision), cases spéciales, signaux et émotes, déroulement du tournoi, talents, entraînement ;
+- **verso** : les 4 classes (caractéristiques, passif, 6 sorts avec coût, portée, relance, dégâts et
+  marques), les combinaisons avec leur mise en pratique, et 5 astuces.
+
+La page est servie par le serveur : `http://<serveur>:8080/guide.html` (lien « Guide du joueur » en haut
+de la page projetée, bouton « Guide » de l'onglet Tournoi). Bouton « Imprimer », en recto-verso.
+
+Elle est générée par `py tools/docs/make_player_guide.py` à partir de `assets/data/gamedata.json` (règles,
+classes, sorts, talents) et de `assets/tiles/tileset.json` (cases spéciales), icônes comprises. Après une
+modification des données de jeu, relancer le script : le test « le guide du joueur est à jour »
+(`TacticalWarTests`) compare l'empreinte de `gamedata.json` gardée dans le guide.
 
 ## Entraînement hors ligne
 

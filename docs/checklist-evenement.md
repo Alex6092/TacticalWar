@@ -14,8 +14,11 @@
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
 - [ ] Proposer aux élèves de faire le **tutoriel** (bouton « Tutoriel » de l'écran de connexion,
-      quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement » (voir
-      `docs/regles-du-jeu.md`).
+      quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement », et ses
+      « Énigmes » (voir `docs/regles-du-jeu.md`).
+- [ ] **Imprimer le guide du joueur**, un par joueur, en recto-verso : `http://<IP>:8080/guide.html`
+      (serveur lancé) ou bouton « Guide » de l'onglet Tournoi. Il peut être distribué avant
+      l'événement avec le tutoriel.
 
 ## Test grandeur nature sans joueurs
 
