@@ -31,6 +31,7 @@ private:
 	void refreshForm();
 	void refreshMatches();
 	void refreshFormatOptions();
+	float layoutSettings(float width);
 	nlohmann::json readSettings() const;
 	std::vector<int> selectedTeamIds() const;
 	void save();
@@ -46,6 +47,8 @@ private:
 	tgui::Button::Ptr newButton;
 
 	tgui::Panel::Ptr form;
+	// Réglages et équipes inscrites : zone qui défile si la fenêtre est trop basse.
+	tgui::ScrollablePanel::Ptr settings;
 	tgui::EditBox::Ptr name;
 	tgui::ComboBox::Ptr format;
 	tgui::Label::Ptr poolCountLabel;
@@ -66,6 +69,8 @@ private:
 	tgui::EditBox::Ptr maxTalents;
 	tgui::Label::Ptr bansLabel;
 	tgui::ComboBox::Ptr bans;
+	tgui::Label::Ptr mapsLabel;
+	tgui::ComboBox::Ptr maps;
 	tgui::ListView::Ptr teamList;
 	tgui::Button::Ptr saveButton;
 	tgui::Button::Ptr startButton;
@@ -79,6 +84,8 @@ private:
 	tgui::Button::Ptr stopButton;
 	tgui::Button::Ptr replayButton;
 	tgui::Button::Ptr webButton;
+	tgui::Button::Ptr diplomasButton;
+	tgui::Button::Ptr guideButton;
 	tgui::Button::Ptr watchButton;
 	nlohmann::json liveSessions = nlohmann::json::array();
 	tgui::Label::Ptr standings;

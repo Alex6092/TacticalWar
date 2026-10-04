@@ -27,6 +27,22 @@ const char * tw::tournament::toString(BanMode mode)
 	return "";
 }
 
+const char * tw::tournament::toString(MapPool pool)
+{
+	switch (pool)
+	{
+	case MapPool::CLASSIC: return "CLASSIC";
+	case MapPool::SPECIAL: return "SPECIAL";
+	case MapPool::ALL: return "ALL";
+	}
+	return "";
+}
+
+bool tw::tournament::mapInPool(MapPool pool, bool hasSpecialCells)
+{
+	return pool == MapPool::ALL || (pool == MapPool::SPECIAL) == hasSpecialCells;
+}
+
 const char * tw::tournament::toString(StageType type)
 {
 	switch (type)

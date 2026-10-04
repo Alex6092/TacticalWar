@@ -1,0 +1,68 @@
+{
+  "id": "collision",
+  "order": 5,
+  "title": "Contre le rocher",
+  "goal": "Mettez le Mage hors combat. Un combattant repoussé contre un obstacle subit des dégâts de collision pour chaque case qu'il n'a pas pu parcourir.",
+  "hint": "Flèche de recul (touche 3) repousse de 3 cases : le rocher derrière le Mage l'arrête net.",
+  "trap": [
+    {
+      "fighter": 0,
+      "move": [
+        [
+          7,
+          3
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          9,
+          4
+        ]
+      ]
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 5,
+      "y": 3
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 5,
+      "y": 3
+    }
+  ],
+  "map": 1,
+  "fighters": [
+    {
+      "team": 1,
+      "class": 2,
+      "name": "Archer",
+      "x": 6,
+      "y": 3
+    },
+    {
+      "team": 2,
+      "class": 1,
+      "name": "Mage",
+      "x": 5,
+      "y": 3,
+      "hp": 23
+    }
+  ],
+  "solution": [
+    {
+      "fighter": 0,
+      "cast": 2,
+      "x": 5,
+      "y": 3
+    }
+  ]
+}

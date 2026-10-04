@@ -10,12 +10,17 @@
 - [ ] Sur le PC serveur, lancer `Ouvrir-pare-feu.bat` en administrateur (ports 12345 et 8080).
 - [ ] Lancer le serveur une première fois et **noter le mot de passe admin** affiché.
 - [ ] Créer les équipes (client connecté en `admin`, onglet Équipes), puis imprimer les fiches
-      d'identifiants générées dans `data\exports\fiches-equipes.html`.
+      d'identifiants générées dans `data\exports\fiches-equipes.html`. Nombre impair d'élèves : une
+      équipe peut n'avoir qu'un joueur (champs du joueur 2 laissés vides), qui joue alors les deux
+      personnages.
 - [ ] Vérifier la licence des musiques (`assets\music\SAM1_*`) avant une diffusion publique.
 - [ ] **Répétition générale** : tous les PC sur le réseau de l'événement, avec le projecteur.
 - [ ] Proposer aux élèves de faire le **tutoriel** (bouton « Tutoriel » de l'écran de connexion,
-      quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement » (voir
-      `docs/regles-du-jeu.md`).
+      quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement », et ses
+      « Énigmes » (voir `docs/regles-du-jeu.md`).
+- [ ] **Imprimer le guide du joueur**, un par joueur, en recto-verso : `http://<IP>:8080/guide.html`
+      (serveur lancé) ou bouton « Guide » de l'onglet Tournoi. Il peut être distribué avant
+      l'événement avec le tutoriel.
 
 ## Test grandeur nature sans joueurs
 
@@ -30,7 +35,8 @@
    (l'adresse du serveur se règle sur l'écran de connexion).
 3. **Écran projeté** :
    - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11).
-     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs » ;
+     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs ».
+     À la fin du tournoi, elle passe sur la « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
    - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré) ;
    - temps forts : chaque combat est enregistré (`data\replays\`) et peut être revu depuis l'écran
      spectateur, onglet « Rediffusions » (client connecté sans identifiants).
@@ -40,6 +46,7 @@
    Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
    Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
    finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
+   Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
 
@@ -54,4 +61,12 @@
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
 | Les émotes des joueurs gênent | Mettre `"emotes": false` dans `server.json`, puis relancer le serveur. |
 
-Sauvegarder le dossier `data\` du serveur après l'événement, puis supprimer les fiches d'identifiants.
+## Après le tournoi
+
+1. La page projetée passe sur la **cérémonie** : podium, MVP du tournoi, hauts faits les plus rares.
+2. **Diplômes** : onglet Tournoi, sélectionner le tournoi, bouton « Diplômes » (ou
+   `http://<IP>:8080/diplomes.html?tournament=<numéro>`). Une page A4 par joueur : équipe et classement,
+   matchs joués et gagnés, bilan, classes jouées, hauts faits et titres de MVP. Bouton « Imprimer »
+   (ou impression vers PDF) ; les en-têtes et pieds de page du navigateur peuvent être désactivés dans
+   ses options d'impression.
+3. Sauvegarder le dossier `data\` du serveur, puis supprimer les fiches d'identifiants.

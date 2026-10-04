@@ -115,7 +115,17 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	};
 	fx.playSound = [this](const std::string & path) { playSound(path); };
 	hud->onSpellClicked = [this](int slot) { selectSpell(selectedSpell == slot ? -1 : slot); };
-	hud->onEndTurn = [this]() { sendAction("Ct", json::object()); };
+	hud->onPing = [this](int kind) { sendPing(pingCell, kind); };
+	const char * pingIcons[4] = { "here", "attack", "retreat", "danger" };
+	for (int kind = 0; kind < 4; kind++)
+	{
+		if (pingTextures[kind].loadFromFile(std::string("./assets/ui/pings/") + pingIcons[kind] + ".png"))
+			pingTextures[kind].setSmooth(true);
+	}
+	hud->onEndTurn = [this]() {
+		if (isMyTurn())
+			sendAction("Ct", json::object());
+	};
 	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
@@ -207,6 +217,9 @@ void BattleScreen::update(float deltatime)
 	for (SpeechBubble & bubble : bubbles)
 		bubble.age += deltatime;
 	bubbles.erase(std::remove_if(bubbles.begin(), bubbles.end(), [](const SpeechBubble & bubble) { return bubble.age > 2.6f; }), bubbles.end());
+	for (PingMarker & marker : pingMarkers)
+		marker.age += deltatime;
+	pingMarkers.erase(std::remove_if(pingMarkers.begin(), pingMarkers.end(), [](const PingMarker & marker) { return marker.age > 3.f; }), pingMarkers.end());
 	emoteCooldown = std::max(0.f, emoteCooldown - deltatime);
 	pingCooldown = std::max(0.f, pingCooldown - deltatime);
 	floatingTexts.erase(std::remove_if(floatingTexts.begin(), floatingTexts.end(),
@@ -234,7 +247,7 @@ void BattleScreen::update(float deltatime)
 	if (hasSnapshot)
 	{
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
-		hud->refresh(shown, ClientGameData::get().data(), you, hoveredFighter, selectedSpell, isInteractive(), remaining);
+		hud->refresh(shown, ClientGameData::get().data(), actor(), hoveredFighter, selectedSpell, isMyTurn(), remaining);
 		refreshPreview();
 	}
 
@@ -280,6 +293,46 @@ void BattleScreen::render(sf::RenderWindow * window)
 
 	drawAimPreview(window);
 	drawBubbles(window);
+	drawPingMarkers(window);
+}
+
+void BattleScreen::drawPingMarkers(sf::RenderWindow * window)
+{
+	// Au-dessus de la flèche du signal : icône du type et mot, dans la couleur du type.
+	const wchar_t * words[4] = { L"Ici !", L"Attaquez !", L"Repli !", L"Danger !" };
+	const sf::Color colors[4] = { sf::Color(255, 215, 70), sf::Color(255, 90, 70), sf::Color(110, 180, 255), sf::Color(255, 160, 50) };
+	for (const PingMarker & marker : pingMarkers)
+	{
+		int kind = std::max(0, std::min(3, marker.kind));
+		float alpha = std::max(0.f, std::min(1.f, (3.f - marker.age) / 0.4f));
+		float centerX = (marker.cell.x - marker.cell.y) * 60.f + 60.f;
+		float centerY = (marker.cell.x + marker.cell.y) * 30.f + 30.f - 190.f;
+
+		sf::Text text(words[kind], font, 20);
+		sf::FloatRect bounds = text.getLocalBounds();
+		float width = 40 + bounds.width + 18;
+		float height = 40;
+		float left = std::round(centerX - width / 2);
+		float top = std::round(centerY - height / 2);
+
+		sf::RectangleShape box(sf::Vector2f(width, height));
+		box.setPosition(left, top);
+		box.setFillColor(sf::Color(20, 20, 30, (sf::Uint8)(220 * alpha)));
+		box.setOutlineColor(sf::Color(colors[kind].r, colors[kind].g, colors[kind].b, (sf::Uint8)(255 * alpha)));
+		box.setOutlineThickness(2);
+		window->draw(box);
+
+		sf::Sprite icon(pingTextures[kind]);
+		float scale = pingTextures[kind].getSize().x > 0 ? 32.f / pingTextures[kind].getSize().x : 1.f;
+		icon.setScale(scale, scale);
+		icon.setPosition(left + 5, top + 4);
+		icon.setColor(sf::Color(255, 255, 255, (sf::Uint8)(255 * alpha)));
+		window->draw(icon);
+
+		text.setFillColor(sf::Color(colors[kind].r, colors[kind].g, colors[kind].b, (sf::Uint8)(255 * alpha)));
+		text.setPosition(std::round(left + 42 - bounds.left), std::round(top + (height - bounds.height) / 2 - bounds.top));
+		window->draw(text);
+	}
 }
 
 void BattleScreen::drawBubbles(sf::RenderWindow * window)
@@ -428,7 +481,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 	{
 		json ping;
 		if (hasSnapshot && message.parseJson(ping))
-			showPing(ping.value("f", -1), { ping.value("x", -1), ping.value("y", -1) });
+			showPing(ping.value("f", -1), { ping.value("x", -1), ping.value("y", -1) }, ping.value("kind", 0));
 	}
 	else if (message.op == "HW")
 	{
@@ -723,7 +776,30 @@ void BattleScreen::leave()
 bool BattleScreen::isInteractive() const
 {
 	return hasSnapshot && !awaitingServer && truth.phase == battle::BattlePhase::FIGHT
-		&& truth.activeFighterId() == you && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
+		&& controls(truth.activeFighterId()) && visualQueue.empty() && !waitingMove && stepRemaining <= 0;
+}
+
+bool BattleScreen::isMyTurn() const
+{
+	return hasSnapshot && mode == Mode::PLAYER && truth.phase == battle::BattlePhase::FIGHT && controls(truth.activeFighterId())
+		&& shown.phase == battle::BattlePhase::FIGHT && shown.activeFighterId() == truth.activeFighterId();
+}
+
+bool BattleScreen::controls(int fighterId) const
+{
+	if (mode != Mode::PLAYER || fighterId < 0)
+		return false;
+	if (fighterId == you)
+		return true;
+	const battle::Fighter * fighter = truth.findFighter(fighterId);
+	const battle::Fighter * me = truth.findFighter(you);
+	return fighter != NULL && me != NULL && fighter->piloted && fighter->team == me->team;
+}
+
+int BattleScreen::actor() const
+{
+	int active = truth.activeFighterId();
+	return truth.phase == battle::BattlePhase::FIGHT && active != you && controls(active) ? active : you;
 }
 
 bool BattleScreen::isMouseOverHud() const
@@ -734,7 +810,8 @@ bool BattleScreen::isMouseOverHud() const
 	sf::Vector2i mouse = sf::Mouse::getPosition(*window);
 	for (const tgui::Widget::Ptr & widget : gui->getWidgets())
 	{
-		if (!widget->isVisible())
+		// Les textes désactivés (messages, ligne d'aide) laissent passer les clics vers la carte.
+		if (!widget->isVisible() || !widget->isEnabled())
 			continue;
 		sf::Vector2f position = widget->getPosition();
 		sf::Vector2f size = widget->getSize();
@@ -747,10 +824,11 @@ bool BattleScreen::isMouseOverHud() const
 void BattleScreen::selectSpell(int slot)
 {
 	selectedSpell = -1;
-	if (slot < 0 || !isInteractive())
+	// Pendant son tour, même pendant une animation : la visée s'affichera à la fin de celle-ci.
+	if (slot < 0 || !isMyTurn())
 		return;
 
-	const battle::Fighter * me = truth.findFighter(you);
+	const battle::Fighter * me = truth.findFighter(actor());
 	const battle::SpellDef * spell = me != NULL ? battle::spellOf(ClientGameData::get().data(), *me, slot) : NULL;
 	if (spell == NULL)
 		return;
@@ -792,37 +870,65 @@ void BattleScreen::sendEmote(int emoteId)
 	sendToServer("CE", { { "id", emoteId } });
 }
 
-void BattleScreen::sendPing(const battle::Cell & cell)
+void BattleScreen::sendPing(const battle::Cell & cell, int kind)
 {
 	// Seuls les coéquipiers voient le signal (le serveur le relaie à l'équipe uniquement).
 	if (mode != Mode::PLAYER || !hasSnapshot || !map.contains(cell) || truth.phase == battle::BattlePhase::ENDED || pingCooldown > 0)
 		return;
 	pingCooldown = 1.f;
-	sendToServer("CG", { { "x", cell.x }, { "y", cell.y } });
+	sendToServer("CG", { { "x", cell.x }, { "y", cell.y }, { "kind", kind } });
 }
 
-void BattleScreen::showPing(int fighterId, const battle::Cell & cell)
+void BattleScreen::showPing(int fighterId, const battle::Cell & cell, int kind)
 {
 	if (!map.contains(cell))
 		return;
+	kind = std::max(0, std::min(3, kind));
+	const char * effects[4] = { "ping", "ping_attack", "ping_retreat", "ping_danger" };
 	sf::Vector2f position((float)cell.x, (float)cell.y);
-	fx.playEffect("ping", position);
-	fx.playEffect("ping_arrow", position);
+	fx.playEffect(effects[kind], position);
+	fx.playEffect(std::string(effects[kind]) + "_arrow", position);
 	playSound("./assets/sound/ui/ping.ogg");
+	pingMarkers.erase(std::remove_if(pingMarkers.begin(), pingMarkers.end(), [&](const PingMarker & marker) { return marker.cell == cell; }), pingMarkers.end());
+	pingMarkers.push_back({ cell, kind, 0.f });
 
 	const battle::Fighter * target = shown.fighterAt(cell);
-	sf::String text = fighterName(fighterId) + (target != NULL ? L" désigne " + fromServerText(target->name) : sf::String(L" signale une case"));
-	hud->log(text, sf::Color(255, 215, 70));
+	sf::String who = fighterName(fighterId);
+	sf::String targetName = target != NULL ? fromServerText(target->name) : sf::String();
+	sf::String text;
+	if (kind == 1)
+		text = who + (target != NULL ? L" : attaquez " + targetName + L" !" : sf::String(L" : attaquez ici !"));
+	else if (kind == 2)
+		text = who + L" : repli !";
+	else if (kind == 3)
+		text = who + (target != NULL ? L" : attention à " + targetName + L" !" : sf::String(L" : danger ici !"));
+	else
+		text = who + (target != NULL ? L" désigne " + targetName : sf::String(L" signale une case"));
+	const sf::Color colors[4] = { sf::Color(255, 215, 70), sf::Color(255, 120, 100), sf::Color(130, 190, 255), sf::Color(255, 170, 70) };
+	hud->log(text, colors[kind]);
 }
 
 void BattleScreen::refreshPreview()
 {
 	colorator->clearPreview();
-	const battle::Fighter * me = truth.findFighter(you);
+	const battle::Fighter * me = truth.findFighter(actor());
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
 	hud->setHint("");
 	const tw::battle::GameData & data = ClientGameData::get().data();
 	sf::String terrain = terrainHint(hoveredCell);
+
+	// Sort choisi pendant une animation : revérifié sur l'état à jour avant la visée (PA dépensés
+	// entre-temps…).
+	if (selectedSpell >= 0 && isInteractive() && me != NULL)
+	{
+		const battle::SpellDef * spell = battle::spellOf(data, *me, selectedSpell);
+		std::string error = spell != NULL ? battle::checkSpellResources(*me, *spell) : std::string("Sort inconnu.");
+		if (!error.empty())
+		{
+			hud->showMessage(fromServerText(error), sf::Color(255, 110, 90), 1.5f);
+			selectedSpell = -1;
+		}
+	}
 
 	bool aiming = isInteractive() && me != NULL && selectedSpell >= 0;
 	if (!aiming)
@@ -832,7 +938,7 @@ void BattleScreen::refreshPreview()
 		// Combattant survolé : où il pourra aller à son prochain tour (orange pour un ennemi, turquoise
 		// pour un allié). Pendant son propre tour, le joueur voit déjà ses déplacements possibles.
 		const battle::Fighter * hovered = truth.findFighter(hoveredFighter);
-		if (hovered != NULL && hovered->alive && truth.phase == battle::BattlePhase::FIGHT && (hovered->id != you || !isInteractive()))
+		if (hovered != NULL && hovered->alive && truth.phase == battle::BattlePhase::FIGHT && (me == NULL || hovered->id != me->id || !isInteractive()))
 		{
 			bool enemy = me == NULL || hovered->team != me->team;
 			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
@@ -842,6 +948,13 @@ void BattleScreen::refreshPreview()
 		{
 			hud->setHint(terrain);
 		}
+	}
+
+	if (selectedSpell >= 0 && me != NULL && !isInteractive() && isMyTurn())
+	{
+		const battle::SpellDef * spell = battle::spellOf(data, *me, selectedSpell);
+		if (spell != NULL)
+			hud->setHint(fromServerText(spell->name) + L" : visée à la fin de l'action en cours");
 	}
 
 	if (!isInteractive() || me == NULL)
@@ -965,11 +1078,22 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 	const battle::Fighter * me = truth.findFighter(you);
 	if (me == NULL)
 		return;
+	if (hud->isPingWheelOpen())
+	{
+		hud->closePingWheel();
+		return;
+	}
+	// Déplacement et sorts : pour le combattant joué (le sien, ou celui de son coéquipier absent).
+	const battle::Fighter * acting = truth.findFighter(actor());
 
-	// Alt+clic : signal pour son équipe.
+	// Alt+clic : roue des signaux pour son équipe (ici, attaquez, repli, danger).
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) || sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
 	{
-		sendPing(cell);
+		if (mode == Mode::PLAYER && window != NULL && truth.phase != battle::BattlePhase::ENDED)
+		{
+			pingCell = cell;
+			hud->openPingWheel(sf::Vector2f(sf::Mouse::getPosition(*window)));
+		}
 		return;
 	}
 
@@ -995,7 +1119,7 @@ void BattleScreen::onCellClicked(int cellX, int cellY)
 	if (colorator->isReachable(cell))
 	{
 		json path = json::array();
-		for (const battle::Cell & step : battle::findPath(truth, map, *me, cell))
+		for (const battle::Cell & step : battle::findPath(truth, map, *acting, cell))
 			path.push_back(json::array({ step.x, step.y }));
 		sendAction("Cm", { { "path", path } });
 	}
@@ -1038,7 +1162,14 @@ void BattleScreen::onEvent(void * e)
 		case sf::Keyboard::Num2: selectSpell(1); break;
 		case sf::Keyboard::Num3: selectSpell(2); break;
 		case sf::Keyboard::Num4: selectSpell(3); break;
-		case sf::Keyboard::Escape: selectSpell(-1); break;
+		case sf::Keyboard::Escape:
+			selectSpell(-1);
+			hud->closePingWheel();
+			hud->hideHelp();
+			break;
+		case sf::Keyboard::H:
+			hud->toggleHelp();
+			break;
 		case sf::Keyboard::F:
 			camera.setFollowing(!camera.isFollowing());
 			hud->showMessage(camera.isFollowing() ? L"Caméra : suivi du personnage actif" : L"Caméra libre", sf::Color(200, 220, 255), 1.2f);

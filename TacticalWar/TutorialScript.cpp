@@ -75,7 +75,8 @@ std::vector<TutorialStep> TutorialScript::standardSteps()
 		L"Pratique pour se mettre hors de portée !",
 		[](const TutorialContext & c) { return c.hoveredFighter == c.dummy; }));
 	steps.push_back(makeStep(L"Signal",
-		L"En 2 contre 2, guidez votre coéquipier : Alt + clic sur une case envoie un signal que seule votre équipe voit.",
+		L"En 2 contre 2, guidez votre coéquipier : Alt + clic sur une case ouvre la roue des signaux (Ici, Attaquez, "
+		L"Repli, Danger), que seule votre équipe voit. Le clic molette envoie directement Ici.",
 		[](const TutorialContext & c) { return c.pinged; }));
 	steps.push_back(makeStep(L"Victoire",
 		L"Mettez le mannequin hors combat ! À la fin du combat, le bilan présente vos hauts faits.",

@@ -154,6 +154,28 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	banLabel->setVisible(banMode);
 	gui->add(banLabel);
 
+	// Coéquipier : affiché dès que le serveur en donne l'état.
+	matePanel = createPanel();
+	mateTitle = tgui::Label::create();
+	mateTitle->setInheritedFont(textFont);
+	mateTitle->setTextSize(18);
+	mateTitle->getRenderer()->setTextColor(sf::Color(255, 215, 0));
+	mateTitle->setPosition(14, 8);
+	matePanel->add(mateTitle);
+	mateStatus = tgui::Label::create();
+	mateStatus->setInheritedFont(textFont);
+	mateStatus->setTextSize(16);
+	mateStatus->setPosition(14, 36);
+	matePanel->add(mateStatus);
+	mateCombos = tgui::Label::create();
+	mateCombos->setInheritedFont(textFont);
+	mateCombos->setTextSize(15);
+	mateCombos->getRenderer()->setTextColor(sf::Color(235, 235, 235));
+	mateCombos->setPosition(14, 64);
+	matePanel->add(mateCombos);
+	matePanel->setVisible(false);
+	gui->add(matePanel);
+
 	showClass(0);
 }
 
@@ -220,6 +242,67 @@ void ClassSelectionScreen::showClass(int index)
 
 	refreshBan();
 	refreshLock();
+	refreshMate();
+	if (windowSize.x > 0)
+		layout(windowSize);
+
+	// Le coéquipier voit la classe regardée (tant que le choix n'est pas verrouillé).
+	if (!locked && classDef != NULL && classDef->id != viewSent)
+	{
+		viewSent = classDef->id;
+		LinkToServer::getInstance()->Send("PV" + nlohmann::json({ { "class", classDef->id } }).dump());
+	}
+}
+
+void ClassSelectionScreen::refreshMate()
+{
+	matePanel->setVisible(mateKnown);
+	if (!mateKnown)
+		return;
+
+	mateTitle->setText(mateStandIn ? sf::String(L"Votre second personnage") : L"Votre coéquipier : " + mateName);
+	sf::String status;
+	if (forMate)
+		status = L"Votre personnage : " + classLabel(myClass) + L" (verrouillé). Choisissez maintenant "
+			+ (mateStandIn ? sf::String(L"le second.") : L"celui de " + mateName + L".");
+	else if (mateLocked)
+		status = (matePresent ? sf::String(L"A choisi : ") : sf::String(L"Choisi : ")) + classLabel(mateClass) + L" (verrouillé)";
+	else if (mateStandIn)
+		status = L"Seul dans votre équipe, vous jouez les deux personnages : choisissez le vôtre, puis le second.";
+	else if (!matePresent)
+		status = L"Absent pour le moment : vous jouerez aussi son personnage.";
+	else
+		status = mateViewing != 0 ? L"Regarde : " + classLabel(mateViewing) : sf::String(L"Choisit sa classe...");
+	mateStatus->setText(status);
+	mateStatus->getRenderer()->setTextColor(mateLocked ? sf::Color(130, 255, 130)
+		: matePresent || mateStandIn || forMate ? sf::Color::White : sf::Color(255, 160, 140));
+
+	// Combinaisons entre la classe affichée et celle du coéquipier (verrouillée, sinon regardée).
+	auto join = [](const std::vector<std::string> & names) {
+		sf::String text;
+		for (std::size_t i = 0; i < names.size(); i++)
+			text += (i == 0 ? sf::String() : i + 1 == names.size() ? sf::String(L" ou ") : sf::String(L", ")) + fromServerText(names[i]);
+		return text;
+	};
+	// Pendant le choix pour le second personnage : entre la classe verrouillée et celle affichée.
+	int mine = forMate ? myClass : currentClassId();
+	int other = forMate ? currentClassId() : mateLocked ? mateClass : mateViewing;
+	// Le joueur joue les deux personnages (seul, ou coéquipier absent) : il pose la marque et frappe.
+	bool playsBoth = mateStandIn || !matePresent;
+	sf::String combos;
+	if (other != 0 && mine != 0)
+	{
+		for (const tw::battle::ComboLink & link : tw::battle::combosBetween(ClientGameData::get().data(), mine, other))
+		{
+			bool marksFirst = link.setterClass == mine;
+			combos += L"\n- " + fromServerText(link.name) + L" (+" + num(link.percent) + L" %) : "
+				+ (playsBoth ? L"marquez avec " + join(link.setters) + L", puis frappez avec " + join(link.finishers)
+					: marksFirst ? L"marquez avec " + join(link.setters) + L", puis votre coéquipier frappe avec " + join(link.finishers)
+					: L"votre coéquipier marque avec " + join(link.setters) + L", puis frappez avec " + join(link.finishers)) + L".";
+		}
+		combos = combos.isEmpty() ? sf::String(L"Pas de combinaison entre vos deux classes.") : L"Combinaisons possibles :" + combos;
+	}
+	mateCombos->setText(combos);
 	if (windowSize.x > 0)
 		layout(windowSize);
 }
@@ -241,9 +324,43 @@ void ClassSelectionScreen::refreshLock()
 	}
 	bool forbidden = forbiddenClass != 0 && currentClassId() == forbiddenClass;
 	bool complete = spellPicker->isComplete() && talentPicker->isComplete();
+	if (forMate)
+	{
+		lockButton->setEnabled(complete && !forbidden && !mateSent);
+		lockButton->setText(mateSent ? L"Choix envoyé" : forbidden ? L"Interdite par l'adversaire"
+			: complete ? (mateStandIn ? sf::String(L"Verrouiller le 2e personnage") : L"Verrouiller pour " + mateName)
+			: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez ses talents");
+		return;
+	}
 	lockButton->setEnabled(!locked && complete && !forbidden);
-	lockButton->setText(locked ? L"Choix verrouillé" : forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
+	lockButton->setText(locked ? (mateLocked && !matePresent ? sf::String(mateStandIn ? L"Vos deux personnages sont prêts" : L"Choix verrouillés pour vous deux")
+		: sf::String(L"Choix verrouillé"))
+		: forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
 		: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez vos talents");
+}
+
+void ClassSelectionScreen::updateMatePick()
+{
+	// Coéquipier absent sans classe : après son propre choix, le joueur choisit aussi pour lui.
+	bool needed = locked && mateKnown && !matePresent && !mateLocked && !banMode;
+	if (needed == forMate)
+		return;
+	forMate = needed;
+	mateSent = false;
+	spellPicker->setLocked(!forMate);
+	talentPicker->setLocked(!forMate);
+	previousButton->setVisible(forMate);
+	nextButton->setVisible(forMate);
+	// Le second personnage part d'une autre classe que le premier (hors classe interdite).
+	if (forMate)
+	{
+		showClass(indexClass + 1);
+		if (forbiddenClass != 0 && currentClassId() == forbiddenClass)
+			showClass(indexClass + 1);
+	}
+	refreshBan();
+	refreshLock();
+	refreshMate();
 }
 
 void ClassSelectionScreen::refreshBan()
@@ -257,7 +374,9 @@ void ClassSelectionScreen::refreshBan()
 	classIcon->getRenderer()->setOpacity(forbidden ? 0.3f : 1.f);
 	characterPicture->setVisible(!forbidden);
 
-	sf::String subtitleText = banMode ? L"Bannissement" : L"Sélection de la classe";
+	sf::String subtitleText = banMode ? sf::String(L"Bannissement")
+		: forMate ? (mateStandIn ? sf::String(L"Votre second personnage") : L"Personnage de " + mateName)
+		: sf::String(L"Sélection de la classe");
 	if (subtitle.getString() != subtitleText)
 	{
 		subtitle.setString(subtitleText);
@@ -333,9 +452,23 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	float rightWidth = width - rightX - margin;
 	statsPanel->setPosition(rightX, top);
 	statsPanel->setSize(rightWidth, 200);
-	descriptionPanel->setPosition(rightX, top + 214);
-	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - (top + 214)));
 	descriptionLabel->setMaximumTextWidth(rightWidth - 28);
+	// Coéquipier, sous la description.
+	float mateHeight = 0;
+	if (matePanel->isVisible())
+	{
+		// L'état du coéquipier peut tenir sur plusieurs lignes : les combinaisons suivent.
+		mateStatus->setMaximumTextWidth(rightWidth - 28);
+		mateCombos->setMaximumTextWidth(rightWidth - 28);
+		float combosTop = 36 + mateStatus->getSize().y + 6;
+		mateCombos->setPosition(14, combosTop);
+		mateHeight = combosTop + mateCombos->getSize().y + 12;
+		matePanel->setSize(rightWidth, mateHeight);
+		matePanel->setPosition(rightX, bottom - 16 - mateHeight);
+		mateHeight += 12;
+	}
+	descriptionPanel->setPosition(rightX, top + 214);
+	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - mateHeight - (top + 214)));
 
 	lockButton->setSize(400, 54);
 	lockButton->setPosition(width / 2 - 200, lockY);
@@ -397,6 +530,15 @@ void ClassSelectionScreen::update(float deltatime)
 		refreshLock();
 	}
 
+	if (readyToLock && forMate)
+	{
+		// Choix pour le coéquipier absent : il sera joué par ce joueur pendant le combat.
+		readyToLock = false;
+		mateSent = true;
+		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", currentClassId() }, { "spells", spellPicker->getChosen() },
+			{ "talents", talentPicker->getChosen() }, { "teammate", true } }).dump());
+		refreshLock();
+	}
 	if (readyToLock)
 	{
 		readyToLock = false;
@@ -445,11 +587,31 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 				showClass(i);
 		}
 		locked = true;
+		myClass = classId;
 		spellPicker->setLocked(true);
 		talentPicker->setLocked(true);
 		previousButton->setVisible(false);
 		nextButton->setVisible(false);
 		refreshLock();
+		updateMatePick();
+	}
+	else if (m.substring(0, 2) == "PT")
+	{
+		// État du coéquipier : nom, classe regardée ou verrouillée, présence.
+		nlohmann::json mate = nlohmann::json::parse(msg.substr(2), nullptr, false);
+		if (mate.is_object())
+		{
+			mateKnown = true;
+			mateName = fromServerText(mate.value("name", std::string()));
+			mateClass = mate.value("class", 0);
+			mateViewing = mate.value("viewing", 0);
+			mateLocked = mate.value("locked", false);
+			matePresent = mate.value("present", true);
+			mateStandIn = mate.value("standIn", false);
+			refreshMate();
+			updateMatePick();
+			refreshLock();
+		}
 	}
 	else if (m.substring(0, 2) == "BB")
 	{

@@ -14,8 +14,21 @@ void TWParser::setHttpFrontend(HttpFrontend * http)
 	publicDirty = true;
 }
 
+bool TWParser::isStandIn(tw::Player * player) const
+{
+	std::map<int, tw::Player*>::const_iterator it = player != NULL ? standIns.find(player->getTeamNumber()) : standIns.end();
+	return it != standIns.end() && it->second == player;
+}
+
 std::string TWParser::displayNameOf(tw::Player * player)
 {
+	// Second personnage d'un joueur seul : « Léa (2) ».
+	if (isStandIn(player))
+	{
+		const tw::Team * team = teamStore.findTeam(player->getTeamNumber());
+		std::string owner = team != NULL ? team->players[0].displayName : std::string("Joueur");
+		return owner + " (2)";
+	}
 	int index = 0;
 	const tw::Team * team = teamStore.findTeamByLogin(player->getPseudo(), &index);
 	return team != NULL ? team->players[index].displayName : player->getPseudo();

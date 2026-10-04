@@ -35,7 +35,7 @@ namespace tw
 		void layoutPanels();
 		void showFinal();
 
-		enum class Next { BACK, TRAINING };
+		enum class Next { BACK, TRAINING, PUZZLES };
 
 		TutorialScript script;
 		Origin origin;

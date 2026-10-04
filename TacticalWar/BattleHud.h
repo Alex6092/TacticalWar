@@ -2,10 +2,12 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <vector>
 #include <TGUI/TGUI.hpp>
 #include <BattleState.h>
 #include <GameData.h>
+#include "HelpPanel.h"
 
 // Interface du combat : ordre de jeu, barre de sorts, minuteur, journal, détails.
 class BattleHud
@@ -51,6 +53,17 @@ public:
 	void setSpectator(const sf::String & banner);
 	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
 	void showLeaveButton(const sf::String & text);
+	// Aide des commandes (bouton « ? » ou touche H).
+	void toggleHelp();
+	void hideHelp();
+	bool isHelpOpen() const;
+
+	// Roue des signaux (Alt+clic) : 4 types autour de la position donnée (pixels de la fenêtre).
+	void openPingWheel(const sf::Vector2f & position);
+	void closePingWheel();
+	bool isPingWheelOpen() const;
+	std::function<void(int kind)> onPing;
+
 	// Secondes restantes du placement et des tours (masquées quand il n'y a pas de minuteur : tutoriel).
 	void showTimers(bool shown) { timersShown = shown; }
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
@@ -106,6 +119,8 @@ private:
 	std::string spellBarKey;
 	tgui::Button::Ptr endTurnButton;
 	tgui::Button::Ptr emoteButton;
+	tgui::Button::Ptr helpButton;
+	std::unique_ptr<tw::HelpPanel> helpPanel;
 	tgui::Panel::Ptr emotePanel;
 	tgui::Button::Ptr readyButton;
 	bool readyState;
@@ -116,6 +131,8 @@ private:
 
 	bool spectator;
 	bool timersShown = true;
+	tgui::Panel::Ptr pingWheel;
+	std::map<int, sf::Texture> pingTextures;
 	tgui::Label::Ptr bannerLabel;
 	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;

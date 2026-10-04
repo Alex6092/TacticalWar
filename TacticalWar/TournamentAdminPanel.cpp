@@ -61,6 +61,13 @@ namespace
 		if (reason == "BYE") return L"exempt";
 		return fromServerText(reason);
 	}
+
+	// Ouvre une page du site web du serveur (port HTTP 8080) dans le navigateur.
+	void openWebPage(const std::string & page)
+	{
+		std::string url = "http://" + ClientConfig::get().serverHost + ":8080/" + page;
+		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	}
 }
 
 TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & font)
@@ -92,13 +99,19 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	form->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
 	group->add(form);
 
-	form->add(createLabel(L"Nom"), "nameLabel");
+	// Les boutons Enregistrer, Démarrer et Supprimer restent en bas du formulaire, toujours visibles.
+	settings = tgui::ScrollablePanel::create();
+	settings->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+	settings->setHorizontalScrollbarPolicy(tgui::Scrollbar::Policy::Never);
+	form->add(settings);
+
+	settings->add(createLabel(L"Nom"), "nameLabel");
 	name = tgui::EditBox::create();
 	name->setInheritedFont(font);
 	name->setTextSize(TEXT_SIZE);
-	form->add(name);
+	settings->add(name);
 
-	form->add(createLabel(L"Format"), "formatLabel");
+	settings->add(createLabel(L"Format"), "formatLabel");
 	format = tgui::ComboBox::create();
 	format->setInheritedFont(font);
 	format->setTextSize(TEXT_SIZE);
@@ -107,11 +120,11 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	format->addItem(L"Suisse", "SWISS");
 	format->setSelectedItemById("POOLS_THEN_BRACKET");
 	format->connect("ItemSelected", [this]() { refreshFormatOptions(); });
-	form->add(format);
+	settings->add(format);
 
-	poolCountLabel = createLabel(L"Nombre de poules");
+	poolCountLabel = createLabel(L"Poules");
 	poolCount = createNumberBox("2");
-	qualifiersLabel = createLabel(L"Qualifiés par poule");
+	qualifiersLabel = createLabel(L"Qualifiés/poule");
 	qualifiers = createNumberBox("2");
 	thirdPlace = tgui::CheckBox::create(L"Petite finale");
 	thirdPlace->setInheritedFont(font);
@@ -150,12 +163,21 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	bans->addItem(L"Phase finale", "FINALS");
 	bans->addItem(L"Tous les matchs", "ALL");
 	bans->setSelectedItemById("NONE");
+	// Cartes tirées pour les matchs : classiques, à cases spéciales (braises, sources...) ou toutes.
+	mapsLabel = createLabel(L"Cartes");
+	maps = tgui::ComboBox::create();
+	maps->setInheritedFont(font);
+	maps->setTextSize(TEXT_SIZE);
+	maps->addItem(L"Classiques", "CLASSIC");
+	maps->addItem(L"À cases spéciales", "SPECIAL");
+	maps->addItem(L"Toutes", "ALL");
+	maps->setSelectedItemById("CLASSIC");
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans })
-		form->add(widget);
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps })
+		settings->add(widget);
 
-	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
+	settings->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
 	teamList = tgui::ListView::create();
 	teamList->setInheritedFont(font);
 	teamList->setTextSize(TEXT_SIZE);
@@ -163,7 +185,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	teamList->addColumn(L"Équipe", 220);
 	teamList->addColumn(L"Tête de série", 110);
 	teamList->getRenderer()->setBackgroundColor(sf::Color(255, 255, 255, 220));
-	form->add(teamList);
+	settings->add(teamList);
 
 	saveButton = createButton(L"Enregistrer");
 	saveButton->getRenderer()->setBackgroundColor(sf::Color(90, 182, 96, 220));
@@ -232,11 +254,18 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 		if (selectedMatchId() != 0)
 			send("UX", { { "id", selectedId }, { "match", selectedMatchId() } });
 	});
+	// Pages web du serveur, ouvertes dans le navigateur.
 	webButton = createButton(L"Vue projetée");
-	webButton->connect("pressed", []() {
-		std::string url = "http://" + ClientConfig::get().serverHost + ":8080/";
-		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	webButton->connect("pressed", []() { openWebPage(""); });
+	diplomasButton = createButton(L"Diplômes");
+	diplomasButton->connect("pressed", [this]() {
+		if (selectedId != 0)
+			openWebPage("diplomes.html?tournament=" + std::to_string(selectedId));
+		else
+			status->setText(L"Sélectionnez un tournoi.");
 	});
+	guideButton = createButton(L"Guide");
+	guideButton->connect("pressed", []() { openWebPage("guide.html"); });
 	watchButton = createButton(L"Regarder");
 	watchButton->connect("pressed", [this]() {
 		int matchId = selectedMatchId();
@@ -254,7 +283,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 		}
 		status->setText(L"Sélectionnez un match en cours.");
 	});
-	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton })
+	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton, diplomasButton, guideButton })
 		group->add(button);
 
 	standings = createLabel("", 13);
@@ -317,36 +346,106 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	newButton->setSize(380, 32);
 
 	float formTop = top + listHeight + 50;
+	float formHeight = height - formTop - margin;
 	form->setPosition(margin, formTop);
-	form->setSize(380, height - formTop - margin);
+	form->setSize(380, formHeight);
 
-	float x = 10;
+	// Réglages au-dessus des boutons. S'ils ne tiennent pas avec une liste d'équipes lisible, la zone
+	// défile (molette ou barre) et les champs laissent la place à la barre.
+	const float minTeamList = 80;
+	float buttonsTop = formHeight - 46;
+	float viewHeight = buttonsTop - 8;
+	settings->setPosition(0, 0);
+	settings->setSize(378, viewHeight);
 	float w = 360;
+	float teamListTop = layoutSettings(w);
+	if (teamListTop + minTeamList + 8 > viewHeight)
+	{
+		w -= settings->getScrollbarWidth();
+		teamListTop = layoutSettings(w);
+	}
+	float teamListHeight = std::max(minTeamList, viewHeight - teamListTop - 8);
+	teamList->setPosition(10, teamListTop);
+	teamList->setSize(w, teamListHeight);
+	// Colonne des noms à la largeur de la liste (barre verticale comprise) : pas de barre horizontale.
+	teamList->setColumnWidth(0, w - teamList->getColumnWidth(1) - 22);
+	settings->setContentSize({ 10 + w, teamListTop + teamListHeight + 8 });
+
+	float third = (360 - 20) / 3;
+	saveButton->setPosition(10, buttonsTop);
+	saveButton->setSize(third, 34);
+	startButton->setPosition(10 + third + 10, buttonsTop);
+	startButton->setSize(third, 34);
+	deleteButton->setPosition(10 + 2 * (third + 10), buttonsTop);
+	deleteButton->setSize(third, 34);
+
+	float right = margin + 380 + margin;
+	float rightWidth = width - right - margin;
+	header->setPosition(right, top);
+	float buttonWidth = (rightWidth - 50) / 6;
+	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton };
+	for (int i = 0; i < 6; i++)
+	{
+		buttons[i]->setPosition(right + i * (buttonWidth + 10), top + 32);
+		buttons[i]->setSize(buttonWidth, 32);
+	}
+
+	float listTop = top + 74;
+	float standingsHeight = 210;
+	matchList->setPosition(right, listTop);
+	matchList->setSize(rightWidth, height - listTop - standingsHeight - margin - 40);
+	standings->setPosition(right, height - margin - standingsHeight - 30);
+	standings->setSize(rightWidth, standingsHeight);
+	status->setPosition(right, height - margin - 24);
+
+	// Pages web : à droite de la ligne d'état.
+	tgui::Button::Ptr webButtons[] = { webButton, diplomasButton, guideButton };
+	const float webWidth = 140;
+	for (int i = 0; i < 3; i++)
+	{
+		webButtons[i]->setPosition(right + rightWidth - (3 - i) * webWidth - (2 - i) * 10, height - margin - 26);
+		webButtons[i]->setSize(webWidth, 26);
+	}
+}
+
+// Champs du formulaire, de largeur w, dans la zone défilante. Renvoie le haut de la liste des équipes.
+float TournamentAdminPanel::layoutSettings(float w)
+{
+	float x = 10;
 	float half = (w - 10) / 2;
 	float y = 8;
 	// Nom et format : libellé à gauche du champ.
-	form->get<tgui::Label>("nameLabel")->setPosition(x, y + 4);
+	settings->get<tgui::Label>("nameLabel")->setPosition(x, y + 4);
 	name->setPosition(x + 80, y);
 	name->setSize(w - 80, 26);
 	y += 34;
-	form->get<tgui::Label>("formatLabel")->setPosition(x, y + 4);
+	settings->get<tgui::Label>("formatLabel")->setPosition(x, y + 4);
 	format->setPosition(x + 80, y);
 	format->setSize(w - 80, 26);
 	y += 38;
 
+	// Deux champs côte à côte, libellé au-dessus : sur deux lignes s'il est plus large que le champ.
+	float labelHeight = 18;
+	for (const tgui::Label::Ptr & label : { poolCountLabel, qualifiersLabel, swissRoundsLabel, topCutLabel })
+	{
+		label->setMaximumTextWidth(half);
+		if (label->isVisible())
+			labelHeight = std::max(labelHeight, label->getSize().y);
+	}
+	float fieldTop = y + labelHeight;
 	poolCountLabel->setPosition(x, y);
-	poolCount->setPosition(x, y + 18);
+	poolCount->setPosition(x, fieldTop);
 	poolCount->setSize(half, 26);
 	qualifiersLabel->setPosition(x + half + 10, y);
-	qualifiers->setPosition(x + half + 10, y + 18);
+	qualifiers->setPosition(x + half + 10, fieldTop);
 	qualifiers->setSize(half, 26);
 	swissRoundsLabel->setPosition(x, y);
-	swissRounds->setPosition(x, y + 18);
+	swissRounds->setPosition(x, fieldTop);
 	swissRounds->setSize(half, 26);
 	topCutLabel->setPosition(x + half + 10, y);
-	topCut->setPosition(x + half + 10, y + 18);
+	topCut->setPosition(x + half + 10, fieldTop);
 	topCut->setSize(half, 26);
-	y += 52;
+	y = fieldTop + 34;
 	thirdPlace->setPosition(x, y);
 	thirdPlace->setSize(18, 18);
 	grandFinalReset->setPosition(x, y);
@@ -368,37 +467,15 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	bans->setPosition(x + 160, y);
 	bans->setSize(w - 160, 26);
 	y += 34;
+	mapsLabel->setPosition(x, y + 4);
+	maps->setPosition(x + 160, y);
+	maps->setSize(w - 160, 26);
+	y += 34;
 
-	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
-	teamList->setPosition(x, y + 20);
-	float buttonsTop = form->getSize().y - 46;
-	teamList->setSize(w, std::max(80.f, buttonsTop - y - 30));
-	float third = (w - 20) / 3;
-	saveButton->setPosition(x, buttonsTop);
-	saveButton->setSize(third, 34);
-	startButton->setPosition(x + third + 10, buttonsTop);
-	startButton->setSize(third, 34);
-	deleteButton->setPosition(x + 2 * (third + 10), buttonsTop);
-	deleteButton->setSize(third, 34);
-
-	float right = margin + 380 + margin;
-	float rightWidth = width - right - margin;
-	header->setPosition(right, top);
-	float buttonWidth = (rightWidth - 60) / 7;
-	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton };
-	for (int i = 0; i < 7; i++)
-	{
-		buttons[i]->setPosition(right + i * (buttonWidth + 10), top + 32);
-		buttons[i]->setSize(buttonWidth, 32);
-	}
-
-	float listTop = top + 74;
-	float standingsHeight = 210;
-	matchList->setPosition(right, listTop);
-	matchList->setSize(rightWidth, height - listTop - standingsHeight - margin - 40);
-	standings->setPosition(right, height - margin - standingsHeight - 30);
-	standings->setSize(rightWidth, standingsHeight);
-	status->setPosition(right, height - margin - 24);
+	tgui::Label::Ptr teamsLabel = settings->get<tgui::Label>("teamsLabel");
+	teamsLabel->setMaximumTextWidth(w);
+	teamsLabel->setPosition(x, y);
+	return y + teamsLabel->getSize().y + 4;
 }
 
 void TournamentAdminPanel::send(const std::string & op, const nlohmann::json & body)
@@ -538,6 +615,8 @@ void TournamentAdminPanel::refreshForm()
 		maxTalents->setText(num(settings.value("maxTalents", 3)));
 		std::string banMode = settings.value("bans", std::string("NONE"));
 		bans->setSelectedItemById(banMode == "FINALS" || banMode == "ALL" ? banMode : "NONE");
+		std::string mapPool = settings.value("maps", std::string("CLASSIC"));
+		maps->setSelectedItemById(mapPool == "SPECIAL" || mapPool == "ALL" ? mapPool : "CLASSIC");
 	}
 	refreshFormatOptions();
 
@@ -586,6 +665,7 @@ void TournamentAdminPanel::refreshForm()
 	zonePoints->setEnabled(draft);
 	maxTalents->setEnabled(draft);
 	bans->setEnabled(draft);
+	maps->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -688,7 +768,8 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "mode", mode->getSelectedItemId().toAnsiString() },
 		{ "zonePoints", number(zonePoints) },
 		{ "maxTalents", number(maxTalents) },
-		{ "bans", bans->getSelectedItemId().toAnsiString() }
+		{ "bans", bans->getSelectedItemId().toAnsiString() },
+		{ "maps", maps->getSelectedItemId().toAnsiString() }
 	};
 }
 

@@ -92,6 +92,8 @@ void TWParser::rebuildPlayers()
 	{
 		for (const tw::PlayerAccount & account : team.players)
 		{
+			if (account.login.empty())
+				continue;
 			tw::Player * player = NULL;
 			std::map<std::string, tw::Player*>::iterator it = allPlayers.find(account.login);
 			if (it == allPlayers.end())
@@ -110,6 +112,16 @@ void TWParser::rebuildPlayers()
 				playersMap[account.login] = player;
 				teamIdToPlayerList[team.id].push_back(player);
 			}
+		}
+
+		// Joueur seul : son second personnage complète l'équipe (le même d'une reconstruction à l'autre,
+		// car les matchs déjà créés le gardent).
+		if (team.active && tw::playerCount(team) == 1)
+		{
+			tw::Player *& standIn = standIns[team.id];
+			if (standIn == NULL)
+				standIn = new tw::Player("second " + std::to_string(team.id), "", team.id);
+			teamIdToPlayerList[team.id].push_back(standIn);
 		}
 	}
 

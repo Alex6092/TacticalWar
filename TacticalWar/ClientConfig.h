@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,8 @@ public:
 	std::map<int, std::vector<int>> spellChoices;
 	// Derniers talents de tournoi choisis (proposés à nouveau au match suivant et à l'entraînement).
 	std::vector<std::string> talentChoice;
+	// Énigmes tactiques réussies (identifiants), retenues d'une session à l'autre.
+	std::set<std::string> solvedPuzzles;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -51,6 +54,7 @@ public:
 	int trainingClass = 0;
 	int trainingMap = 0;
 	bool trainingDuel = false;
+	bool trainingDuoControl = false;
 	bool trainingAutoplay = false;
 	bool trainingZone = false;
 	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
@@ -59,9 +63,23 @@ public:
 	int classScreenTalents = -1;
 	// Tutoriel guidé (--tutorial), à partir d'une étape (--tutorial-step N, de 1 à 9) pour les captures.
 	bool tutorial = false;
+	// Énigmes : la liste (--puzzles), une énigme (--puzzle N, de 1 à 6), jouée par la démonstration
+	// (--puzzle-demo) pour les vérifications et les captures.
+	bool puzzleList = false;
+	int puzzle = 0;
+	bool puzzleDemo = false;
 	int tutorialStep = 1;
 	int classScreenBan = 0;
 	int classScreenForbidden = 0;
+	// Coéquipier simulé, qui a verrouillé cette classe (--class-screen-mate <id>, 0 : aucun).
+	int classScreenMate = 0;
+	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
+	bool classScreenSolo = false;
+	// Joueur seul dans son équipe simulé (--class-screen-alone 1 : son choix, 2 : le second personnage).
+	int classScreenAlone = 0;
+	// Onglet ouvert à la connexion admin (--admin-tab N : 0 Matchs, 1 Équipes, 2 Tournoi, 3 Combats),
+	// pour les captures. -1 : le dernier onglet ouvert.
+	int adminTab = -1;
 	int trainingTalents = 0;
 
 	static ClientConfig & get();

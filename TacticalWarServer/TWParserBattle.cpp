@@ -90,6 +90,48 @@ void TWParser::handleBan(ClientState * client, tw::Player * player, const std::s
 		finishBanPhase(session);
 }
 
+void TWParser::handleViewClass(ClientState * client, tw::Player * player, const std::string & body)
+{
+	BattleSession * session = sessionOfPlayer(player);
+	if (session == NULL || !player->getHasJoinBattle())
+		return;
+
+	// PV{"class": id} : la classe que le joueur regarde, montrée à son coéquipier.
+	nlohmann::json view = nlohmann::json::parse(body, nullptr, false);
+	int classId = view.is_object() ? view.value("class", 0) : 0;
+	if (gameData.findClass(classId) != nullptr && session->setViewing(player, classId))
+		sendTeammateStates(session, player);
+}
+
+nlohmann::json TWParser::teammateState(BattleSession * session, tw::Player * player)
+{
+	int chosen = session->chosenClass(player);
+	return {
+		{ "name", displayNameOf(player) },
+		{ "class", chosen },
+		{ "viewing", session->viewingClass(player) },
+		{ "locked", chosen != 0 },
+		{ "present", getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle() },
+		// Second personnage d'un joueur seul dans son équipe (jamais présent : il le joue aussi).
+		{ "standIn", isStandIn(player) }
+	};
+}
+
+void TWParser::sendTeammateStates(BattleSession * session, tw::Player * about)
+{
+	// Seulement aux coéquipiers, pendant le bannissement et le choix des classes.
+	if (session->getPhase() != BattleSession::Phase::BAN && session->getPhase() != BattleSession::Phase::CLASS_SELECTION)
+		return;
+	std::string message = encode("PT", teammateState(session, about));
+	int team = session->teamOf(about);
+	for (tw::Player * mate : session->getParticipants())
+	{
+		ClientState * client = getClientStateFromPlayer(mate);
+		if (mate != about && session->teamOf(mate) == team && client != NULL && mate->getHasJoinBattle())
+			send(client, message);
+	}
+}
+
 void TWParser::sendBanState(BattleSession * session, ClientState * client, tw::Player * player)
 {
 	if (!session->hasBanPhase())
@@ -128,12 +170,14 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 	int classId = 0;
 	std::vector<int> spells;
 	std::vector<std::string> talents;
+	bool forTeammate = false;
 	if (!body.empty() && body[0] == '{')
 	{
 		nlohmann::json pick = nlohmann::json::parse(body, nullptr, false);
 		if (pick.is_object())
 		{
 			classId = pick.value("class", 0);
+			forTeammate = pick.value("teammate", false);
 			if (pick.contains("spells") && pick["spells"].is_array())
 			{
 				for (const nlohmann::json & index : pick["spells"])
@@ -157,9 +201,13 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 		classId = std::atoi(body.c_str());
 	}
 
-	if (session->chooseClass(player, classId, spells, talents))
+	// PC{..., "teammate": true} : choix pour le coéquipier absent (refusé s'il est là).
+	tw::Player * target = forTeammate ? absentTeammate(session, player) : player;
+	if (target != NULL && session->chooseClass(target, classId, spells, talents))
 	{
-		send(client, "PO" + std::to_string(classId) + "\n");
+		if (target == player)
+			send(client, "PO" + std::to_string(classId) + "\n");
+		sendTeammateStates(session, target);
 		if (session->allClassesChosen())
 			startBattle(session);
 	}
@@ -177,6 +225,7 @@ void TWParser::startBattle(BattleSession * session)
 		names[player] = displayNameOf(player);
 
 	session->startBattle(nowMs(), connected, names);
+	refreshPilots(session);
 	publicDirty = true;
 	session->getMatch()->setMatchStatus(tw::MatchStatus::STARTED);
 
@@ -233,7 +282,9 @@ void TWParser::handleBattleAction(ClientState * client, const std::string & op, 
 	}
 
 	tw::battle::BattleEngine * engine = session->getEngine();
-	int fighterId = session->fighterIdOf(player);
+	// Déplacement, sort et fin de tour : pour le combattant actif s'il est piloté par ce joueur.
+	bool turnAction = op == "Cm" || op == "CL" || op == "Ct";
+	int fighterId = turnAction ? session->actingFighter(player) : session->fighterIdOf(player);
 	std::int64_t now = nowMs();
 	tw::battle::ActionResult result;
 
@@ -307,7 +358,9 @@ void TWParser::handlePing(ClientState * client, const nlohmann::json & body)
 		return;
 	recent.push_back(now);
 
-	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y } });
+	// Type de signal : 0 ici, 1 attaquez, 2 repli, 3 danger (absent : ici, pour les anciens clients).
+	int kind = std::max(0, std::min(3, body.value("kind", 0)));
+	std::string message = encode("BG", { { "f", fighter->id }, { "x", cell.x }, { "y", cell.y }, { "kind", kind } });
 	for (tw::Player * mate : session->getParticipants())
 	{
 		const tw::battle::Fighter * other = state.findFighter(session->fighterIdOf(mate));
@@ -369,6 +422,14 @@ void TWParser::finishBattle(BattleSession * session)
 		const tw::battle::ClassDef * classDef = gameData.findClass(fighter.classId);
 		tw::tournament::PlayerRecord player;
 		player.name = fighter.name;
+		// Second personnage d'un joueur seul : son bilan revient à ce joueur (sur un nom à lui).
+		tw::Player * account = session->playerOfFighter(fighter.id);
+		if (isStandIn(account))
+		{
+			const tw::Team * team = teamStore.findTeam(account->getTeamNumber());
+			player.name = team != NULL ? team->players[0].displayName : fighter.name;
+			player.standIn = true;
+		}
 		player.className = classDef != nullptr ? classDef->name : std::string();
 		player.side = fighter.team;
 		player.dealt = fighter.record.dealt;
@@ -425,7 +486,38 @@ void TWParser::onPlayerConnectionChanged(tw::Player * player, bool connected)
 		return;
 
 	session->getEngine()->setConnected(session->fighterIdOf(player), connected, nowMs());
+	refreshPilots(session);
 	broadcastBattleEvents(session);
+}
+
+bool TWParser::isPresent(tw::Player * player)
+{
+	return getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle();
+}
+
+tw::Player * TWParser::absentTeammate(BattleSession * session, tw::Player * player)
+{
+	for (tw::Player * mate : session->getParticipants())
+	{
+		if (mate != player && session->teamOf(mate) == session->teamOf(player) && !isPresent(mate))
+			return mate;
+	}
+	return NULL;
+}
+
+void TWParser::refreshPilots(BattleSession * session)
+{
+	// Combattant d'un joueur absent dont un coéquipier est là : piloté par ce coéquipier.
+	tw::battle::BattleEngine * engine = session->getEngine();
+	if (engine == NULL)
+		return;
+	for (tw::Player * player : session->getParticipants())
+	{
+		bool mateHere = false;
+		for (tw::Player * mate : session->getParticipants())
+			mateHere = mateHere || (mate != player && session->teamOf(mate) == session->teamOf(player) && isPresent(mate));
+		engine->setPiloted(session->fighterIdOf(player), !isPresent(player) && mateHere, nowMs());
+	}
 }
 
 void TWParser::trackAbsences(BattleSession * session, std::int64_t now)

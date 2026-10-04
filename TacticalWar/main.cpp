@@ -6,6 +6,8 @@
 #include "TrainingScreen.h"
 #include "TrainingSetupScreen.h"
 #include "TutorialScreen.h"
+#include "PuzzleScreen.h"
+#include "PuzzleSelectScreen.h"
 #include "ScreenManager.h"
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
@@ -32,12 +34,36 @@ int main(int argc, char** argv)
 		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
+		if (config.classScreenSolo)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false}");
+			screen->onMessageReceived("PO4");
+		}
+		if (config.classScreenAlone > 0)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille (2)\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false, \"standIn\": true}");
+			if (config.classScreenAlone >= 2)
+				screen->onMessageReceived("PO3");
+		}
+		if (config.classScreenMate > 0)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": " + std::to_string(config.classScreenMate)
+				+ ", \"viewing\": " + std::to_string(config.classScreenMate) + ", \"locked\": true, \"present\": true}");
+		}
 		// Fin de bannissement simulée : la classe donnée est interdite, la suivante bannie par notre équipe.
 		if (config.classScreenForbidden > 0)
 		{
 			screen->onMessageReceived("BB{\"banned\": " + std::to_string(config.classScreenForbidden % 4 + 1) + ", \"done\": true, \"forbidden\": "
 				+ std::to_string(config.classScreenForbidden) + "}");
 		}
+	}
+	else if (config.puzzle > 0)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::PuzzleScreen(&gui, config.puzzle - 1, config.puzzleDemo));
+	}
+	else if (config.puzzleList)
+	{
+		tw::ScreenManager::getInstance()->setCurrentScreen(new tw::PuzzleSelectScreen(&gui));
 	}
 	else if (config.tutorial)
 	{
@@ -47,6 +73,7 @@ int main(int argc, char** argv)
 	{
 		tw::TrainingSettings & settings = tw::TrainingSettings::current();
 		settings.duo = !config.trainingDuel;
+		settings.controlAlly = config.trainingDuoControl;
 		settings.playerClass = config.trainingClass;
 		settings.mapId = config.trainingMap;
 		settings.autoplay = config.trainingAutoplay;

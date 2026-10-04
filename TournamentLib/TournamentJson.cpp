@@ -82,7 +82,8 @@ nlohmann::json tw::tournament::toJson(const Settings & settings)
 		{ "mode", settings.zoneMode ? "ZONE" : "KO" },
 		{ "zonePoints", settings.zonePoints },
 		{ "maxTalents", settings.maxTalents },
-		{ "bans", toString(settings.bans) }
+		{ "bans", toString(settings.bans) },
+		{ "maps", toString(settings.maps) }
 	};
 }
 
@@ -102,6 +103,7 @@ Settings tw::tournament::settingsFromJson(const nlohmann::json & json)
 	settings.zonePoints = std::max(1, std::min(20, json.value("zonePoints", settings.zonePoints)));
 	settings.maxTalents = std::max(0, std::min(5, json.value("maxTalents", settings.maxTalents)));
 	parseEnum(json.value("bans", std::string()), settings.bans, { BanMode::NONE, BanMode::FINALS, BanMode::ALL });
+	parseEnum(json.value("maps", std::string()), settings.maps, { MapPool::CLASSIC, MapPool::SPECIAL, MapPool::ALL });
 	return settings;
 }
 
@@ -125,6 +127,8 @@ nlohmann::json tw::tournament::toJson(const MatchResult & result)
 			};
 			if (!player.badges.empty())
 				value["badges"] = player.badges;
+			if (player.standIn)
+				value["standIn"] = true;
 			players.push_back(value);
 		}
 		json["players"] = players;
@@ -151,6 +155,7 @@ MatchResult tw::tournament::resultFromJson(const nlohmann::json & json)
 		player.shielded = value.value("shielded", 0);
 		player.kills = value.value("kills", 0);
 		player.mvp = value.value("mvp", false);
+		player.standIn = value.value("standIn", false);
 		for (const nlohmann::json & badge : value.value("badges", nlohmann::json::array()))
 		{
 			if (badge.is_string())

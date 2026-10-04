@@ -495,10 +495,17 @@ TEST_CASE("Match results keep the players' records through JSON")
 	healer.side = 2;
 	healer.healed = 45;
 	healer.shielded = 40;
-	result.players = { archer, healer };
+	// Second personnage d'un joueur seul dans son équipe : bilan au nom de ce joueur.
+	PlayerRecord second = archer;
+	second.className = "Mage";
+	second.standIn = true;
+	result.players = { archer, healer, second };
 
 	MatchResult restored = resultFromJson(toJson(result));
-	REQUIRE(restored.players.size() == 2);
+	REQUIRE(restored.players.size() == 3);
+	CHECK(restored.players[2].standIn);
+	CHECK_FALSE(restored.players[0].standIn);
+	CHECK_FALSE(toJson(result)["players"][0].contains("standIn"));
 	CHECK(restored.players[0].name == archer.name);
 	CHECK(restored.players[0].className == "Archer");
 	CHECK(restored.players[0].side == 1);
@@ -578,6 +585,24 @@ TEST_CASE("Teams earn one talent per finished match, up to the tournament maximu
 	CHECK(settingsFromJson(legacy).maxTalents == 3);
 	legacy["maxTalents"] = 9;
 	CHECK(settingsFromJson(legacy).maxTalents == 5);
+}
+
+TEST_CASE("The map setting picks classic maps, maps with special cells, or both")
+{
+	Settings settings;
+	CHECK((settings.maps == MapPool::CLASSIC));
+	CHECK(mapInPool(MapPool::CLASSIC, false));
+	CHECK_FALSE(mapInPool(MapPool::CLASSIC, true));
+	CHECK(mapInPool(MapPool::SPECIAL, true));
+	CHECK_FALSE(mapInPool(MapPool::SPECIAL, false));
+	CHECK(mapInPool(MapPool::ALL, true));
+	CHECK(mapInPool(MapPool::ALL, false));
+
+	settings.maps = MapPool::SPECIAL;
+	CHECK((settingsFromJson(toJson(settings)).maps == MapPool::SPECIAL));
+	nlohmann::json legacy = toJson(Settings());
+	legacy.erase("maps");
+	CHECK((settingsFromJson(legacy).maps == MapPool::CLASSIC));
 }
 
 TEST_CASE("The ban setting decides which matches start with a class ban")

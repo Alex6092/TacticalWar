@@ -10,6 +10,7 @@ let state = null;
 let version = 0;
 let activeTab = null;
 let userPickedTab = false;
+let lastBoardHtml = null;
 
 // ---------------------------------------------------------------- utilitaires
 
@@ -58,6 +59,8 @@ function renderHeader(tournament) {
 
 function boardTabs(tournament) {
   const tabs = [];
+  // Tournoi terminé : la cérémonie (podium, MVP, hauts faits rares) en premier.
+  if (tournament.status === "FINISHED" && tournament.ranking && tournament.ranking.length) tabs.push({ id: "ceremony", label: "Cérémonie" });
   if (tournament.standings.length) {
     const swiss = tournament.stages.some((s) => s.type === "SWISS");
     tabs.push({ id: "standings", label: swiss ? "Classement suisse" : "Poules" });
@@ -73,6 +76,7 @@ function renderBoard(tournament) {
   const tabsBox = el("board-tabs");
   if (!tournament) {
     board.innerHTML = '<p class="empty">Aucun tournoi en cours.</p>';
+    lastBoardHtml = null;
     tabsBox.innerHTML = "";
     return;
   }
@@ -80,13 +84,14 @@ function renderBoard(tournament) {
   const tabs = boardTabs(tournament);
   if (!tabs.length) {
     board.innerHTML = '<p class="empty">Le tournoi n\'a pas encore commencé.</p>';
+    lastBoardHtml = null;
     tabsBox.innerHTML = "";
     return;
   }
 
   // Par défaut : l'arbre dès qu'il existe (phase finale), sinon les poules.
   if (!activeTab || !tabs.some((t) => t.id === activeTab) || !userPickedTab) {
-    activeTab = tabs.some((t) => t.id === "bracket") ? "bracket" : tabs[0].id;
+    activeTab = tabs.some((t) => t.id === "ceremony") ? "ceremony" : tabs.some((t) => t.id === "bracket") ? "bracket" : tabs[0].id;
     if (userPickedTab && !tabs.some((t) => t.id === activeTab)) userPickedTab = false;
   }
 
@@ -102,9 +107,45 @@ function renderBoard(tournament) {
   });
 
   el("board-title").textContent = tabs.find((t) => t.id === activeTab).label;
-  board.innerHTML = activeTab === "bracket" ? renderBracket(tournament)
+  const html = activeTab === "ceremony" ? renderCeremony(tournament)
+    : activeTab === "bracket" ? renderBracket(tournament)
     : activeTab === "leaders" ? renderLeaders(tournament)
     : renderStandings(tournament);
+  // Contenu inchangé : rien n'est redessiné (les animations de la cérémonie ne repartent pas à zéro).
+  if (html !== lastBoardHtml) {
+    board.innerHTML = html;
+    lastBoardHtml = html;
+  }
+}
+
+// Cérémonie de fin : podium des trois premières équipes (avec leurs joueurs), MVP du tournoi (meilleur
+// bilan cumulé), hauts faits les plus rares, et des confettis.
+function renderCeremony(tournament) {
+  const playersOf = (team) => ((tournament.teamPlayers || {})[String(team)] || []).map(esc).join(" · ");
+  const step = (rank) => {
+    const teams = tournament.ranking.filter((r) => r.rank === rank);
+    if (!teams.length) return `<div class="step s${rank}"><span class="place">${rank}</span></div>`;
+    return `<div class="step s${rank}"><span class="place">${rank}</span>${teams.map((r) =>
+      `<div class="team">${esc(teamName(tournament, r.team))}</div><div class="players">${playersOf(r.team)}</div>`).join("")}</div>`;
+  };
+  const mvp = tournament.leaders && tournament.leaders.length ? tournament.leaders[0] : null;
+  const mvpCard = mvp ? `<div class="mvp-card"><div class="label">★ MVP du tournoi</div>
+      <div class="name">${esc(mvp.name)}</div><div class="sub">${esc(mvp.class)} · ${esc(teamName(tournament, mvp.team))}</div>
+      <div class="stats">${mvp.dealt} dégâts · ${mvp.healed} soins · ${mvp.kills} KO · ${mvp.mvp} fois MVP</div></div>` : "";
+  const rare = (tournament.badges || []).slice(0, 3).map((b) => `<li><strong>${esc(b.name)}</strong>
+      <span class="count">${b.count === 1 ? "une seule fois" : b.count + " fois"}</span>
+      <div class="who">${b.players.map(esc).join(", ")}</div></li>`).join("");
+  const colors = ["#ffd34d", "#ff6b6b", "#5ec8ff", "#8dff8a", "#ff9bf2", "#ffffff"];
+  let confetti = "";
+  for (let i = 0; i < 40; i++) {
+    confetti += `<span style="left:${(i * 37) % 100}%;background:${colors[i % colors.length]};animation-delay:${(i * 0.23) % 4}s;animation-duration:${3 + (i % 5) * 0.6}s"></span>`;
+  }
+  return `<div class="ceremony"><div class="confetti">${confetti}</div>
+    <h2>Bravo à tous les joueurs !</h2>
+    <div class="big-podium">${step(2)}${step(1)}${step(3)}</div>
+    <div class="ceremony-row">${mvpCard}
+      ${rare ? `<div class="rare-card"><div class="label">Hauts faits les plus rares</div><ol>${rare}</ol></div>` : ""}</div>
+  </div>`;
 }
 
 // Meilleurs joueurs du tournoi : bilan cumulé sur les matchs joués (score : dégâts + soins

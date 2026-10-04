@@ -883,3 +883,75 @@ MovePreview tw::battle::previewMove(const BattleState & state, const BattleMap &
 
 	return preview;
 }
+
+namespace
+{
+	// Marques (états) posées par un effet, y compris par les effets d'un glyphe.
+	void collectStates(const EffectDef & effect, std::vector<std::string> & states)
+	{
+		if (effect.type == EffectType::STATE && !effect.state.empty())
+			states.push_back(effect.state);
+		for (const EffectDef & nested : effect.glyphEffects)
+			collectStates(nested, states);
+	}
+
+	void addUnique(std::vector<std::string> & list, const std::string & value)
+	{
+		if (std::find(list.begin(), list.end(), value) == list.end())
+			list.push_back(value);
+	}
+
+	void combosFrom(const ClassDef & setter, const ClassDef & finisher, std::vector<ComboLink> & links)
+	{
+		for (const SpellDef & spell : finisher.spells)
+		{
+			for (const EffectDef & effect : spell.effects)
+			{
+				if (effect.comboState.empty() || effect.comboPercent <= 0)
+					continue;
+
+				std::vector<std::string> setters;
+				for (const SpellDef & marker : setter.spells)
+				{
+					std::vector<std::string> states;
+					for (const EffectDef & markerEffect : marker.effects)
+						collectStates(markerEffect, states);
+					if (std::find(states.begin(), states.end(), effect.comboState) != states.end())
+						addUnique(setters, marker.name);
+				}
+				if (setters.empty())
+					continue;
+
+				auto existing = std::find_if(links.begin(), links.end(), [&](const ComboLink & link) {
+					return link.name == effect.comboName && link.setterClass == setter.id && link.finisherClass == finisher.id;
+				});
+				if (existing == links.end())
+				{
+					ComboLink link;
+					link.name = effect.comboName;
+					link.percent = effect.comboPercent;
+					link.state = effect.comboState;
+					link.setterClass = setter.id;
+					link.setters = setters;
+					link.finisherClass = finisher.id;
+					links.push_back(link);
+					existing = links.end() - 1;
+				}
+				addUnique(existing->finishers, spell.name);
+			}
+		}
+	}
+}
+
+std::vector<ComboLink> tw::battle::combosBetween(const GameData & data, int classA, int classB)
+{
+	std::vector<ComboLink> links;
+	const ClassDef * a = data.findClass(classA);
+	const ClassDef * b = data.findClass(classB);
+	if (a == nullptr || b == nullptr)
+		return links;
+	combosFrom(*a, *b, links);
+	if (classA != classB)
+		combosFrom(*b, *a, links);
+	return links;
+}

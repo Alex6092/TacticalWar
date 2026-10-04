@@ -3,6 +3,13 @@
 Ce que les joueurs voient à l'écran pour comprendre leurs options. Les règles elles-mêmes (sorts, classes,
 équilibrage) sont dans `assets/data/gamedata.json`, voir `docs/equilibrage.md`.
 
+## Aide des commandes
+
+En combat, le bouton **« ? »** (à droite de « Émotes ») ou la touche **H** ouvre un panneau qui
+rappelle les commandes (déplacement, sorts, signaux, émotes, caméra) et les règles à retenir (PA et PM,
+relance, bouclier, tacle, ligne de vue, cases spéciales, combinaisons, réserve de temps). Il se ferme
+par « Fermer », par H ou par Échap.
+
 ## Viser un sort
 
 Sélectionner un sort (touches 1 à 4, ou clic sur la barre de sorts) affiche :
@@ -52,8 +59,18 @@ possibles du joueur sont en vert.
 
 ## Communiquer avec son équipe
 
-- **Signal** : Alt+clic (ou clic molette) sur une case. Un anneau doré et une flèche apparaissent sur la
-  case, avec un son, et le journal indique « Léa signale une case » ou « Léa désigne Cible ».
+- **Signal** : Alt+clic sur une case ouvre une roue de 4 signaux ; le clic molette envoie directement « Ici ».
+
+  | Signal | Couleur | Journal |
+  |---|---|---|
+  | Ici | doré | « Léa désigne Cible » ou « Léa signale une case » |
+  | Attaquez | rouge | « Léa : attaquez Cible ! » |
+  | Repli | bleu | « Léa : repli ! » |
+  | Danger | orange | « Léa : attention à Cible ! » ou « Léa : danger ici ! » |
+
+  Un anneau et une flèche de la couleur du signal apparaissent sur la case, avec son icône et son nom
+  pendant 3 secondes. Échap ou un clic ailleurs referme la roue.
+  Message : `CG{"x", "y", "kind"}` (0 ici, 1 attaquez, 2 repli, 3 danger).
   - Seuls les coéquipiers le voient : ni les adversaires ni les spectateurs (l'écran projeté est
     visible des joueurs), et il n'est pas enregistré dans les rediffusions.
   - Au plus un signal par seconde (trois toutes les cinq secondes côté serveur).
@@ -62,6 +79,18 @@ possibles du joueur sont en vert.
   - Une bulle s'affiche à côté du personnage, pour tout le monde, spectateurs et rediffusions compris.
   - Pas de texte libre ; une émote toutes les trois secondes au plus.
   - L'organisateur peut les couper : `"emotes": false` dans `server.json`.
+
+## Réserve de temps
+
+Un tour dure 40 secondes. Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout
+le combat :
+- au-delà des 40 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
+- le temps utilisé est perdu pour les tours suivants ; la réserve restante figure dans les détails du
+  combattant (« Réserve 18 s ») ;
+- réserve épuisée : le tour s'arrête à la fin des 40 secondes, comme avant ;
+- un joueur absent (5 secondes par tour) n'utilise pas sa réserve, sauf si son coéquipier le pilote.
+
+Réglage : `"timeBankSeconds"` dans les règles de `assets/data/gamedata.json` (0 : pas de réserve).
 
 ## Sorts au choix
 
@@ -81,6 +110,46 @@ pour chaque classe est retenu (`client.json`) et proposé la fois suivante. Sans
 - Les bots et l'ordinateur de l'entraînement emportent 4 sorts au hasard.
 - Le message `PC` envoie la classe et les sorts : `PC{"class": 4, "spells": [0, 1, 4, 5]}`. Un choix non
   valable donne les sorts par défaut.
+
+## Choix de classe en équipe
+
+Sur l'écran de choix de classe, le bloc **« Votre coéquipier »** (en bas à droite) montre en direct la
+classe que regarde son coéquipier, puis celle qu'il a verrouillée, et s'il est absent. Il liste les
+**combinaisons possibles** entre la classe affichée et celle du coéquipier (« Brise-glace : marquez avec
+Glyphe de givre ou Prison de glace, puis votre coéquipier frappe avec Taillade... »). Les adversaires
+ne voient rien de ces choix.
+
+Messages : `PV{"class"}` (classe regardée) et `PT{"name", "class", "viewing", "locked", "present"}`,
+relayé aux seuls coéquipiers.
+
+## Coéquipier absent : un joueur, deux personnages
+
+Si l'un des deux joueurs d'une équipe est absent (jamais connecté, ou déconnecté), ou si l'équipe n'a
+qu'un joueur, ce joueur joue les deux personnages :
+- **choix de classe** : après avoir verrouillé son choix, il choisit aussi celui de son coéquipier
+  (« Personnage de <nom> »). Sans choix, la classe de l'absent est tirée au hasard ;
+- **combat** : le personnage de l'absent est « piloté ». À son tour (« À vous de jouer <nom> ! »), la
+  barre de sorts, la visée et les déplacements sont les siens, avec un tour complet (au lieu des 5 s
+  d'un joueur déconnecté) ;
+- si l'absent revient, il reprend la main sur son personnage ;
+- une équipe entièrement absente perd toujours par forfait.
+
+**Équipe d'un seul joueur** (nombre impair d'élèves) : à la création de l'équipe (onglet Équipes), laisser
+vides les champs du « Joueur 2 (facultatif) » ; dans `equipe.txt`, une seule ligne pour cette équipe.
+- Le second personnage s'appelle comme le joueur, suivi de « (2) » (« Léa (2) »). Sans compte, il est
+  toujours joué par lui : le joueur choisit sa classe juste après la sienne (« Votre second
+  personnage »), puis le joue à son tour en combat.
+- Sur l'écran de choix de classe, le bloc « Votre second personnage » rappelle la classe du premier et
+  liste leurs combinaisons ; la seconde étape propose d'abord une autre classe.
+- Bilan : ce que fait le second personnage revient au joueur (diplôme, hauts faits), sans compter le
+  match deux fois. Le classement « Meilleurs joueurs » ne compte que son premier personnage, pour rester
+  comparable aux autres joueurs.
+- Un second joueur peut être ajouté plus tard (équipe sans match en cours) : il reçoit un mot de passe,
+  le premier garde le sien.
+
+À l'entraînement, le format « 2 contre 2 (vous jouez les deux) » fait de même avec l'allié
+(`--training-duo-control`). Avec `--training-autoplay`, l'ordinateur joue les personnages du joueur
+en passant par les mêmes commandes qu'un joueur.
 
 ## Talents de tournoi
 
@@ -164,9 +233,14 @@ Certaines cartes ont des cases qui changent le combat :
 - Au survol, la ligne d'aide donne la règle de la case, y compris pendant un déplacement.
 - Les dégâts et les soins s'affichent avec le nom de la case (« Braises -8 », « Source +6 »).
 - L'ordinateur évite les braises et rejoint une source quand il est blessé.
-- Les 7 cartes du tournoi n'en ont pas. La carte 8, « Terrain d'exercice » (hors tournoi), les
-  montre toutes : `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte,
-  utiliser le groupe « Cases spéciales » de la palette de l'éditeur.
+- **Cartes** : les 7 cartes classiques n'en ont pas. Trois cartes de tournoi en ont : 9 « Cœur du
+  volcan », 10 « Prairie des hautes herbes », 11 « Oasis brûlante ». Elles sont symétriques (un
+  demi-tour échange les deux camps) et générées par `py tools/maps/make_special_maps.py`.
+- **Réglage du tournoi** « Cartes » (onglet Tournoi) : classiques (par défaut), à cases spéciales, ou
+  toutes. L'entraînement propose toutes les cartes du tournoi.
+- La carte 8, « Terrain d'exercice » (hors tournoi, celle du tutoriel), les montre toutes :
+  `TacticalWar.exe --training-start --training-map 8`. Pour en mettre sur une carte, utiliser le
+  groupe « Cases spéciales » de la palette de l'éditeur.
 
 ## Combinaisons entre classes
 
@@ -237,7 +311,10 @@ Le bilan s'affiche sur l'écran de fin (joueurs, spectateurs, rediffusions). Les
 tournoi sont enregistrés avec leurs résultats, et la page projetée montre :
 - **les derniers combats**, avec le vainqueur et le MVP ;
 - **l'onglet « Meilleurs joueurs »** : bilan cumulé de chaque joueur sur le tournoi, avec son nombre de
-  titres de MVP et de hauts faits.
+  titres de MVP et de hauts faits ;
+- **l'onglet « Cérémonie »**, une fois le tournoi terminé (affiché en premier) : podium des trois
+  premières équipes avec leurs joueurs, MVP du tournoi (meilleur bilan cumulé) et hauts faits les plus
+  rares, avec ceux qui les ont obtenus.
 
 ### Hauts faits
 
@@ -282,11 +359,54 @@ la consigne est remplie.
 | 9. Victoire | Mettre le mannequin hors combat : le bilan présente les hauts faits |
 
 - Pas de minuteur : chacun avance à son rythme. « Quitter » interrompt le tutoriel.
-- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts, talents,
-  bannissement, mode de victoire, jeu en équipe. Puis « Entraînement libre » ou « Retour ».
+- Après le bilan, « Fermer » ouvre un écran qui présente le tournoi : choix des sorts et bloc du
+  coéquipier, talents, bannissement, mode de victoire, réserve de temps, coéquipier absent, aide (H),
+  signaux et combinaisons. Puis « Entraînement libre », « Énigmes » ou « Retour ».
 - Captures d'écran : `TacticalWar.exe --tutorial-step N` ouvre le tutoriel à l'étape N (1 à 9), les
   étapes précédentes étant jouées automatiquement ; 10 mène le combat jusqu'au bilan, 11 ouvre l'écran
   final. `--tutorial` ouvre le tutoriel au début.
+
+## Énigmes tactiques
+
+Le bouton **« Énigmes »** des réglages de l'entraînement ouvre six petits défis, sans serveur : une
+position imposée, et un objectif à atteindre pendant ses tours (mettre l'adversaire hors combat). Les
+adversaires ne jouent pas, et les sorts font leurs dégâts minimum : le résultat est toujours le même.
+
+| Énigme | Idée à trouver |
+|---|---|
+| 1. Brise-glace | Sur une cible gelée, Taillade (au contact) profite plus du gel que Charge |
+| 2. Cible immobile | Avancer pour être à portée, puis trois Éclair sur la cible entravée |
+| 3. Dans le mille | Reculer d'une case pour le bonus de distance de l'Archer, puis Tir précis |
+| 4. Jugement ardent | Se mettre à portée, puis deux Châtiment sur la cible brûlée |
+| 5. Contre le rocher | Flèche de recul contre un rocher : dégâts de collision |
+| 6. Duo : Archer et Mage | Jouer les deux : Flèche entravante, puis trois Éclair (Cible immobile) |
+
+- Panneau en haut de l'écran : objectif, « Indice », « Recommencer », « Énigmes » ; puis « Réussi ! »
+  (« Énigme suivante ») ou « Raté » (« Réessayer »). Les énigmes réussies sont retenues (`client.json`)
+  et marquées dans la liste.
+- Données : `assets/puzzles/*.json` (carte, combattants, marques posées, objectif, indice, solution et
+  « piège »). Les tests vérifient que la solution réussit, et que ne rien faire ou suivre le piège
+  échoue : une énigme impossible ou trop facile est détectée.
+- En ligne de commande : `--puzzles` (liste), `--puzzle N` (énigme N), `--puzzle-demo` (la solution
+  est jouée automatiquement, avec les mêmes commandes qu'un joueur).
+
+## Guide du joueur imprimable
+
+Une feuille A4 recto-verso à distribuer à chaque joueur, à lire en plus du tutoriel et de
+l'entraînement :
+- **recto** : but du jeu (KO, zone, mort subite), déroulement d'un tour (placement, PA, PM, relance,
+  réserve de temps), commandes, règles à savoir (aperçu, bouclier, résistance, tacle, ligne de vue,
+  collision), cases spéciales, signaux et émotes, déroulement du tournoi, talents, entraînement ;
+- **verso** : les 4 classes (caractéristiques, passif, 6 sorts avec coût, portée, relance, dégâts et
+  marques), les combinaisons avec leur mise en pratique, et 5 astuces.
+
+La page est servie par le serveur : `http://<serveur>:8080/guide.html` (lien « Guide du joueur » en haut
+de la page projetée, bouton « Guide » de l'onglet Tournoi). Bouton « Imprimer », en recto-verso.
+
+Elle est générée par `py tools/docs/make_player_guide.py` à partir de `assets/data/gamedata.json` (règles,
+classes, sorts, talents) et de `assets/tiles/tileset.json` (cases spéciales), icônes comprises. Après une
+modification des données de jeu, relancer le script : le test « le guide du joueur est à jour »
+(`TacticalWarTests`) compare l'empreinte de `gamedata.json` gardée dans le guide.
 
 ## Entraînement hors ligne
 

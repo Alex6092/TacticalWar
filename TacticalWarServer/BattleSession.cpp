@@ -38,6 +38,18 @@ tw::Player * BattleSession::playerOfFighter(int fighterId) const
 	return fighterId >= 0 && fighterId < (int)participants.size() ? participants[fighterId] : NULL;
 }
 
+int BattleSession::actingFighter(tw::Player * player) const
+{
+	int own = fighterIdOf(player);
+	if (!engine || own < 0)
+		return own;
+	const tw::battle::BattleState & state = engine->getState();
+	const tw::battle::Fighter * active = state.findFighter(state.activeFighterId());
+	if (active != nullptr && active->id != own && active->piloted && active->team == teamOf(player))
+		return active->id;
+	return own;
+}
+
 int BattleSession::teamOf(tw::Player * player) const
 {
 	if (fighterIdOf(player) < 0)
@@ -88,6 +100,20 @@ bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vec
 	spellChoices[player] = tw::battle::validSpellChoice(*classDef, spells);
 	talentChoices[player] = tw::battle::validTalentChoice(data, talents, talentSlots(player));
 	return true;
+}
+
+bool BattleSession::setViewing(tw::Player * player, int classId)
+{
+	if ((phase != Phase::BAN && phase != Phase::CLASS_SELECTION) || fighterIdOf(player) < 0 || viewing[player] == classId)
+		return false;
+	viewing[player] = classId;
+	return true;
+}
+
+int BattleSession::viewingClass(tw::Player * player) const
+{
+	auto it = viewing.find(player);
+	return it == viewing.end() ? 0 : it->second;
 }
 
 int BattleSession::chosenClass(tw::Player * player) const

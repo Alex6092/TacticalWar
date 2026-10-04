@@ -191,6 +191,15 @@ TEST_CASE("Cases spéciales : règles de la tuile, carte envoyée aux clients et
 	CHECK(map.blocksSight({ 3, 3 }));
 	CHECK_FALSE(map.isWalkable({ 4, 4 }));
 	CHECK(map.blocksSight({ 4, 4 }));
+
+	// Carte « à cases spéciales » (réglage des cartes du tournoi) : braises, source ou hautes herbes.
+	CHECK(client->hasSpecialCells());
+	Environment plain(4, 4, 5, "grass");
+	plain.setTile(1, 1, "stone");
+	plain.setTile(2, 2, "water");
+	CHECK_FALSE(plain.hasSpecialCells());
+	plain.setTile(3, 3, "tall_grass");
+	CHECK(plain.hasSpecialCells());
 }
 
 TEST_CASE("Carte v1 : lecture de l'ancien format")

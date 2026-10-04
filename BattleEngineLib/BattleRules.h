@@ -100,5 +100,21 @@ namespace tw
 
 		// Direction dominante de "from" vers "to" (pas en x et y : -1, 0 ou 1).
 		Cell directionBetween(const Cell & from, const Cell & to);
+
+		// Combinaison entre deux classes : des sorts d'une classe posent une marque, des sorts de l'autre
+		// en profitent (choix de classe en équipe, guide du joueur).
+		struct ComboLink
+		{
+			std::string name;						// "Brise-glace"
+			int percent = 0;
+			std::string state;						// Marque ("gele")
+			int setterClass = 0;
+			std::vector<std::string> setters;		// Noms des sorts qui posent la marque
+			int finisherClass = 0;
+			std::vector<std::string> finishers;		// Noms des sorts qui en profitent
+		};
+		// Combinaisons possibles entre deux classes, dans les deux sens (A marque et B profite, puis
+		// l'inverse). Marques posées directement ou par un glyphe.
+		std::vector<ComboLink> combosBetween(const GameData & data, int classA, int classB);
 	}
 }

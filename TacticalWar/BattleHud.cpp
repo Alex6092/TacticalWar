@@ -125,11 +125,14 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	messageLabel = createLabel(30, sf::Color(255, 220, 80));
 	messageLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	messageLabel->getRenderer()->setTextOutlineThickness(2);
+	// Textes seuls : ils ne doivent pas intercepter les clics (carte, barre de sorts).
+	messageLabel->setEnabled(false);
 	gui->add(messageLabel);
 
 	hintLabel = createLabel(16, sf::Color(255, 200, 120));
 	hintLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
 	hintLabel->getRenderer()->setTextOutlineThickness(1);
+	hintLabel->setEnabled(false);
 	gui->add(hintLabel);
 
 	detailsPanel = tgui::Panel::create();
@@ -182,6 +185,41 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 		spells.push_back(button);
 	}
 
+	// Roue des signaux : Ici (haut), Attaquez (droite), Danger (gauche), Repli (bas).
+	pingWheel = tgui::Panel::create();
+	pingWheel->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+	pingWheel->setSize(320, 170);
+	pingWheel->setVisible(false);
+	const char * pingIcons[4] = { "here", "attack", "retreat", "danger" };
+	const wchar_t * pingNames[4] = { L"Ici", L"Attaquez", L"Repli", L"Danger" };
+	const sf::Vector2f pingPlaces[4] = { { 95, 0 }, { 190, 65 }, { 95, 130 }, { 0, 65 } };
+	for (int kind = 0; kind < 4; kind++)
+	{
+		tgui::BitmapButton::Ptr choice = tgui::BitmapButton::create(pingNames[kind]);
+		choice->setInheritedFont(font);
+		choice->setTextSize(16);
+		if (pingTextures[kind].loadFromFile(std::string("./assets/ui/pings/") + pingIcons[kind] + ".png"))
+		{
+			pingTextures[kind].setSmooth(true);
+			choice->setImage(pingTextures[kind]);
+			choice->setImageScaling(0.75f);
+		}
+		choice->setSize(130, 40);
+		choice->setPosition(pingPlaces[kind].x, pingPlaces[kind].y);
+		choice->getRenderer()->setBackgroundColor(sf::Color(25, 25, 35, 225));
+		choice->getRenderer()->setBackgroundColorHover(sf::Color(60, 60, 80, 240));
+		choice->getRenderer()->setTextColor(sf::Color::White);
+		choice->getRenderer()->setTextColorHover(sf::Color(255, 230, 150));
+		choice->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
+		choice->connect("pressed", [this, kind]() {
+			closePingWheel();
+			if (onPing)
+				onPing(kind);
+		});
+		pingWheel->add(choice);
+	}
+	gui->add(pingWheel);
+
 	endTurnButton = tgui::Button::create(L"Passer le tour");
 	endTurnButton->setInheritedFont(font);
 	endTurnButton->setTextSize(16);
@@ -197,6 +235,14 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	emoteButton->setTextSize(16);
 	emoteButton->connect("pressed", [this]() { emotePanel->setVisible(!emotePanel->isVisible()); });
 	gui->add(emoteButton);
+
+	// Aide des commandes, à droite des émotes (aussi par la touche H).
+	helpPanel.reset(new tw::HelpPanel(gui, font));
+	helpButton = tgui::Button::create(L"?");
+	helpButton->setInheritedFont(font);
+	helpButton->setTextSize(22);
+	helpButton->connect("pressed", [this]() { toggleHelp(); });
+	gui->add(helpButton);
 
 	emotePanel = tgui::Panel::create();
 	emotePanel->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 225));
@@ -306,7 +352,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 	logBox->setPosition(15, height - 215);
 	logBox->setSize(440, 200);
 
-	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120;
+	float barWidth = 4 * (SPELL_SIZE + 10) + 190 + 120 + SPELL_SIZE - 6;
 	float barX = (width - barWidth) / 2;
 	float barY = height - SPELL_SIZE - 18;
 	for (int i = 0; i < (int)spells.size(); i++)
@@ -323,6 +369,9 @@ void BattleHud::layout(const sf::Vector2u & size)
 	endTurnButton->setSize(170, SPELL_SIZE - 16);
 	emoteButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 190, barY + 8);
 	emoteButton->setSize(110, SPELL_SIZE - 16);
+	helpButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 310, barY + 8);
+	helpButton->setSize(SPELL_SIZE - 16, SPELL_SIZE - 16);
+	helpPanel->layout(windowSize);
 	emotePanel->setSize(220, EMOTE_COUNT * 38.f + 8);
 	emotePanel->setPosition(barX + 4 * (SPELL_SIZE + 10) + 300 - 220, barY - (EMOTE_COUNT * 38.f + 8) - 8);
 	readyButton->setSize(220, 60);
@@ -372,6 +421,27 @@ void BattleHud::setHint(const sf::String & text)
 	}
 }
 
+void BattleHud::openPingWheel(const sf::Vector2f & position)
+{
+	// Centrée sur le clic, sans sortir de la fenêtre.
+	sf::Vector2f size = pingWheel->getSize();
+	float x = std::max(0.f, std::min(windowSize.x - size.x, position.x - size.x / 2));
+	float y = std::max(0.f, std::min(windowSize.y - size.y, position.y - size.y / 2));
+	pingWheel->setPosition(x, y);
+	pingWheel->setVisible(true);
+	pingWheel->moveToFront();
+}
+
+void BattleHud::closePingWheel()
+{
+	pingWheel->setVisible(false);
+}
+
+bool BattleHud::isPingWheelOpen() const
+{
+	return pingWheel->isVisible();
+}
+
 void BattleHud::log(const sf::String & line, const sf::Color & color)
 {
 	logBox->addLine(line, color);
@@ -408,6 +478,8 @@ sf::String BattleHud::fighterSummary(const BattleState & state, const GameData &
 	if (fighter.shield > 0)
 		text += L"\nBouclier " + num(fighter.shield) + L" : absorbe les dégâts en premier";
 	text += L"\nPA " + num(fighter.ap) + L"   PM " + num(fighter.mp);
+	if (fighter.timeBankMs > 0)
+		text += L"   Réserve " + num((int)(fighter.timeBankMs / 1000)) + L" s";
 	text += L"\nPuissance " + num(effectiveStat(state, data, fighter, Stat::POWER))
 		+ L"%   Résistance " + num(effectiveStat(state, data, fighter, Stat::RESISTANCE)) + L"%";
 	text += L"\nTacle " + num(effectiveStat(state, data, fighter, Stat::LOCK))
@@ -539,6 +611,16 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	// Minuteur.
 	sf::String timer;
 	sf::String seconds = timersShown ? L" - " + num((int)remainingSeconds) + L" s" : sf::String();
+	// Tour en cours : temps normal, puis réserve de temps (en orange) une fois celui-ci écoulé.
+	bool inReserve = false;
+	if (timersShown && state.phase == BattlePhase::FIGHT)
+	{
+		const Fighter * current = state.findFighter(active);
+		float bank = current != nullptr ? current->timeBankMs / 1000.f : 0.f;
+		inReserve = bank > 0 && remainingSeconds <= bank;
+		seconds = inReserve ? L" - réserve " + num((int)std::ceil(remainingSeconds)) + L" s"
+			: L" - " + num((int)std::ceil(remainingSeconds - bank)) + L" s";
+	}
 	if (state.phase == BattlePhase::PLACEMENT)
 		timer = L"Placement" + seconds;
 	else if (state.phase == BattlePhase::FIGHT)
@@ -549,7 +631,7 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	if (timerLabel->getText() != timer)
 	{
 		timerLabel->setText(timer);
-		timerLabel->getRenderer()->setTextColor(myTurn ? sf::Color(120, 255, 120) : sf::Color::White);
+		timerLabel->getRenderer()->setTextColor(inReserve ? sf::Color(255, 170, 60) : myTurn ? sf::Color(120, 255, 120) : sf::Color::White);
 		layout(windowSize);
 	}
 
@@ -609,11 +691,11 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 			const SpellDef & spell = *spellOf(data, *me, i);
 			auto cooldown = me->cooldowns.find(spell.id);
 			int remaining = cooldown == me->cooldowns.end() ? 0 : cooldown->second;
-			bool usable = myTurn && checkSpellResources(*me, spell).empty();
-
-			float opacity = usable || !myTurn ? 1.0f : 0.35f;
-			if (selectedSpell >= 0 && selectedSpell != i)
-				opacity *= 0.6f;
+			// Grisé : un sort en relance l'est en permanence ; un manque de PA (ou de lancers) seulement
+			// pendant son tour, les PA revenant au tour suivant. Pendant une visée, les autres sorts
+			// disponibles sont atténués.
+			bool usable = remaining <= 0 && (!myTurn || checkSpellResources(*me, spell).empty());
+			float opacity = !usable ? 0.3f : (selectedSpell >= 0 && selectedSpell != i) ? 0.65f : 1.0f;
 			button.icon->getRenderer()->setOpacity(opacity);
 			button.key->getRenderer()->setTextColor(selectedSpell == i ? sf::Color(120, 255, 120) : sf::Color(255, 230, 150));
 			button.cooldown->setText(remaining > 0 ? num(remaining) : "");
@@ -742,6 +824,23 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	endTurnButton->setVisible(false);
 	emoteButton->setVisible(false);
 	emotePanel->setVisible(false);
+	helpButton->setVisible(false);
+	helpPanel->hide();
 	for (SpellButton & button : spells)
 		button.icon->setVisible(false);
+}
+
+void BattleHud::toggleHelp()
+{
+	helpPanel->toggle();
+}
+
+void BattleHud::hideHelp()
+{
+	helpPanel->hide();
+}
+
+bool BattleHud::isHelpOpen() const
+{
+	return helpPanel->isVisible();
 }

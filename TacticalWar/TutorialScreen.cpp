@@ -7,6 +7,7 @@
 #include "ClientGameData.h"
 #include "LoginScreen.h"
 #include "MusicManager.h"
+#include "PuzzleSelectScreen.h"
 #include "ScreenManager.h"
 #include "TrainingSetupScreen.h"
 
@@ -27,7 +28,7 @@ namespace
 	const battle::Cell SPRING = { 4, 4 };
 	const float PANEL_TOP = 52;
 	const float FINAL_WIDTH = 860;
-	const float FINAL_HEIGHT = 560;
+	const float FINAL_HEIGHT = 640;
 
 	sf::String num(int value)
 	{
@@ -107,7 +108,8 @@ void TutorialScreen::playDemo(int step)
 	// réussite est vérifiée comme en jeu. Une action par étape, sauf pour finir le combat.
 	const battle::Fighter * me = truth.findFighter(you);
 	const battle::Fighter * target = truth.findFighter(dummy);
-	if (me == NULL || target == NULL || (step == demoActed && step != 8))
+	// Une action par étape, sauf pour finir le combat (8) et pour la roue des signaux (7 : ouverte, puis un choix).
+	if (me == NULL || target == NULL || (step == demoActed && step != 8 && step != 7))
 		return;
 	if (step >= 1 && !isInteractive())
 		return;
@@ -146,7 +148,18 @@ void TutorialScreen::playDemo(int step)
 		hoveredFighter = dummy;
 		break;
 	case 7:
-		sendPing({ target->position.x - 1, target->position.y });
+		// Roue des signaux ouverte au milieu de l'écran, puis « Attaquez » sur le mannequin.
+		if (!hud->isPingWheelOpen())
+		{
+			pingCell = target->position;
+			hud->openPingWheel(sf::Vector2f(gui->getView().getSize().x / 2, gui->getView().getSize().y / 2));
+			demoWait = -1.5f;
+		}
+		else if (hud->onPing)
+		{
+			hud->closePingWheel();
+			hud->onPing(1);
+		}
 		break;
 	default:
 	{
@@ -155,7 +168,9 @@ void TutorialScreen::playDemo(int step)
 		for (int slot = 0; slot < 2; slot++)
 		{
 			const battle::SpellDef * spell = battle::spellOf(data, *me, slot);
-			std::vector<battle::Cell> cells = spell != NULL ? battle::castableCells(truth, map, data, *me, *spell) : std::vector<battle::Cell>();
+			if (spell == NULL || !battle::checkSpellResources(*me, *spell).empty())
+				continue;
+			std::vector<battle::Cell> cells = battle::castableCells(truth, map, data, *me, *spell);
 			if (std::find(cells.begin(), cells.end(), target->position) != cells.end())
 			{
 				sendAction("CL", { { "slot", slot }, { "x", target->position.x }, { "y", target->position.y } });
@@ -235,18 +250,23 @@ void TutorialScreen::showFinal()
 	title->setPosition(26, 20);
 	finalPanel->add(title);
 
+	const battle::GameData & data = ClientGameData::get().data();
+	std::wstring time = L"-  Un tour dure " + std::to_wstring(data.rules.turnSeconds) + L" s ; au-delà, votre réserve de "
+		+ std::to_wstring(data.rules.timeBankSeconds) + L" s pour tout le combat s'entame.\n";
 	tgui::Label::Ptr body = tgui::Label::create(
 		L"Le jour du tournoi, vous jouerez en équipe de deux contre une autre équipe.\n\n"
-		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 6 sorts.\n"
+		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 6 sorts. Le bloc « Votre "
+		L"coéquipier » montre sa classe et vos combinaisons possibles.\n"
 		L"-  Talents : chaque match joué vous en fait gagner un (3 au plus), à choisir avant chaque match. "
 		L"Le talent Garde, qui vous a protégé ici, en est un.\n"
-		L"-  Bannissement, si l'organisateur l'a prévu (souvent en phase finale) : chaque équipe interdit une "
-		L"classe à l'autre avant le match.\n"
-		L"-  Selon l'organisateur, on gagne en mettant l'équipe adverse hors combat, ou en tenant la zone "
-		L"dorée au centre de la carte.\n"
-		L"-  En 2 contre 2, parlez avec votre coéquipier : les signaux (Alt + clic) et les combinaisons de sorts "
-		L"entre classes font la différence.\n\n"
-		L"Entraînez-vous contre l'ordinateur pour découvrir les quatre classes !");
+		L"-  Bannissement, si l'organisateur l'a prévu : chaque équipe interdit une classe à l'autre avant le match.\n"
+		L"-  On gagne en mettant l'équipe adverse hors combat, ou en tenant la zone dorée au centre de la carte.\n"
+		+ time +
+		L"-  Seul dans votre équipe, ou si votre coéquipier est absent : vous jouez les deux personnages.\n"
+		L"-  En combat, H affiche l'aide des commandes. Parlez avec votre coéquipier : les signaux (Alt + clic : "
+		L"Ici, Attaquez, Repli, Danger) et les combinaisons de sorts font la différence.\n\n"
+		L"Entraînez-vous contre l'ordinateur, résolvez les énigmes tactiques, et gardez le guide du joueur "
+		L"à côté du clavier !");
 	body->setInheritedFont(textFont);
 	body->setTextSize(18);
 	body->setMaximumTextWidth(FINAL_WIDTH - 52);
@@ -257,8 +277,8 @@ void TutorialScreen::showFinal()
 	tgui::Button::Ptr training = tgui::Button::create(L"Entraînement libre");
 	training->setInheritedFont(font);
 	training->setTextSize(18);
-	training->setSize(260, 46);
-	training->setPosition(FINAL_WIDTH / 2 - 280, FINAL_HEIGHT - 70);
+	training->setSize(240, 46);
+	training->setPosition(FINAL_WIDTH / 2 - 380, FINAL_HEIGHT - 70);
 	training->getRenderer()->setBackgroundColor(sf::Color(255, 215, 0, 220));
 	training->connect("pressed", [this]() {
 		next = Next::TRAINING;
@@ -266,11 +286,22 @@ void TutorialScreen::showFinal()
 	});
 	finalPanel->add(training);
 
+	tgui::Button::Ptr puzzles = tgui::Button::create(L"Énigmes");
+	puzzles->setInheritedFont(font);
+	puzzles->setTextSize(18);
+	puzzles->setSize(240, 46);
+	puzzles->setPosition(FINAL_WIDTH / 2 - 120, FINAL_HEIGHT - 70);
+	puzzles->connect("pressed", [this]() {
+		next = Next::PUZZLES;
+		closeRequested = true;
+	});
+	finalPanel->add(puzzles);
+
 	tgui::Button::Ptr back = tgui::Button::create(L"Retour");
 	back->setInheritedFont(font);
 	back->setTextSize(18);
-	back->setSize(260, 46);
-	back->setPosition(FINAL_WIDTH / 2 + 20, FINAL_HEIGHT - 70);
+	back->setSize(240, 46);
+	back->setPosition(FINAL_WIDTH / 2 + 140, FINAL_HEIGHT - 70);
 	back->connect("pressed", [this]() {
 		next = Next::BACK;
 		closeRequested = true;
@@ -367,7 +398,9 @@ void TutorialScreen::leave()
 		window->setView(sf::View(sf::FloatRect(0.f, 0.f, (float)window->getSize().x, (float)window->getSize().y)));
 	MusicManager::getInstance()->setMenuMusic();
 
-	if (next == Next::TRAINING || origin == Origin::TRAINING)
+	if (next == Next::PUZZLES)
+		ScreenManager::getInstance()->setCurrentScreen(new PuzzleSelectScreen(gui));
+	else if (next == Next::TRAINING || origin == Origin::TRAINING)
 		ScreenManager::getInstance()->setCurrentScreen(new TrainingSetupScreen(gui));
 	else
 		ScreenManager::getInstance()->setCurrentScreen(new LoginScreen(gui));

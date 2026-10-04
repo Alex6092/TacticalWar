@@ -355,6 +355,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
 		}
+		// Classe regardée sur l'écran de choix (montrée au coéquipier) :
+		else if (StringUtils::startsWith(toParse, "PV"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handleViewClass(client, p, toParse.substr(2));
+		}
 		// Bannissement d'une classe :
 		else if (StringUtils::startsWith(toParse, "PB"))
 		{
@@ -665,24 +672,15 @@ void TWParser::notifyMatchConnectedPlayerChanged(tw::Match * match)
 		std::string playerStatus;
 		std::vector<tw::Player*> diffusionList;
 
-		for (int i = 0; i < team1.size(); i++)
+		// Joueurs des deux équipes ; le second personnage d'un joueur seul n'est pas un joueur à attendre.
+		std::vector<tw::Player*> everyone = team1;
+		everyone.insert(everyone.end(), team2.begin(), team2.end());
+		for (tw::Player * p : everyone)
 		{
-			if (i > 0)
+			if (isStandIn(p))
+				continue;
+			if (!playerStatus.empty())
 				playerStatus += ";";
-			tw::Player * p = team1[i];
-			playerStatus += p->getPseudo() + "," + std::to_string((p->getHasJoinBattle() ? 1 : 0));
-
-			if (p->getHasJoinBattle())
-				diffusionList.push_back(p);
-		}
-
-		playerStatus += ";";
-
-		for (int i = 0; i < team2.size(); i++)
-		{
-			if (i > 0)
-				playerStatus += ";";
-			tw::Player * p = team2[i];
 			playerStatus += p->getPseudo() + "," + std::to_string((p->getHasJoinBattle() ? 1 : 0));
 
 			if (p->getHasJoinBattle())
@@ -699,6 +697,14 @@ void TWParser::notifyMatchConnectedPlayerChanged(tw::Match * match)
 			{
 				send(c, playerStatus);
 			}
+		}
+
+		// Choix de classe en cours : chacun retrouve l'état de son coéquipier (arrivée, départ).
+		BattleSession * session = sessionOfMatch(match);
+		if (session != NULL)
+		{
+			for (tw::Player * participant : session->getParticipants())
+				sendTeammateStates(session, participant);
 		}
 	}
 }

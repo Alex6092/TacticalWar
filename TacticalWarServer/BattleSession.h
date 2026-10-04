@@ -35,6 +35,9 @@ public:
 
 	const std::vector<tw::Player*> & getParticipants() const { return participants; }
 	int fighterIdOf(tw::Player * player) const;
+	// Combattant que le joueur fait agir : le combattant actif s'il s'agit du sien, ou de celui de
+	// son coéquipier absent qu'il pilote ; sinon le sien.
+	int actingFighter(tw::Player * player) const;
 	// Équipe du joueur dans ce combat : 1 ou 2 (0 : il n'y participe pas).
 	int teamOf(tw::Player * player) const;
 	tw::Player * playerOfFighter(int fighterId) const;
@@ -59,6 +62,9 @@ public:
 	void setTalentSlots(int team1, int team2) { talentSlotsByTeam[1] = team1; talentSlotsByTeam[2] = team2; }
 	int talentSlots(tw::Player * player) const;
 	int chosenClass(tw::Player * player) const;
+	// Classe affichée par le joueur sur son écran de choix (montrée à son coéquipier).
+	bool setViewing(tw::Player * player, int classId);
+	int viewingClass(tw::Player * player) const;
 	bool allClassesChosen() const;
 	std::int64_t getClassSelectionDeadline() const { return classSelectionDeadline; }
 	void postponeClassSelection(std::int64_t deadline) { classSelectionDeadline = deadline; }
@@ -95,6 +101,7 @@ private:
 	Phase phase;
 	std::vector<tw::Player*> participants;
 	std::map<tw::Player*, int> classes;
+	std::map<tw::Player*, int> viewing;
 	std::map<tw::Player*, std::vector<int>> spellChoices;
 	std::map<tw::Player*, std::vector<std::string>> talentChoices;
 	int talentSlotsByTeam[3] = { 0, 0, 0 };

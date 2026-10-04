@@ -44,6 +44,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::map<std::string, tw::Player*> allPlayers;
 	// Joueurs des équipes actives (login -> joueur) :
 	std::map<std::string, tw::Player*> playersMap;
+	// Équipe d'un seul joueur : son second personnage occupe la place vide (par numéro d'équipe). Sans
+	// compte, il n'est jamais connecté : il est donc toujours piloté par le joueur de l'équipe.
+	std::map<int, tw::Player*> standIns;
+	bool isStandIn(tw::Player * player) const;
 	std::map<tw::Player*, ClientState*> connectedPlayerMap;
 	std::map<int, std::vector<tw::Player*>> teamIdToPlayerList;
 
@@ -122,6 +126,15 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void sendGameData(ClientState * client);
 	void handlePickClass(ClientState * client, tw::Player * player, const std::string & body);
 	void handleBan(ClientState * client, tw::Player * player, const std::string & body);
+	// Choix de classe en équipe : PV (classe affichée par le joueur) et PT (état d'un coéquipier :
+	// nom, classe regardée ou verrouillée, présence), relayé aux seuls coéquipiers.
+	void handleViewClass(ClientState * client, tw::Player * player, const std::string & body);
+	// Un joueur présent pilote le combattant de son coéquipier absent (et choisit sa classe).
+	bool isPresent(tw::Player * player);
+	tw::Player * absentTeammate(BattleSession * session, tw::Player * player);
+	void refreshPilots(BattleSession * session);
+	nlohmann::json teammateState(BattleSession * session, tw::Player * player);
+	void sendTeammateStates(BattleSession * session, tw::Player * about);
 	// Bannissement : BB{banned: classe interdite par l'équipe du joueur, forbidden: classe qui lui est
 	// interdite, done: phase terminée}. Envoyé au retour d'un joueur si le match a un bannissement.
 	void sendBanState(BattleSession * session, ClientState * client, tw::Player * player);

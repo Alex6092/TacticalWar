@@ -43,6 +43,17 @@ void Environment::setTile(int x, int y, const std::string & tile)
 	setTile(x, y, tile, def != nullptr ? def->rules : TileRules::unknown());
 }
 
+bool Environment::hasSpecialCells()
+{
+	for (CellData * cell : cells)
+	{
+		const TileRules & rules = cell->getRules();
+		if (rules.hasTurnEffect() || (rules.walkable && rules.blocksLineOfSight))
+			return true;
+	}
+	return false;
+}
+
 void Environment::setTile(int x, int y, const std::string & tile, const TileRules & rules)
 {
 	CellData * cell = getMapData(x, y);

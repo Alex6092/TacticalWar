@@ -21,7 +21,7 @@ namespace tw
 		virtual void render(sf::RenderWindow * window);
 
 	private:
-		enum class Request { NONE, PLAY, BACK, TUTORIAL };
+		enum class Request { NONE, PLAY, BACK, TUTORIAL, PUZZLES };
 
 		tgui::ComboBox::Ptr addRow(const sf::String & text);
 		tgui::ComboBox::Ptr addClassRow(const sf::String & text, int selected);

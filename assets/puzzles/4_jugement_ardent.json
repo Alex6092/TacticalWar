@@ -1,0 +1,56 @@
+{
+  "id": "jugement_ardent",
+  "order": 4,
+  "title": "Jugement ardent",
+  "goal": "Mettez l'Archer hors combat. Il est brûlé : Châtiment lui fait +30 % (combinaison Jugement ardent), et soigne le Protecteur d'autant.",
+  "hint": "Châtiment a une portée de 4 cases : approchez-vous de deux cases, puis frappez deux fois.",
+  "map": 4,
+  "fighters": [
+    {
+      "team": 1,
+      "class": 3,
+      "name": "Protecteur",
+      "x": 2,
+      "y": 7,
+      "hp": 60
+    },
+    {
+      "team": 2,
+      "class": 2,
+      "name": "Archer",
+      "x": 8,
+      "y": 7,
+      "marks": [
+        "brule"
+      ],
+      "hp": 24
+    }
+  ],
+  "solution": [
+    {
+      "fighter": 0,
+      "move": [
+        [
+          3,
+          7
+        ],
+        [
+          4,
+          7
+        ]
+      ]
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    },
+    {
+      "fighter": 0,
+      "cast": 0,
+      "x": 8,
+      "y": 7
+    }
+  ]
+}

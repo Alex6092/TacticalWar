@@ -50,6 +50,11 @@ void ClientConfig::load()
 		if (talent.is_string())
 			talentChoice.push_back(talent.get<std::string>());
 	}
+	for (const nlohmann::json & puzzleId : json.value("puzzles", nlohmann::json::array()))
+	{
+		if (puzzleId.is_string())
+			solvedPuzzles.insert(puzzleId.get<std::string>());
+	}
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -77,6 +82,8 @@ void ClientConfig::save() const
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;
+	if (!solvedPuzzles.empty())
+		json["puzzles"] = solvedPuzzles;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -166,6 +173,11 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 			training = trainingStart = true;
 			trainingMap = std::atoi(argv[++i]);
 		}
+		else if (arg == "--training-duo-control")
+		{
+			training = trainingStart = true;
+			trainingDuoControl = true;
+		}
 		else if (arg == "--training-1v1")
 		{
 			training = trainingStart = true;
@@ -180,6 +192,18 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenTalents = std::atoi(argv[++i]);
 		}
+		else if (arg == "--puzzles")
+		{
+			puzzleList = true;
+		}
+		else if (arg == "--puzzle" && hasValue)
+		{
+			puzzle = std::atoi(argv[++i]);
+		}
+		else if (arg == "--puzzle-demo")
+		{
+			puzzleDemo = true;
+		}
 		else if (arg == "--tutorial")
 		{
 			tutorial = true;
@@ -192,6 +216,22 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--class-screen-ban" && hasValue)
 		{
 			classScreenBan = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-solo")
+		{
+			classScreenSolo = true;
+		}
+		else if (arg == "--class-screen-alone" && hasValue)
+		{
+			classScreenAlone = std::atoi(argv[++i]);
+		}
+		else if (arg == "--admin-tab" && hasValue)
+		{
+			adminTab = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-mate" && hasValue)
+		{
+			classScreenMate = std::atoi(argv[++i]);
 		}
 		else if (arg == "--class-screen-forbidden" && hasValue)
 		{

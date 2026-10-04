@@ -217,8 +217,8 @@ TEST_CASE("Turn order follows initiative and alternates teams")
 	CHECK(arena.state().round == 1);
 	CHECK(arena.active() == order[0]);
 
-	// Fin de tour au minuteur.
-	arena.now += 41000;
+	// Fin de tour au minuteur (durée du tour, puis réserve de temps).
+	arena.now += (gameData().rules.turnSeconds + gameData().rules.timeBankSeconds) * 1000 + 1000;
 	arena.engine->tick(arena.now);
 	CHECK(arena.active() == order[1]);
 	REQUIRE(arena.engine->endTurn(order[1], arena.now).ok);
@@ -740,6 +740,79 @@ TEST_CASE("Emotes are broadcast as events and rate limited per fighter")
 	CHECK(mirror.fighters.size() == before.fighters.size());
 }
 
+TEST_CASE("A long turn eats into the fighter's time bank, and an empty bank ends the turn on time")
+{
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } });
+	const std::int64_t turnMs = gameData().rules.turnSeconds * 1000;
+	const std::int64_t bankMs = gameData().rules.timeBankSeconds * 1000;
+	REQUIRE(bankMs > 10000);
+	arena.playUntilTurnOf(0);
+	CHECK(arena.fighter(0).timeBankMs == bankMs);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
+
+	// Tour fini 10 s après la durée normale : 10 s de moins dans la réserve.
+	arena.now += turnMs + 10000;
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	CHECK(arena.fighter(0).timeBankMs == bankMs - 10000);
+
+	// Un tour plus court que la durée normale ne touche pas à la réserve.
+	arena.playUntilTurnOf(0);
+	arena.now += 5000;
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	CHECK(arena.fighter(0).timeBankMs == bankMs - 10000);
+
+	// Réserve épuisée : le tour s'arrête à son échéance, et la réserve reste vide.
+	arena.playUntilTurnOf(0);
+	std::int64_t deadline = arena.state().deadlineMs;
+	CHECK(deadline - arena.now == turnMs + bankMs - 10000);
+	arena.now = deadline;
+	arena.engine->tick(arena.now);
+	CHECK(arena.active() != 0);
+	CHECK(arena.fighter(0).timeBankMs == 0);
+	arena.playUntilTurnOf(0);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs);
+
+	// Les clients lisent la réserve dans l'état complet.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(0, arena.now));
+	CHECK(mirror.findFighter(0)->timeBankMs == 0);
+	CHECK(mirror.findFighter(1)->timeBankMs == arena.fighter(1).timeBankMs);
+}
+
+TEST_CASE("A fighter piloted by its teammate keeps a full turn while its player is away")
+{
+	Arena arena({ { ARCHER, { 2, 2 } }, { GUERRIER, { 3, 2 } } }, { { MAGE, { 2, 8 } } });
+	const int turnMs = gameData().rules.turnSeconds * 1000;
+	const int shortMs = gameData().rules.disconnectedTurnSeconds * 1000;
+
+	// Joueur du Guerrier absent : tour raccourci...
+	arena.engine->setConnected(1, false, arena.now);
+	arena.playUntilTurnOf(1);
+	CHECK(arena.state().deadlineMs - arena.now == shortMs);
+
+	// ... sauf si son coéquipier le pilote : tour complet (avec sa réserve), rendu aussi pendant le tour en cours.
+	const int bankMs = gameData().rules.timeBankSeconds * 1000;
+	arena.engine->setPiloted(1, true, arena.now);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
+	CHECK(arena.fighter(1).piloted);
+	REQUIRE(arena.engine->endTurn(1, arena.now).ok);
+	arena.playUntilTurnOf(1);
+	CHECK(arena.state().deadlineMs - arena.now == turnMs + bankMs);
+
+	// Le miroir des clients suit l'état piloté (instantané et événement).
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, arena.engine->snapshot(0, arena.now));
+	CHECK(mirror.findFighter(1)->piloted);
+	arena.engine->flushEvents();
+	arena.engine->setPiloted(1, false, arena.now);
+	nlohmann::json batch = arena.engine->flushEvents();
+	for (const nlohmann::json & event : batch["ev"])
+		BattleMirror::applyEvent(mirror, event);
+	CHECK_FALSE(mirror.findFighter(1)->piloted);
+}
+
 TEST_CASE("Battle records credit damage, shields, casts and knockouts to the right fighter")
 {
 	Arena arena({ { ARCHER, { 2, 2 } }, { PROTECTEUR, { 3, 2 } } }, { { MAGE, { 2, 7 } } });
@@ -1119,6 +1192,47 @@ TEST_CASE("Fireball marks burned enemies only and the frost glyph freezes until 
 	// Toujours gelé après son tour : le Guerrier peut en profiter.
 	REQUIRE(frost.engine->endTurn(2, frost.now).ok);
 	CHECK(frost.fighter(2).hasState("gele"));
+}
+
+TEST_CASE("Combos between two classes list the marking and finishing spells, both ways")
+{
+	auto has = [](const std::vector<std::string> & list, const std::string & name) {
+		return std::find(list.begin(), list.end(), name) != list.end();
+	};
+
+	// Mage et Guerrier : Brise-glace, la marque venant aussi du glyphe.
+	std::vector<ComboLink> links = combosBetween(gameData(), MAGE, GUERRIER);
+	REQUIRE(links.size() == 1);
+	CHECK(links[0].name == "Brise-glace");
+	CHECK(links[0].setterClass == MAGE);
+	CHECK(links[0].finisherClass == GUERRIER);
+	CHECK(links[0].percent == 40);
+	CHECK(has(links[0].setters, "Glyphe de givre"));
+	CHECK(has(links[0].setters, "Prison de glace"));
+	CHECK(has(links[0].finishers, "Taillade"));
+	CHECK(has(links[0].finishers, "Charge"));
+	// L'ordre des classes ne change pas le résultat.
+	CHECK(combosBetween(gameData(), GUERRIER, MAGE).size() == 1);
+
+	// Les 4 combinaisons du jeu, chacune entre deux classes différentes.
+	std::set<std::string> names;
+	const int classes[4] = { MAGE, ARCHER, PROTECTEUR, GUERRIER };
+	for (int i = 0; i < 4; i++)
+	{
+		CHECK(combosBetween(gameData(), classes[i], classes[i]).empty());
+		for (int j = i + 1; j < 4; j++)
+		{
+			for (const ComboLink & link : combosBetween(gameData(), classes[i], classes[j]))
+			{
+				CHECK(link.setterClass != link.finisherClass);
+				CHECK_FALSE(link.setters.empty());
+				CHECK_FALSE(link.finishers.empty());
+				names.insert(link.name);
+			}
+		}
+	}
+	CHECK(names == std::set<std::string>{ "Brise-glace", "Cible immobile", "Dans le mille", "Jugement ardent" });
+	CHECK(combosBetween(gameData(), MAGE, 99).empty());
 }
 
 TEST_CASE("Each combo uses a mark set by a spell of another class")

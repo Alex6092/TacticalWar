@@ -82,7 +82,15 @@ namespace tw
 		// Aperçu du sort visé sur "cell" (recalculé quand la case, le sort ou l'état changent).
 		void updateAimPreview(const battle::Fighter & me, const battle::Cell & cell);
 		void drawAimPreview(sf::RenderWindow * window);
+		// Le joueur peut agir maintenant (son tour, animations terminées, serveur à jour).
 		bool isInteractive() const;
+		// C'est le tour du joueur (état de référence et état affiché) : il peut déjà choisir un sort
+		// pendant une animation ; viser et agir attendent isInteractive().
+		bool isMyTurn() const;
+		// Combattants que le joueur fait agir : le sien, et celui de son coéquipier absent qu'il pilote.
+		bool controls(int fighterId) const;
+		// Combattant joué en ce moment : le combattant actif s'il est contrôlé par le joueur, sinon le sien.
+		int actor() const;
 		bool isMouseOverHud() const;
 		void selectSpell(int slot);
 		// Action de jeu du joueur (une seule à la fois, en attendant la réponse du serveur).
@@ -91,8 +99,10 @@ namespace tw
 		virtual void sendToServer(const std::string & op, const nlohmann::json & body);
 		// Émote prédéfinie, et signal pour son équipe sur une case (Alt+clic ou clic molette).
 		void sendEmote(int emoteId);
-		void sendPing(const battle::Cell & cell);
-		void showPing(int fighterId, const battle::Cell & cell);
+		// Types de signal : 0 ici, 1 attaquez, 2 repli, 3 danger.
+		void sendPing(const battle::Cell & cell, int kind = 0);
+		void showPing(int fighterId, const battle::Cell & cell, int kind = 0);
+		void drawPingMarkers(sf::RenderWindow * window);
 		void drawBubbles(sf::RenderWindow * window);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
 		void playSound(const std::string & path);
@@ -147,6 +157,16 @@ namespace tw
 			float age = 0;
 		};
 		std::vector<SpeechBubble> bubbles;
+		// Repères des signaux reçus (icône et mot au-dessus de la case), et case de la roue ouverte.
+		struct PingMarker
+		{
+			battle::Cell cell;
+			int kind = 0;
+			float age = 0;
+		};
+		std::vector<PingMarker> pingMarkers;
+		sf::Texture pingTextures[4];
+		battle::Cell pingCell = { -1, -1 };
 		float emoteCooldown = 0;
 		float pingCooldown = 0;
 		std::vector<battle::TargetPreview> aimPreviews;
