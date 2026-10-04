@@ -653,6 +653,30 @@ TEST_CASE("Spell preview reports shields, periodic effects, pushes, collisions a
 	CHECK(arena.fighter(2).hp == arena.fighter(2).maxHp);
 }
 
+TEST_CASE("Spell preview ignores shields already in place, even in a client mirror")
+{
+	Arena arena({ { ARCHER, { 2, 2 } } }, { { GUERRIER, { 2, 8 } } });
+	arena.playUntilTurnOf(0);
+
+	// Le Guerrier a déjà un bouclier ; le miroir d'un client ne connaît pas le compteur d'identifiants.
+	BattleState mirror = arena.state();
+	ActiveEffect shield;
+	shield.uid = 40;
+	shield.type = EffectType::SHIELD;
+	shield.value = 30;
+	shield.remainingTurns = 2;
+	shield.positive = true;
+	mirror.findFighter(1)->effects.push_back(shield);
+	mirror.findFighter(1)->shield = 30;
+	mirror.nextUid = 1;
+
+	std::vector<TargetPreview> previews = previewSpell(mirror, arena.map, gameData(), 0, arena.slotOf(0, "tir_precis"), { 2, 8 });
+	REQUIRE(previews.size() == 1);
+	CHECK(previews[0].maxAbsorbed > 0);
+	CHECK(previews[0].minShield == 0);
+	CHECK(previews[0].maxShield == 0);
+}
+
 TEST_CASE("Spell preview includes collision damage when a push is blocked")
 {
 	BattleMap map = openMap();
