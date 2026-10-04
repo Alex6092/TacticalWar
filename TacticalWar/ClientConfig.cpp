@@ -221,6 +221,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenSolo = true;
 		}
+		else if (arg == "--admin-tab" && hasValue)
+		{
+			adminTab = std::atoi(argv[++i]);
+		}
 		else if (arg == "--class-screen-mate" && hasValue)
 		{
 			classScreenMate = std::atoi(argv[++i]);

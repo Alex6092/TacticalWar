@@ -99,13 +99,19 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	form->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
 	group->add(form);
 
-	form->add(createLabel(L"Nom"), "nameLabel");
+	// Les boutons Enregistrer, Démarrer et Supprimer restent en bas du formulaire, toujours visibles.
+	settings = tgui::ScrollablePanel::create();
+	settings->getRenderer()->setBackgroundColor(sf::Color::Transparent);
+	settings->setHorizontalScrollbarPolicy(tgui::Scrollbar::Policy::Never);
+	form->add(settings);
+
+	settings->add(createLabel(L"Nom"), "nameLabel");
 	name = tgui::EditBox::create();
 	name->setInheritedFont(font);
 	name->setTextSize(TEXT_SIZE);
-	form->add(name);
+	settings->add(name);
 
-	form->add(createLabel(L"Format"), "formatLabel");
+	settings->add(createLabel(L"Format"), "formatLabel");
 	format = tgui::ComboBox::create();
 	format->setInheritedFont(font);
 	format->setTextSize(TEXT_SIZE);
@@ -114,11 +120,11 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	format->addItem(L"Suisse", "SWISS");
 	format->setSelectedItemById("POOLS_THEN_BRACKET");
 	format->connect("ItemSelected", [this]() { refreshFormatOptions(); });
-	form->add(format);
+	settings->add(format);
 
-	poolCountLabel = createLabel(L"Nombre de poules");
+	poolCountLabel = createLabel(L"Poules");
 	poolCount = createNumberBox("2");
-	qualifiersLabel = createLabel(L"Qualifiés par poule");
+	qualifiersLabel = createLabel(L"Qualifiés/poule");
 	qualifiers = createNumberBox("2");
 	thirdPlace = tgui::CheckBox::create(L"Petite finale");
 	thirdPlace->setInheritedFont(font);
@@ -169,9 +175,9 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
 		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps })
-		form->add(widget);
+		settings->add(widget);
 
-	form->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
+	settings->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
 	teamList = tgui::ListView::create();
 	teamList->setInheritedFont(font);
 	teamList->setTextSize(TEXT_SIZE);
@@ -179,7 +185,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	teamList->addColumn(L"Équipe", 220);
 	teamList->addColumn(L"Tête de série", 110);
 	teamList->getRenderer()->setBackgroundColor(sf::Color(255, 255, 255, 220));
-	form->add(teamList);
+	settings->add(teamList);
 
 	saveButton = createButton(L"Enregistrer");
 	saveButton->getRenderer()->setBackgroundColor(sf::Color(90, 182, 96, 220));
@@ -340,72 +346,37 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	newButton->setSize(380, 32);
 
 	float formTop = top + listHeight + 50;
+	float formHeight = height - formTop - margin;
 	form->setPosition(margin, formTop);
-	form->setSize(380, height - formTop - margin);
+	form->setSize(380, formHeight);
 
-	float x = 10;
+	// Réglages au-dessus des boutons. S'ils ne tiennent pas avec une liste d'équipes lisible, la zone
+	// défile (molette ou barre) et les champs laissent la place à la barre.
+	const float minTeamList = 80;
+	float buttonsTop = formHeight - 46;
+	float viewHeight = buttonsTop - 8;
+	settings->setPosition(0, 0);
+	settings->setSize(378, viewHeight);
 	float w = 360;
-	float half = (w - 10) / 2;
-	float y = 8;
-	// Nom et format : libellé à gauche du champ.
-	form->get<tgui::Label>("nameLabel")->setPosition(x, y + 4);
-	name->setPosition(x + 80, y);
-	name->setSize(w - 80, 26);
-	y += 34;
-	form->get<tgui::Label>("formatLabel")->setPosition(x, y + 4);
-	format->setPosition(x + 80, y);
-	format->setSize(w - 80, 26);
-	y += 38;
+	float teamListTop = layoutSettings(w);
+	if (teamListTop + minTeamList + 8 > viewHeight)
+	{
+		w -= settings->getScrollbarWidth();
+		teamListTop = layoutSettings(w);
+	}
+	float teamListHeight = std::max(minTeamList, viewHeight - teamListTop - 8);
+	teamList->setPosition(10, teamListTop);
+	teamList->setSize(w, teamListHeight);
+	// Colonne des noms à la largeur de la liste (barre verticale comprise) : pas de barre horizontale.
+	teamList->setColumnWidth(0, w - teamList->getColumnWidth(1) - 22);
+	settings->setContentSize({ 10 + w, teamListTop + teamListHeight + 8 });
 
-	poolCountLabel->setPosition(x, y);
-	poolCount->setPosition(x, y + 18);
-	poolCount->setSize(half, 26);
-	qualifiersLabel->setPosition(x + half + 10, y);
-	qualifiers->setPosition(x + half + 10, y + 18);
-	qualifiers->setSize(half, 26);
-	swissRoundsLabel->setPosition(x, y);
-	swissRounds->setPosition(x, y + 18);
-	swissRounds->setSize(half, 26);
-	topCutLabel->setPosition(x + half + 10, y);
-	topCut->setPosition(x + half + 10, y + 18);
-	topCut->setSize(half, 26);
-	y += 52;
-	thirdPlace->setPosition(x, y);
-	thirdPlace->setSize(18, 18);
-	grandFinalReset->setPosition(x, y);
-	grandFinalReset->setSize(18, 18);
-	y += 30;
-	// Mode des combats sur une seule ligne : Combats [KO | Zone à tenir]   Points [5]
-	modeLabel->setPosition(x, y + 4);
-	mode->setPosition(x + 95, y);
-	mode->setSize(140, 26);
-	zonePointsLabel->setPosition(x + 252, y + 4);
-	zonePoints->setPosition(x + 318, y);
-	zonePoints->setSize(42, 26);
-	y += 34;
-	talentsLabel->setPosition(x, y + 4);
-	maxTalents->setPosition(x + 318, y);
-	maxTalents->setSize(42, 26);
-	y += 34;
-	bansLabel->setPosition(x, y + 4);
-	bans->setPosition(x + 160, y);
-	bans->setSize(w - 160, 26);
-	y += 34;
-	mapsLabel->setPosition(x, y + 4);
-	maps->setPosition(x + 160, y);
-	maps->setSize(w - 160, 26);
-	y += 34;
-
-	form->get<tgui::Label>("teamsLabel")->setPosition(x, y);
-	teamList->setPosition(x, y + 20);
-	float buttonsTop = form->getSize().y - 46;
-	teamList->setSize(w, std::max(80.f, buttonsTop - y - 30));
-	float third = (w - 20) / 3;
-	saveButton->setPosition(x, buttonsTop);
+	float third = (360 - 20) / 3;
+	saveButton->setPosition(10, buttonsTop);
 	saveButton->setSize(third, 34);
-	startButton->setPosition(x + third + 10, buttonsTop);
+	startButton->setPosition(10 + third + 10, buttonsTop);
 	startButton->setSize(third, 34);
-	deleteButton->setPosition(x + 2 * (third + 10), buttonsTop);
+	deleteButton->setPosition(10 + 2 * (third + 10), buttonsTop);
 	deleteButton->setSize(third, 34);
 
 	float right = margin + 380 + margin;
@@ -435,6 +406,76 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 		webButtons[i]->setPosition(right + rightWidth - (3 - i) * webWidth - (2 - i) * 10, height - margin - 26);
 		webButtons[i]->setSize(webWidth, 26);
 	}
+}
+
+// Champs du formulaire, de largeur w, dans la zone défilante. Renvoie le haut de la liste des équipes.
+float TournamentAdminPanel::layoutSettings(float w)
+{
+	float x = 10;
+	float half = (w - 10) / 2;
+	float y = 8;
+	// Nom et format : libellé à gauche du champ.
+	settings->get<tgui::Label>("nameLabel")->setPosition(x, y + 4);
+	name->setPosition(x + 80, y);
+	name->setSize(w - 80, 26);
+	y += 34;
+	settings->get<tgui::Label>("formatLabel")->setPosition(x, y + 4);
+	format->setPosition(x + 80, y);
+	format->setSize(w - 80, 26);
+	y += 38;
+
+	// Deux champs côte à côte, libellé au-dessus : sur deux lignes s'il est plus large que le champ.
+	float labelHeight = 18;
+	for (const tgui::Label::Ptr & label : { poolCountLabel, qualifiersLabel, swissRoundsLabel, topCutLabel })
+	{
+		label->setMaximumTextWidth(half);
+		if (label->isVisible())
+			labelHeight = std::max(labelHeight, label->getSize().y);
+	}
+	float fieldTop = y + labelHeight;
+	poolCountLabel->setPosition(x, y);
+	poolCount->setPosition(x, fieldTop);
+	poolCount->setSize(half, 26);
+	qualifiersLabel->setPosition(x + half + 10, y);
+	qualifiers->setPosition(x + half + 10, fieldTop);
+	qualifiers->setSize(half, 26);
+	swissRoundsLabel->setPosition(x, y);
+	swissRounds->setPosition(x, fieldTop);
+	swissRounds->setSize(half, 26);
+	topCutLabel->setPosition(x + half + 10, y);
+	topCut->setPosition(x + half + 10, fieldTop);
+	topCut->setSize(half, 26);
+	y = fieldTop + 34;
+	thirdPlace->setPosition(x, y);
+	thirdPlace->setSize(18, 18);
+	grandFinalReset->setPosition(x, y);
+	grandFinalReset->setSize(18, 18);
+	y += 30;
+	// Mode des combats sur une seule ligne : Combats [KO | Zone à tenir]   Points [5]
+	modeLabel->setPosition(x, y + 4);
+	mode->setPosition(x + 95, y);
+	mode->setSize(140, 26);
+	zonePointsLabel->setPosition(x + 252, y + 4);
+	zonePoints->setPosition(x + 318, y);
+	zonePoints->setSize(42, 26);
+	y += 34;
+	talentsLabel->setPosition(x, y + 4);
+	maxTalents->setPosition(x + 318, y);
+	maxTalents->setSize(42, 26);
+	y += 34;
+	bansLabel->setPosition(x, y + 4);
+	bans->setPosition(x + 160, y);
+	bans->setSize(w - 160, 26);
+	y += 34;
+	mapsLabel->setPosition(x, y + 4);
+	maps->setPosition(x + 160, y);
+	maps->setSize(w - 160, 26);
+	y += 34;
+
+	tgui::Label::Ptr teamsLabel = settings->get<tgui::Label>("teamsLabel");
+	teamsLabel->setMaximumTextWidth(w);
+	teamsLabel->setPosition(x, y);
+	return y + teamsLabel->getSize().y + 4;
 }
 
 void TournamentAdminPanel::send(const std::string & op, const nlohmann::json & body)

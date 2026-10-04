@@ -31,6 +31,7 @@ private:
 	void refreshForm();
 	void refreshMatches();
 	void refreshFormatOptions();
+	float layoutSettings(float width);
 	nlohmann::json readSettings() const;
 	std::vector<int> selectedTeamIds() const;
 	void save();
@@ -46,6 +47,8 @@ private:
 	tgui::Button::Ptr newButton;
 
 	tgui::Panel::Ptr form;
+	// Réglages et équipes inscrites : zone qui défile si la fenêtre est trop basse.
+	tgui::ScrollablePanel::Ptr settings;
 	tgui::EditBox::Ptr name;
 	tgui::ComboBox::Ptr format;
 	tgui::Label::Ptr poolCountLabel;

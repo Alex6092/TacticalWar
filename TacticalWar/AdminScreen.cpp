@@ -1,5 +1,6 @@
 ﻿#include "AdminScreen.h"
 #include "LinkToServer.h"
+#include "ClientConfig.h"
 #include <Match.h>
 #include "MatchView.h"
 #include "ScreenManager.h"
@@ -155,7 +156,10 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	tabs->add(L"Combats", false);
 	tabs->connect("TabSelected", [this](const sf::String & tab) { showTab(tab); });
 	gui->add(tabs);
-	if (!tabs->select(currentTab))
+	int startTab = ClientConfig::get().adminTab;
+	if (startTab >= 0 && startTab < 4)
+		tabs->select(startTab);
+	else if (!tabs->select(currentTab))
 		tabs->select(2);
 
 	LinkToServer::getInstance()->addListener(this);
@@ -184,8 +188,15 @@ AdminScreen::~AdminScreen()
 
 void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 {
-	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
-	subtitle.setPosition(window->getSize().x / 2 - subtitle.getLocalBounds().width / 2, 10 + 128 + 10);
+	// Fenêtre basse (portable en 1280x720 ou 1366x768) : titre réduit, pour laisser la place aux panneaux.
+	bool compact = window->getSize().y < 900;
+	float titleTop = compact ? 4.f : 10.f;
+	float titleSize = compact ? 76.f : 128.f;
+	title.setCharacterSize((unsigned int)titleSize);
+	subtitle.setCharacterSize(compact ? 24 : 32);
+	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, titleTop);
+	subtitle.setPosition(window->getSize().x / 2 - subtitle.getLocalBounds().width / 2, titleTop + titleSize + 10);
+	float tabsTop = compact ? 130.f : 200.f;
 	matchPanelTitle->setPosition(window->getSize().x / 2.0 - m_matchListpanel->getSize().x / 2.0, 270);
 	m_matchListpanel->setPosition(window->getSize().x / 2.0 - m_matchListpanel->getSize().x / 2.0, 300);
 	m_matchListCreate->setPosition(window->getSize().x / 2.0 + 700 - m_matchListCreate->getSize().x / 2.0, 300);
@@ -201,10 +212,10 @@ void AdminScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	team2Choice->setPosition(window->getSize().x / 2.0 + 350 - team2Choice->getSize().x / 2.0, 425);
 	matchEnd->setPosition(window->getSize().x / 2.0 - 750 - matchCreate->getSize().x / 2.0, 270);
 
-	tabs->setPosition(window->getSize().x / 2.0 - tabs->getSize().x / 2.0, 200);
-	teamsPanel->layout(window->getSize(), 250);
-	tournamentPanel->layout(window->getSize(), 250);
-	livePanel->layout(window->getSize(), 250);
+	tabs->setPosition(window->getSize().x / 2.0 - tabs->getSize().x / 2.0, tabsTop);
+	teamsPanel->layout(window->getSize(), tabsTop + 50);
+	tournamentPanel->layout(window->getSize(), tabsTop + 50);
+	livePanel->layout(window->getSize(), tabsTop + 50);
 
 	sf::Event event;
 	while (window->pollEvent(event))

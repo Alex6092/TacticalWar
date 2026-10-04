@@ -75,6 +75,9 @@ public:
 	int classScreenMate = 0;
 	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
 	bool classScreenSolo = false;
+	// Onglet ouvert à la connexion admin (--admin-tab N : 0 Matchs, 1 Équipes, 2 Tournoi, 3 Combats),
+	// pour les captures. -1 : le dernier onglet ouvert.
+	int adminTab = -1;
 	int trainingTalents = 0;
 
 	static ClientConfig & get();
