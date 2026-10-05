@@ -92,6 +92,10 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `CM` | C → S | admin | Créer un match : nom;equipe1;equipe2 |
 | `CO` | S → C | admin | Match créé |
 | `CN` | S → C | admin | Une équipe est déjà occupée |
+| `FL` | C ↔ S | admin | Matchs amicaux (hors tournoi). C-&gt;S : FL{} ; S-&gt;C : FL{matches:[{id, name, teamA:{id, name}, teamB, map, status: planned\|playing\|finished\|cancelled, winner, session}], maps:[{id, name}]} |
+| `FC` | C → S | admin | Créer un match amical : FC{name, teamA, teamB, map (0 : au hasard)} |
+| `FX` | C → S | admin | Annuler un match amical prévu ou en cours : FX{id} |
+| `FR` | S → C | admin | Réponse à FC ou FX : FR{ok, message} |
 | `CF` | S → C | admin | Même équipe deux fois |
 
 ## Choix de classe

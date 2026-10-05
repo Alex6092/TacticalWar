@@ -96,6 +96,10 @@ namespace tw
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },
 			{ "CO", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Match créé" },
 			{ "CN", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Une équipe est déjà occupée" },
+			{ "FL", Direction::BOTH, Role::ADMIN, "Matchs amicaux (hors tournoi). C->S : FL{} ; S->C : FL{matches:[{id, name, teamA:{id, name}, teamB, map, status: planned|playing|finished|cancelled, winner, session}], maps:[{id, name}]}" },
+			{ "FC", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match amical : FC{name, teamA, teamB, map (0 : au hasard)}" },
+			{ "FX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Annuler un match amical prévu ou en cours : FX{id}" },
+			{ "FR", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Réponse à FC ou FX : FR{ok, message}" },
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe

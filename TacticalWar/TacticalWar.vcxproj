@@ -175,6 +175,7 @@ exit /b 0</Command>
     <ClCompile Include="BattleFx.cpp" />
     <ClCompile Include="ReplaysPanel.cpp" />
     <ClCompile Include="LiveSessionsPanel.cpp" />
+    <ClCompile Include="MatchesAdminPanel.cpp" />
     <ClCompile Include="TournamentAdminPanel.cpp" />
     <ClCompile Include="ClientGameData.cpp" />
     <ClCompile Include="BattleColorator.cpp" />
@@ -187,7 +188,6 @@ exit /b 0</Command>
     <ClCompile Include="LinkToServer.cpp" />
     <ClCompile Include="LoginScreen.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MatchView.cpp" />
     <ClCompile Include="MusicManager.cpp" />
     <ClCompile Include="PictureCharacterView.cpp" />
     <ClCompile Include="PlayerStatusView.cpp" />
@@ -254,6 +254,7 @@ exit /b 0</Command>
     <ClInclude Include="BattleFx.h" />
     <ClInclude Include="ReplaysPanel.h" />
     <ClInclude Include="LiveSessionsPanel.h" />
+    <ClInclude Include="MatchesAdminPanel.h" />
     <ClInclude Include="TournamentAdminPanel.h" />
     <ClInclude Include="ClientGameData.h" />
     <ClInclude Include="BattleColorator.h" />
@@ -265,7 +266,6 @@ exit /b 0</Command>
     <ClInclude Include="ClassSelectionScreen.h" />
     <ClInclude Include="LinkToServer.h" />
     <ClInclude Include="LoginScreen.h" />
-    <ClInclude Include="MatchView.h" />
     <ClInclude Include="MusicManager.h" />
     <ClInclude Include="PictureCharacterView.h" />
     <ClInclude Include="PlayerStatusView.h" />

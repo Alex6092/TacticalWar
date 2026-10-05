@@ -1,7 +1,6 @@
 #include "WaitMatchScreen.h"
 #include "LinkToServer.h"
 #include <Match.h>
-#include "MatchView.h"
 #include "PlayerStatusView.h"
 #include "ScreenManager.h"
 #include "ClassSelectionScreen.h"

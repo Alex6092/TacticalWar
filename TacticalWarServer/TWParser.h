@@ -76,6 +76,26 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 
 	int isTeamAvailableForMatchCreation(int teamId);
 
+	// Matchs amicaux (hors tournoi) : onglet Matchs de l'admin (FL, FC, FX) et ancien message CM.
+	struct FriendlyMatch
+	{
+		int id = 0;
+		std::string name;
+		int teamA = 0;
+		int teamB = 0;
+		int mapId = 0;
+		tw::Match * match = NULL;
+		bool cancelled = false;
+	};
+	std::vector<FriendlyMatch> friendlyMatches;
+	int nextFriendlyId = 1;
+	// Crée le match et sa session (choix des classes envoyé aux joueurs connectés). mapId 0 : au
+	// hasard. NULL avec un message d'erreur en français si c'est impossible.
+	tw::Match * createFriendlyMatch(const std::string & name, int teamA, int teamB, int mapId, std::string & error);
+	nlohmann::json friendlyListJson();
+	void handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void notifyFriendlyMatches(ClientState * only = NULL);
+
 
 
 
