@@ -1,4 +1,5 @@
 ﻿#include "SpellPicker.h"
+#include "UiScale.h"
 
 #include <algorithm>
 #include <string>
@@ -79,12 +80,12 @@ void SpellPicker::setClass(const battle::ClassDef * newClass, const std::vector<
 			icons[i]->getRenderer()->setTexture(texture);
 		labels[i]->setText(spellText(spell));
 
-		// Rangée d'icônes : la description s'affiche au survol.
-		if (layout == Layout::ROW)
+		// Rangée d'icônes : la description s'affiche au survol (en liste aussi, avec un texte agrandi).
+		if (layout == Layout::ROW || ui::scale() > 1.f)
 		{
 			tgui::Label::Ptr tip = tgui::Label::create(spellText(spell));
 			tip->setInheritedFont(font);
-			tip->setTextSize(13);
+			tip->setTextSize(ui::text(13));
 			tip->setMaximumTextWidth(360);
 			tip->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 235));
 			tip->getRenderer()->setTextColor(sf::Color::White);
@@ -155,7 +156,7 @@ void SpellPicker::arrange()
 			icons[i]->setPosition(0, i * rowHeight);
 			labels[i]->setPosition(icon + 12, i * rowHeight);
 			labels[i]->setSize(std::max(100.f, width - icon - 12), rowHeight - 4);
-			labels[i]->setTextSize(rowHeight < 70 ? 12 : 14);
+			labels[i]->setTextSize(ui::text(rowHeight < 70 ? 12 : 14));
 		}
 		counter->setPosition(0, rows() * rowHeight + 2);
 		counter->setSize(width, 26);

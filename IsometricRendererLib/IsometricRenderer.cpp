@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "IsometricRenderer.h"
+
+#include <Palette.h>
 #include <CharacterView.h>
 #include <SpellView.h>
 #include <TileRegistry.h>
@@ -256,6 +258,27 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 		diamond.setOutlineThickness(-1.5f);
 		window->draw(diamond);
 	}
+	if (colorator != NULL && colorator->isHatched(cell))
+	{
+		// Rayures parallèles au bord haut-gauche du losange, d'un bord à l'autre.
+		sf::Vector2f left(centerX - 60.f, centerY);
+		sf::Vector2f top(centerX, centerY - 30.f);
+		sf::Vector2f right(centerX + 60.f, centerY);
+		sf::Vector2f bottom(centerX, centerY + 30.f);
+		sf::VertexArray stripes(sf::Quads);
+		const sf::Color stripe(25, 20, 20, 170);
+		for (int i = 1; i <= 7; i++)
+		{
+			float t = i / 8.f;
+			sf::Vector2f from = left + (bottom - left) * t;
+			sf::Vector2f to = top + (right - top) * t;
+			stripes.append(sf::Vertex(from, stripe));
+			stripes.append(sf::Vertex(to, stripe));
+			stripes.append(sf::Vertex(to + sf::Vector2f(0.f, 2.5f), stripe));
+			stripes.append(sf::Vertex(from + sf::Vector2f(0.f, 2.5f), stripe));
+		}
+		window->draw(stripes);
+	}
 }
 
 void IsometricRenderer::render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime)
@@ -495,8 +518,12 @@ void IsometricRenderer::drawCharacterSprite(BaseCharacterModel * m, sf::RenderTa
 	float scaleY = 0.4;
 	s->setScale(flipped ? -scaleX : scaleX, mirrored ? -scaleY : scaleY);
 
-	sf::Color toApplyarmure1 = sf::Color(0, 166, 214);
-	sf::Color toApplyarmure2 = sf::Color(120, 17, 17);
+	int team1[3];
+	int team2[3];
+	palette::teamArmor(1, team1);
+	palette::teamArmor(2, team2);
+	sf::Color toApplyarmure1 = sf::Color(team1[0], team1[1], team1[2]);
+	sf::Color toApplyarmure2 = sf::Color(team2[0], team2[1], team2[2]);
 	sf::Color toApplycheveux = sf::Color(108, 70, 35);
 	sf::Color toApplypeau = sf::Color(202, 165, 150);
 
@@ -533,7 +560,7 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	sf::Sprite * paBg = v.getPaBackground();
 	sf::Sprite * pmBg = v.getPmBackground();
 
-	pseudoTxt->setCharacterSize(16);
+	pseudoTxt->setCharacterSize((unsigned int)std::lround(16 * textScale));
 	paTxt->setCharacterSize(12);
 	pmTxt->setCharacterSize(12);
 	lifeTxt->setCharacterSize(12);
@@ -585,6 +612,20 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	}
 
 	window->draw(*pseudoTxt);
+
+	// Mode daltonien : symbole d'équipe devant le nom (rond pour l'équipe 1, triangle pour l'équipe 2).
+	if (palette::colorblind() && (m->getColorNumber() == 1 || m->getColorNumber() == 2))
+	{
+		palette::Rgba color = palette::color(palette::teamRole(m->getColorNumber(), palette::Role::TEAM1_ARMOR));
+		sf::CircleShape symbol(6.f, m->getColorNumber() == 1 ? 24 : 3);
+		symbol.setOrigin(6.f, 6.f);
+		symbol.setFillColor(sf::Color(color.r, color.g, color.b));
+		symbol.setOutlineColor(sf::Color::Black);
+		symbol.setOutlineThickness(1.5f);
+		sf::FloatRect name = pseudoTxt->getGlobalBounds();
+		symbol.setPosition(name.left - 11.f, name.top + name.height / 2.f);
+		window->draw(symbol);
+	}
 }
 
 

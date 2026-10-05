@@ -6,7 +6,10 @@ Usage (depuis la racine du dépôt) :
 
 - ping.ogg  : signal d'un coéquipier, deux notes brèves ;
 - emote.ogg : bulle d'émote, petit « pop » ;
-- combo.ogg : combinaison déclenchée, arpège montant et brillant.
+- combo.ogg : combinaison déclenchée, arpège montant et brillant ;
+- tick.ogg  : alerte des 5 dernières secondes du tour, clic sec de métronome.
+
+    py tools/fx/make_ui_sounds.py tick    (un seul son : les autres fichiers ne sont pas réécrits)
 """
 import os
 import sys
@@ -46,12 +49,14 @@ def save(name, samples, peak_db=-6.0):
 
 
 def main():
+    wanted = set(sys.argv[1:])
+    sounds = {}
     gap = np.zeros(int(RATE * 0.02))
     ping = np.concatenate([tone(880, 0.12, 22) * 0.9, gap, tone(1318.5, 0.28, 12)])
-    save('ping', ping)
+    sounds['ping'] = (ping, -6.0)
 
     pop = sweep(520, 980, 0.09, 30)
-    save('emote', np.concatenate([pop, np.zeros(int(RATE * 0.03))]), peak_db=-9.0)
+    sounds['emote'] = (np.concatenate([pop, np.zeros(int(RATE * 0.03))]), -9.0)
 
     # Arpège do-mi-sol-do, chaque note tenue sous la suivante, avec une octave pour le brillant.
     notes = [523.25, 659.25, 783.99, 1046.5]
@@ -60,7 +65,15 @@ def main():
     for index, frequency in enumerate(notes):
         note = tone(frequency, 0.45, 9) + 0.35 * tone(frequency * 2, 0.45, 14)
         combo[index * step:index * step + len(note)] += note
-    save('combo', combo, peak_db=-7.0)
+    sounds['combo'] = (combo, -7.0)
+
+    # Clic bref : une note aiguë très amortie et son harmonique, sans traîne.
+    tick = tone(1500, 0.07, 75) + 0.4 * tone(3000, 0.07, 110)
+    sounds['tick'] = (np.concatenate([tick, np.zeros(int(RATE * 0.02))]), -10.0)
+
+    for name, (samples, peak_db) in sounds.items():
+        if not wanted or name in wanted:
+            save(name, samples, peak_db)
 
 
 if __name__ == '__main__':

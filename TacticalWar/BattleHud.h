@@ -8,6 +8,7 @@
 #include <BattleState.h>
 #include <GameData.h>
 #include "HelpPanel.h"
+#include "OptionsPanel.h"
 
 // Interface du combat : ordre de jeu, barre de sorts, minuteur, journal, détails.
 class BattleHud
@@ -23,6 +24,8 @@ public:
 	std::function<void()> onReplay;
 	// Émote choisie dans la liste (identifiant de BattleEngineLib/Emotes.h).
 	std::function<void(int)> onEmote;
+	// Options changées depuis l'aide (couleurs des personnages, taille du texte du bandeau).
+	std::function<void()> onOptionsChanged;
 
 	void layout(const sf::Vector2u & windowSize);
 	void update(float deltatime);
@@ -68,6 +71,8 @@ public:
 	void showTimers(bool shown) { timersShown = shown; }
 	// Texte du bouton de l'écran de fin (ex : compte à rebours du mode réalisateur).
 	void setEndButtonText(const sf::String & text);
+	// Alerte de fin de tour : seconde en cours (5 à 1) des 5 dernières de son propre tour, 0 sinon.
+	int turnAlertSecond() const { return alertSecond; }
 
 	static sf::String fighterSummary(const tw::battle::BattleState & state, const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
 
@@ -76,6 +81,7 @@ private:
 	{
 		tgui::Panel::Ptr panel;
 		tgui::Label::Ptr name;
+		tgui::Label::Ptr symbol;	// Mode daltonien : rond (équipe 1) ou triangle (équipe 2)
 		tgui::Label::Ptr life;
 		tgui::Label::Ptr shield;	// "+20" en bleu après les PV
 		tgui::Label::Ptr stats;		// PA et PM
@@ -98,6 +104,9 @@ private:
 	};
 
 	tgui::Label::Ptr createLabel(unsigned int size, const sf::Color & color);
+	// Taille du texte des surfaces de lecture (options), et changements d'options.
+	void applyTextScale();
+	void optionsChanged();
 	// Barre de sorts : les sorts emportés par le combattant.
 	void setSpellBar(const tw::battle::GameData & data, const tw::battle::Fighter & fighter);
 
@@ -121,6 +130,10 @@ private:
 	tgui::Button::Ptr emoteButton;
 	tgui::Button::Ptr helpButton;
 	std::unique_ptr<tw::HelpPanel> helpPanel;
+	std::unique_ptr<tw::OptionsPanel> optionsPanel;
+	// Police des symboles d'équipe (OpenSans n'a ni rond ni triangle).
+	sf::Font symbolFont;
+	int alertSecond = 0;
 	tgui::Panel::Ptr emotePanel;
 	tgui::Button::Ptr readyButton;
 	bool readyState;

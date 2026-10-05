@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <Palette.h>
 
 namespace
 {
@@ -44,6 +45,12 @@ void ClientConfig::load()
 	serverPort = json.value("serverPort", serverPort);
 	soundInFile = json.value("sound", soundInFile);
 	soundEnabled = soundInFile;
+	colorblind = json.value("colorblind", colorblind);
+	textScale = json.value("textScale", textScale);
+	if (textScale != 115 && textScale != 130)
+		textScale = 100;
+	turnAlert = json.value("turnAlert", turnAlert);
+	tw::palette::setColorblind(colorblind);
 
 	for (const nlohmann::json & talent : json.value("talents", nlohmann::json::array()))
 	{
@@ -84,7 +91,10 @@ void ClientConfig::save() const
 	nlohmann::json json = {
 		{ "serverHost", serverHost },
 		{ "serverPort", serverPort },
-		{ "sound", soundInFile }
+		{ "sound", soundInFile },
+		{ "colorblind", colorblind },
+		{ "textScale", textScale },
+		{ "turnAlert", turnAlert }
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;
@@ -270,6 +280,14 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			training = trainingStart = true;
 			trainingAutoplay = true;
+		}
+		else if (arg == "--options")
+		{
+			openOptions = true;
+		}
+		else if (arg == "--help-panel")
+		{
+			openHelp = true;
 		}
 		else if (arg == "--spectator")
 		{

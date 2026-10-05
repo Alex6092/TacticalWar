@@ -62,6 +62,7 @@ namespace tw
 		void drawProp(const Prop & prop);
 		void drawPropBar(const Prop & prop);
 		std::vector<Prop> props;
+		float textScale = 1.f;
 		void drawCharacter(BaseCharacterModel * model, float deltatime);
 		void drawCharacterSprite(BaseCharacterModel * model, sf::RenderTarget & target, bool mirrored);
 		void drawCharacterOverlay(BaseCharacterModel * model);
@@ -99,6 +100,8 @@ namespace tw
 
 		// Objets posés sur les cases, pour les prochains rendus.
 		void setProps(const std::vector<Prop> & props) { this->props = props; }
+		// Taille du texte du bandeau des personnages (options d'accessibilité), 1 : normale.
+		void setTextScale(float scale) { textScale = scale; }
 
 		// Centre (repère du monde) et facteur de zoom de la vue (> 1 : vue plus large).
 		void setCamera(const sf::Vector2f & center, float zoom)

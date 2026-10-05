@@ -1,4 +1,9 @@
 ﻿#include "BattleHud.h"
+
+#include <Palette.h>
+
+#include "ClientConfig.h"
+#include "UiScale.h"
 #include "LinkToServer.h"
 
 #include <BattleRules.h>
@@ -6,11 +11,30 @@
 #include <algorithm>
 
 using namespace tw::battle;
+namespace palette = tw::palette;
+namespace ui = tw::ui;
 
 namespace
 {
-	const float ROW_HEIGHT = 74;
-	const float TIMELINE_WIDTH = 380;
+	// Lignes de la frise, à la taille de texte normale (elles grandissent avec le texte).
+	const float BASE_ROW_HEIGHT = 74;
+	const float BASE_TIMELINE_WIDTH = 380;
+
+	float rowHeight()
+	{
+		return BASE_ROW_HEIGHT * tw::ui::scale();
+	}
+
+	float timelineWidth()
+	{
+		return BASE_TIMELINE_WIDTH + (tw::ui::scale() - 1.f) * 300.f;
+	}
+
+	sf::Color paletteColor(tw::palette::Role role)
+	{
+		tw::palette::Rgba color = tw::palette::color(role);
+		return sf::Color(color.r, color.g, color.b, color.a);
+	}
 	const float SPELL_SIZE = 72;
 
 	std::map<std::string, tgui::Texture> textureCache;
@@ -236,8 +260,15 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	emoteButton->connect("pressed", [this]() { emotePanel->setVisible(!emotePanel->isVisible()); });
 	gui->add(emoteButton);
 
-	// Aide des commandes, à droite des émotes (aussi par la touche H).
+	// Aide des commandes, à droite des émotes (aussi par la touche H), et ses options.
+	symbolFont.loadFromFile("./assets/font/arial.ttf");
 	helpPanel.reset(new tw::HelpPanel(gui, font));
+	optionsPanel.reset(new tw::OptionsPanel(gui, font));
+	helpPanel->onOptions = [this]() {
+		helpPanel->hide();
+		optionsPanel->show();
+	};
+	optionsPanel->onChange = [this]() { optionsChanged(); };
 	helpButton = tgui::Button::create(L"?");
 	helpButton->setInheritedFont(font);
 	helpButton->setTextSize(22);
@@ -325,6 +356,36 @@ void BattleHud::setEndButtonText(const sf::String & text)
 		endButton->setText(text);
 }
 
+void BattleHud::applyTextScale()
+{
+	logBox->setTextSize(ui::text(14));
+	hintLabel->setTextSize(ui::text(16));
+	detailsLabel->setTextSize(ui::text(15));
+	detailsLabel->setMaximumTextWidth(310 * ui::scale());
+	for (SpellButton & button : spells)
+		button.tooltip->setTextSize(ui::text(15));
+	for (TimelineRow & row : rows)
+	{
+		row.name->setTextSize(ui::text(15));
+		row.symbol->setTextSize(ui::text(16));
+		row.life->setTextSize(ui::text(14));
+		row.shield->setTextSize(ui::text(14));
+		row.stats->setTextSize(ui::text(14));
+		row.details->setTextSize(ui::text(13));
+		row.life->setPosition(10, 4 + 22 * ui::scale());
+		row.details->setPosition(10, 4 + 42 * ui::scale());
+	}
+}
+
+void BattleHud::optionsChanged()
+{
+	applyTextScale();
+	helpPanel->rebuild();
+	layout(windowSize);
+	if (onOptionsChanged)
+		onOptionsChanged();
+}
+
 tgui::Label::Ptr BattleHud::createLabel(unsigned int size, const sf::Color & color)
 {
 	tgui::Label::Ptr label = tgui::Label::create();
@@ -340,14 +401,14 @@ void BattleHud::layout(const sf::Vector2u & size)
 	float width = (float)size.x;
 	float height = (float)size.y;
 
-	timelinePanel->setPosition(width - TIMELINE_WIDTH - 15, 15);
+	timelinePanel->setPosition(width - timelineWidth() - 15, 15);
 	timerLabel->setPosition((width - timerLabel->getSize().x) / 2, 12);
 	zoneLabel->setPosition((width - zoneLabel->getSize().x) / 2, spectator ? 76.f : 46.f);
 	messageLabel->setPosition((width - messageLabel->getSize().x) / 2, height / 2 - 140);
 	hintLabel->setPosition((width - hintLabel->getSize().x) / 2, height - SPELL_SIZE - 60);
 
 	detailsPanel->setPosition(15, 15);
-	detailsPanel->setSize(330, detailsLabel->getSize().y + 16);
+	detailsPanel->setSize(std::max(330.f, detailsLabel->getSize().x + 20), detailsLabel->getSize().y + 16);
 
 	logBox->setPosition(15, height - 215);
 	logBox->setSize(440, 200);
@@ -372,6 +433,7 @@ void BattleHud::layout(const sf::Vector2u & size)
 	helpButton->setPosition(barX + 4 * (SPELL_SIZE + 10) + 310, barY + 8);
 	helpButton->setSize(SPELL_SIZE - 16, SPELL_SIZE - 16);
 	helpPanel->layout(windowSize);
+	optionsPanel->layout(windowSize);
 	emotePanel->setSize(220, EMOTE_COUNT * 38.f + 8);
 	emotePanel->setPosition(barX + 4 * (SPELL_SIZE + 10) + 300 - 220, barY - (EMOTE_COUNT * 38.f + 8) - 8);
 	readyButton->setSize(220, 60);
@@ -522,6 +584,10 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		TimelineRow row;
 		row.panel = tgui::Panel::create();
 		row.name = createLabel(15, sf::Color::White);
+		row.symbol = createLabel(16, sf::Color::White);
+		row.symbol->setInheritedFont(symbolFont);
+		row.symbol->getRenderer()->setTextOutlineColor(sf::Color::Black);
+		row.symbol->getRenderer()->setTextOutlineThickness(1);
 		row.life = createLabel(14, sf::Color(255, 120, 120));
 		row.shield = createLabel(14, sf::Color(130, 195, 255));
 		row.stats = createLabel(14, sf::Color(225, 225, 225));
@@ -535,12 +601,15 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		row.barLife->getRenderer()->setBackgroundColor(sf::Color(225, 70, 60));
 		row.barShield = tgui::Panel::create();
 		row.barShield->getRenderer()->setBackgroundColor(sf::Color(110, 180, 255));
-		for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ row.name, row.life, row.shield, row.stats, row.details,
+		for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ row.name, row.symbol, row.life, row.shield, row.stats, row.details,
 			row.barBack, row.barLife, row.barShield })
 			row.panel->add(widget);
 		timelinePanel->add(row.panel);
 		rows.push_back(row);
+		applyTextScale();
 	}
+	const float ROW_HEIGHT = rowHeight();
+	const float TIMELINE_WIDTH = timelineWidth();
 
 	int active = state.activeFighterId();
 	for (std::size_t i = 0; i < order.size(); i++)
@@ -553,9 +622,16 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		row.panel->setPosition(6, 6 + i * (ROW_HEIGHT + 6));
 		row.panel->setSize(TIMELINE_WIDTH - 12, ROW_HEIGHT);
 
-		sf::Color teamColor = fighter->team == 1 ? sf::Color(40, 80, 170, 210) : sf::Color(160, 40, 40, 210);
+		sf::Color teamColor = paletteColor(palette::teamRole(fighter->team, palette::Role::TEAM1_PANEL));
 		if (!fighter->alive)
 			teamColor = sf::Color(60, 60, 60, 200);
+		// Mode daltonien : la forme du symbole double la couleur de l'équipe.
+		row.symbol->setVisible(palette::colorblind());
+		row.symbol->setText(fighter->team == 1 ? L"\u25CF" : L"\u25B2");
+		// Le rond de la police est plus petit que le triangle : il est agrandi pour leur donner le même poids.
+		row.symbol->setTextSize(ui::text(fighter->team == 1 ? 22 : 16));
+		row.symbol->getRenderer()->setTextColor(paletteColor(palette::teamRole(fighter->team, palette::Role::TEAM1_ARMOR)));
+		row.symbol->setPosition(TIMELINE_WIDTH - 12 - row.symbol->getSize().x - 8, 4);
 		row.panel->getRenderer()->setBackgroundColor(teamColor);
 		row.panel->getRenderer()->setBorders(fighter->id == active ? 3 : 0);
 		row.panel->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
@@ -575,10 +651,11 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		bool shielded = fighter->alive && fighter->shield > 0;
 		row.shield->setVisible(shielded);
 		row.shield->setText(shielded ? L"+" + num(fighter->shield) : sf::String());
-		row.shield->setPosition(10 + row.life->getSize().x + 4, 26);
+		float lifeY = row.life->getPosition().y;
+		row.shield->setPosition(10 + row.life->getSize().x + 4, lifeY);
 		row.stats->setVisible(fighter->alive);
 		row.stats->setText(L"PA " + num(fighter->ap) + L"  PM " + num(fighter->mp));
-		row.stats->setPosition((shielded ? row.shield->getPosition().x + row.shield->getSize().x : 10 + row.life->getSize().x) + 14, 26);
+		row.stats->setPosition((shielded ? row.shield->getPosition().x + row.shield->getSize().x : 10 + row.life->getSize().x) + 14, lifeY);
 
 		// Barre de vie au bas de la ligne : le bouclier prolonge les PV (il est consommé en premier).
 		// PV + bouclier au-delà du maximum : la barre représente ce total, pour que le bouclier reste visible.
@@ -628,12 +705,32 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		const Fighter * current = state.findFighter(active);
 		timer = L"Tour " + num(state.round) + L" - " + (current != nullptr ? fromServerText(current->name) : sf::String()) + seconds;
 	}
-	if (timerLabel->getText() != timer)
+	// Alerte de fin de tour (options) : pendant les 5 dernières secondes de son tour (temps normal,
+	// puis réserve), le minuteur clignote et grossit ; l'écran joue un tic à chaque seconde.
+	alertSecond = 0;
+	if (timersShown && myTurn && state.phase == BattlePhase::FIGHT && ClientConfig::get().turnAlert)
+	{
+		const Fighter * current = state.findFighter(active);
+		float bank = current != nullptr ? current->timeBankMs / 1000.f : 0.f;
+		float segment = inReserve ? remainingSeconds : remainingSeconds - bank;
+		if (segment > 0 && segment <= 5)
+			alertSecond = (int)std::ceil(segment);
+	}
+	sf::Color timerColor = inReserve ? sf::Color(255, 170, 60) : myTurn ? sf::Color(120, 255, 120) : sf::Color::White;
+	unsigned int timerSize = 24;
+	if (alertSecond > 0)
+	{
+		bool flash = std::fmod(remainingSeconds, 1.f) > 0.5f;
+		timerColor = flash ? sf::Color(255, 80, 60) : sf::Color::White;
+		timerSize = flash ? 30 : 26;
+	}
+	if (timerLabel->getText() != timer || timerLabel->getTextSize() != timerSize)
 	{
 		timerLabel->setText(timer);
-		timerLabel->getRenderer()->setTextColor(inReserve ? sf::Color(255, 170, 60) : myTurn ? sf::Color(120, 255, 120) : sf::Color::White);
+		timerLabel->setTextSize(timerSize);
 		layout(windowSize);
 	}
+	timerLabel->getRenderer()->setTextColor(timerColor);
 
 	// Zone à tenir : score de chaque équipe (la sienne d'abord pour un joueur).
 	sf::String zoneText;
@@ -644,7 +741,8 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 		if (me != nullptr)
 			zoneText = L"Zone à tenir : votre équipe " + num(state.zone.scores[me->team]) + L" - " + num(state.zone.scores[3 - me->team]) + L" adversaires" + goal;
 		else
-			zoneText = L"Zone à tenir : bleus " + num(state.zone.scores[1]) + L" - " + num(state.zone.scores[2]) + L" rouges" + goal;
+			zoneText = L"Zone à tenir : " + fromServerText(palette::teamPlayers(1)) + L" " + num(state.zone.scores[1]) + L" - "
+				+ num(state.zone.scores[2]) + L" " + fromServerText(palette::teamPlayers(2)) + goal;
 	}
 	zoneLabel->setVisible(!zoneText.isEmpty());
 	if (zoneLabel->getText() != zoneText)
@@ -763,7 +861,7 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 		for (std::size_t i = 0; i < rows.size(); i++)
 		{
 			const EndRow & row = rows[i];
-			sf::Color color = row.mvp ? sf::Color(255, 215, 70) : row.team == 1 ? sf::Color(150, 200, 255) : sf::Color(255, 160, 150);
+			sf::Color color = row.mvp ? sf::Color(255, 215, 70) : paletteColor(palette::teamRole(row.team, palette::Role::TEAM1_TEXT));
 			const sf::String cells[5] = { row.name + (row.mvp ? sf::String(L"   MVP") : sf::String()), num(row.dealt), num(row.healed), num(row.shielded), num(row.kills) };
 			for (int column = 0; column < 5; column++)
 			{
@@ -826,21 +924,27 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	emotePanel->setVisible(false);
 	helpButton->setVisible(false);
 	helpPanel->hide();
+	optionsPanel->hide();
 	for (SpellButton & button : spells)
 		button.icon->setVisible(false);
 }
 
 void BattleHud::toggleHelp()
 {
-	helpPanel->toggle();
+	// Options ouvertes depuis l'aide : H les ferme d'abord.
+	if (optionsPanel->isVisible())
+		optionsPanel->hide();
+	else
+		helpPanel->toggle();
 }
 
 void BattleHud::hideHelp()
 {
 	helpPanel->hide();
+	optionsPanel->hide();
 }
 
 bool BattleHud::isHelpOpen() const
 {
-	return helpPanel->isVisible();
+	return helpPanel->isVisible() || optionsPanel->isVisible();
 }

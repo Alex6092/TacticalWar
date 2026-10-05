@@ -107,6 +107,15 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 		tutorialRequested = true;
 	});
 
+	// Options : sons, mode daltonien, taille du texte, alerte de fin de tour.
+	tgui::Button::Ptr optionsButton = tgui::Button::create();
+	optionsButton->setInheritedFont(font);
+	optionsButton->setTextSize(formFontSize);
+	optionsButton->setText(L"Options");
+	optionsButton->setSize(login->getSize().x, optionsButton->getSize().y);
+	optionsButton->getRenderer()->setBackgroundColor(sf::Color(170, 190, 255, 180));
+	optionsButton->connect("pressed", [this]() { optionsPanel->show(); });
+
 	errorMsg = tgui::Label::create();
 	errorMsg->setInheritedFont(font);
 	errorMsg->setTextSize(formFontSize);
@@ -122,8 +131,13 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	gui->add(button, "connectBtn");
 	gui->add(trainingButton, "trainingBtn");
 	gui->add(tutorialButton, "tutorialBtn");
+	gui->add(optionsButton, "optionsBtn");
 
 	gui->add(errorMsg, "errorMsg");
+
+	optionsPanel.reset(new tw::OptionsPanel(gui, font));
+	if (ClientConfig::get().openOptions)
+		optionsPanel->show();
 
 	LinkToServer::getInstance()->addListener(this);
 
@@ -158,6 +172,7 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	tgui::Button::Ptr btn = gui->get<tgui::Button>("connectBtn");
 	tgui::Button::Ptr trainingBtn = gui->get<tgui::Button>("trainingBtn");
 	tgui::Button::Ptr tutorialBtn = gui->get<tgui::Button>("tutorialBtn");
+	tgui::Button::Ptr optionsBtn = gui->get<tgui::Button>("optionsBtn");
 
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
 
@@ -176,9 +191,11 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	btn->setPosition(formX, formY + 6 * formElementHeight + 30);
 	trainingBtn->setPosition(formX, formY + 7 * formElementHeight + 50);
 	tutorialBtn->setPosition(formX, formY + 8 * formElementHeight + 60);
+	optionsBtn->setPosition(formX, formY + 9 * formElementHeight + 70);
+	optionsPanel->layout(window->getSize());
 
 	errorMsg->setSize(window->getSize().x, 40);
-	errorMsg->setPosition(0, formY + 9 * formElementHeight + 70);
+	errorMsg->setPosition(0, formY + 10 * formElementHeight + 80);
 	
 
 	sf::Event event;

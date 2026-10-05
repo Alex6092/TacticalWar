@@ -117,6 +117,10 @@ namespace tw
 		// Orbe bonus : nom et effet, pour le journal et l'aide au survol.
 		sf::String orbLabel(const std::string & kind) const;
 		void playSound(const std::string & path);
+	// Options changées : couleurs des personnages (palette, apparence) et taille du bandeau.
+	void applyOptions();
+	// Dernière seconde annoncée par l'alerte de fin de tour (un tic par seconde).
+	int lastAlertSecond = 0;
 		sf::String fighterName(int fighterId) const;
 		void showEnd();
 		// Quitte l'écran de combat (l'objet est détruit).

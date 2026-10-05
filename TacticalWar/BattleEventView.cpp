@@ -5,6 +5,7 @@
 #include <BattleMirror.h>
 #include <BattleRules.h>
 #include <Emotes.h>
+#include <Palette.h>
 
 #include "BattleScreen.h"
 #include "ClientGameData.h"
@@ -13,6 +14,15 @@
 
 using namespace tw;
 using nlohmann::json;
+
+namespace
+{
+	sf::Color paletteColor(palette::Role role)
+	{
+		palette::Rgba color = palette::color(role);
+		return sf::Color(color.r, color.g, color.b, color.a);
+	}
+}
 
 namespace
 {
@@ -300,7 +310,7 @@ float BattleEventView::onDamage(const Context & c)
 	}
 	if (lost > 0)
 	{
-		screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"-" + num(lost), sf::Color(255, 80, 70));
+		screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"-" + num(lost), paletteColor(palette::Role::DAMAGE_TEXT));
 		screen.hud->log(screen.fighterName(c.fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
 	}
 	MusicManager::getInstance()->playTakeDamageSound();
@@ -323,7 +333,7 @@ float BattleEventView::onHeal(const Context & c)
 		screen.fx.playEvent("lifesteal", c.fighterId);
 	// Case à effet (source) : son nom accompagne les soins.
 	sf::String terrain = kind == "terrain" ? screen.terrainName(c.fighter->position) : sf::String();
-	screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"+" + num(amount), sf::Color(110, 255, 110));
+	screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"+" + num(amount), paletteColor(palette::Role::HEAL_TEXT));
 	screen.hud->log(screen.fighterName(c.fighterId) + L" récupère " + num(amount) + L" PV" + (terrain.isEmpty() ? sf::String() : L" (" + terrain + L")"),
 		sf::Color(130, 255, 130));
 	return c.fast ? 0 : 0.3f;

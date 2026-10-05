@@ -12,6 +12,7 @@
 #include <EnvironmentManager.h>
 #include <EnvironmentMap.h>
 #include <Message.h>
+#include <Palette.h>
 
 #include "AdminScreen.h"
 #include "AppearanceChoice.h"
@@ -24,6 +25,7 @@
 #include "MusicManager.h"
 #include "ScreenManager.h"
 #include "SpectatorModeScreen.h"
+#include "UiScale.h"
 #include "WaitMatchScreen.h"
 
 using namespace tw;
@@ -130,6 +132,10 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
+	hud->onOptionsChanged = [this]() { applyOptions(); };
+	renderer->setTextScale(ui::scale());
+	if (ClientConfig::get().openHelp)
+		hud->toggleHelp();
 
 	if (MusicManager::getInstance()->isEnabled())
 		sounds.resize(8);
@@ -250,6 +256,11 @@ void BattleScreen::update(float deltatime)
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
 		hud->refresh(shown, ClientGameData::get().data(), actor(), hoveredFighter, selectedSpell, isMyTurn(), remaining);
 		refreshPreview();
+		// Alerte de fin de tour : un tic à chaque seconde des 5 dernières.
+		int alertSecond = hud->turnAlertSecond();
+		if (alertSecond > 0 && alertSecond != lastAlertSecond)
+			playSound("./assets/sound/ui/tick.ogg");
+		lastAlertSecond = alertSecond;
 	}
 
 	if (closeRequested)
@@ -990,7 +1001,8 @@ void BattleScreen::refreshPreview()
 		{
 			bool enemy = me == NULL || hovered->team != me->team;
 			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
-			hud->setHint(fromServerText(hovered->name) + (enemy ? L" : déplacement possible au prochain tour en orange" : L" : déplacement possible au prochain tour en turquoise"));
+			hud->setHint(fromServerText(hovered->name) + L" : déplacement possible au prochain tour en "
+				+ fromServerText(palette::name(enemy ? palette::Role::THREAT_ENEMY : palette::Role::THREAT_ALLY)));
 		}
 		else if (!terrain.isEmpty())
 		{
@@ -1053,12 +1065,13 @@ void BattleScreen::refreshPreview()
 		else if (castable.empty())
 		{
 			aimPreviews.clear();
-			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en bleu clair (Échap pour annuler)");
+			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en " + fromServerText(palette::name(palette::Role::RANGE))
+				+ L" (Échap pour annuler)");
 		}
 		else
 		{
 			aimPreviews.clear();
-			hud->setHint(name + L" : cliquez sur une case bleue (Échap pour annuler)");
+			hud->setHint(name + L" : cliquez sur une case " + fromServerText(palette::name(palette::Role::CASTABLE)) + L" (Échap pour annuler)");
 		}
 		return;
 	}
@@ -1340,9 +1353,27 @@ void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String
 	floatingTexts.push_back(floating);
 }
 
+void BattleScreen::applyOptions()
+{
+	renderer->setTextScale(ui::scale());
+	for (const battle::Fighter & fighter : shown.fighters)
+	{
+		BaseCharacterModel * view = viewOf(fighter.id);
+		if (view == NULL)
+			continue;
+		int armor[3];
+		int hair[3];
+		appearanceColors(fighter.appearance, fighter.team, armor, hair);
+		view->setAppearanceColors(armor, hair);
+	}
+}
+
 void BattleScreen::playSound(const std::string & path)
 {
-	if (path.empty() || sounds.empty())
+	// Son réactivé dans les options pendant le combat.
+	if (sounds.empty() && MusicManager::getInstance()->isEnabled())
+		sounds.resize(8);
+	if (path.empty() || sounds.empty() || !MusicManager::getInstance()->isEnabled())
 		return;
 
 	auto it = soundBuffers.find(path);

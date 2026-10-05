@@ -13,6 +13,11 @@ public:
 	unsigned short serverPort = 12345;
 	// Musique et sons (désactivables, ex : poste de projection ou PC sans carte son).
 	bool soundEnabled = true;
+	// Accessibilité (écran Options) : couleurs pour daltoniens (Palette.h), taille du texte des
+	// surfaces de lecture en pour cent (100, 115 ou 130), alerte des 5 dernières secondes du tour.
+	bool colorblind = false;
+	int textScale = 100;
+	bool turnAlert = true;
 	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
 	// proposés à nouveau au choix suivant et à l'entraînement.
 	std::map<int, std::vector<int>> spellChoices;
@@ -60,6 +65,9 @@ public:
 	bool trainingDuel = false;
 	bool trainingDuoControl = false;
 	bool trainingAutoplay = false;
+	// Captures : panneau Options ouvert sur l'écran de connexion, aide ouverte au début du combat.
+	bool openOptions = false;
+	bool openHelp = false;
 	bool trainingZone = false;
 	// Entraînement avec bonus sur la carte (--training-bonuses).
 	bool trainingBonuses = false;
@@ -102,6 +110,14 @@ public:
 	bool setServerAddress(const std::string & address);
 
 	void save() const;
+
+	// Son enregistré dans client.json, et son changement (Options) : actif tout de suite.
+	bool soundSaved() const { return soundInFile; }
+	void setSound(bool enabled)
+	{
+		soundInFile = enabled;
+		soundEnabled = enabled;
+	}
 
 private:
 	ClientConfig() {}

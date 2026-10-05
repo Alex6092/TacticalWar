@@ -161,6 +161,7 @@ exit /b 0</Command>
     <ClCompile Include="HelpPanel.cpp" />
     <ClCompile Include="PuzzleScreen.cpp" />
     <ClCompile Include="AppearanceChoice.cpp" />
+    <ClCompile Include="OptionsPanel.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClCompile Include="TutorialScript.cpp" />
     <ClCompile Include="TutorialScreen.cpp" />
@@ -238,6 +239,8 @@ exit /b 0</Command>
     <ClInclude Include="HelpPanel.h" />
     <ClInclude Include="PuzzleScreen.h" />
     <ClInclude Include="AppearanceChoice.h" />
+    <ClInclude Include="OptionsPanel.h" />
+    <ClInclude Include="UiScale.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
     <ClInclude Include="TutorialScript.h" />
     <ClInclude Include="TutorialScreen.h" />
