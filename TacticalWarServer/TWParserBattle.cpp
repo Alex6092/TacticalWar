@@ -242,6 +242,11 @@ void TWParser::startBattle(BattleSession * session)
 	session->getEngine()->flushEvents();
 	startRecording(session);
 
+	// Commentateur du combat (phrases tirées avec le numéro du combat).
+	tw::battle::Commentary * commentary = new tw::battle::Commentary((std::uint32_t)session->getId() * 2654435761u);
+	commentary->setTeamNames(teamName(session->getMatch()->getTeam1()[0]->getTeamNumber()), teamName(session->getMatch()->getTeam2()[0]->getTeamNumber()));
+	commentaries[session->getId()].reset(commentary);
+
 	for (tw::Player * player : session->getParticipants())
 	{
 		ClientState * client = getClientStateFromPlayer(player);
@@ -387,6 +392,9 @@ void TWParser::broadcastBattleEvents(BattleSession * session)
 
 	nlohmann::json batch = engine->flushEvents();
 	recordBatch(session, batch);
+	auto commentary = commentaries.find(session->getId());
+	if (commentary != commentaries.end())
+		addComment(session, commentary->second->onEvents(batch.value("ev", nlohmann::json::array()), engine->getState(), nowMs()));
 	std::string message = encode("BV", batch);
 	for (tw::Player * player : session->getParticipants())
 	{
@@ -404,6 +412,17 @@ void TWParser::broadcastBattleEvents(BattleSession * session)
 
 	if (engine->isOver() && session->getPhase() == BattleSession::Phase::BATTLE)
 		finishBattle(session);
+}
+
+void TWParser::addComment(BattleSession * session, const std::string & text)
+{
+	if (text.empty())
+		return;
+	comments.push_front({ { "text", text }, { "match", session->getMatch()->getMatchName() }, { "session", session->getId() },
+		{ "tournament", session->getTournamentId() }, { "at", nowMs() } });
+	while (comments.size() > 30)
+		comments.pop_back();
+	publicDirty = true;
 }
 
 void TWParser::finishBattle(BattleSession * session)
@@ -691,6 +710,10 @@ void TWParser::tickBattles()
 			trackAbsences(session, now);
 			session->getEngine()->tick(now);
 			broadcastBattleEvents(session);
+			// Phrase gardée pour plus tard (trop rapprochée de la précédente).
+			auto commentary = commentaries.find(session->getId());
+			if (commentary != commentaries.end())
+				addComment(session, commentary->second->poll(now));
 		}
 	}
 
@@ -708,6 +731,7 @@ void TWParser::tickBattles()
 	{
 		if (it->second->getPhase() == BattleSession::Phase::ENDED)
 		{
+			commentaries.erase(it->first);
 			delete it->second;
 			it = sessions.erase(it);
 		}

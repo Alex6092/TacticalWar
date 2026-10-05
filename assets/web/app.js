@@ -342,6 +342,29 @@ function renderLive(tournament) {
   }).join("");
 }
 
+// Commentaire automatique des combats : les dernières phrases, les nouvelles en surbrillance.
+const seenComments = new Set();
+let commentsPrimed = false;
+function renderComments(tournament) {
+  const panel = el("comments-panel");
+  const lines = (state && state.comments ? state.comments : [])
+    .filter((c) => !tournament || !c.tournament || c.tournament === tournament.id)
+    .slice(0, 4);
+  if (!lines.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  el("comments").innerHTML = lines.map((c) => {
+    const key = `${c.session}:${c.at}:${c.text}`;
+    // Au premier affichage de la page, rien n'est mis en surbrillance.
+    const fresh = commentsPrimed && !seenComments.has(key);
+    seenComments.add(key);
+    return `<li class="${fresh ? "fresh" : ""}"><span class="comment-match">${esc(c.match || "")}</span>${esc(c.text)}</li>`;
+  }).join("");
+  commentsPrimed = true;
+}
+
 // Derniers combats terminés : vainqueur et MVP (meilleur bilan du combat).
 function renderRecent(tournament) {
   const panel = el("recent-panel");
@@ -406,6 +429,7 @@ function render() {
   renderHeader(tournament);
   renderBoard(tournament);
   renderLive(tournament);
+  renderComments(tournament);
   renderRecent(tournament);
   renderUpcoming(tournament);
   renderRanking(tournament);

@@ -49,6 +49,7 @@
     <ClCompile Include="PuzzleTests.cpp" />
     <ClCompile Include="BattleEngineTests.cpp" />
     <ClCompile Include="ChallengeTests.cpp" />
+    <ClCompile Include="CommentaryTests.cpp" />
     <ClCompile Include="FxDataTests.cpp" />
     <ClCompile Include="MapTests.cpp" />
     <ClCompile Include="PaletteTests.cpp" />

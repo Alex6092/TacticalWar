@@ -15,6 +15,7 @@
 #include <ReplayStore.h>
 #include <ProfileStore.h>
 #include <Appearances.h>
+#include <Commentary.h>
 #include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -244,6 +245,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	nlohmann::json publicStateJson();
 	// Derniers combats terminés (bilan et MVP), du plus récent au plus ancien.
 	std::deque<nlohmann::json> recentBattles;
+	// Commentateur de chaque combat en cours, et fil des 30 dernières phrases (tous combats, le plus
+	// récent d'abord) pour la vue projetée.
+	std::map<int, std::unique_ptr<tw::battle::Commentary>> commentaries;
+	std::deque<nlohmann::json> comments;
+	void addComment(BattleSession * session, const std::string & text);
 	void publishPublicState(bool force = false);
 
 	// Mode spectateur (TWParserSpectator.cpp) :
