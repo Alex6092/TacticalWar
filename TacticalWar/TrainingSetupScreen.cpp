@@ -89,7 +89,9 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	difficulty = addRow(L"Difficulté");
 	difficulty->addItem(L"Facile (l'IA fait des erreurs)", "easy");
 	difficulty->addItem(L"Normal", "normal");
-	difficulty->setSelectedItemById(settings.easy ? "easy" : "normal");
+	difficulty->addItem(L"Difficile (l'IA prépare ses coups)", "hard");
+	difficulty->setSelectedItemById(settings.difficulty == TrainingSettings::Difficulty::EASY ? "easy"
+		: settings.difficulty == TrainingSettings::Difficulty::HARD ? "hard" : "normal");
 
 	talentCount = addRow(L"Talents de tournoi");
 	talentCount->addItem(L"Aucun", "0");
@@ -258,7 +260,8 @@ void TrainingSetupScreen::save()
 	settings.enemyClasses[0] = selectedId(enemyClasses[0]);
 	settings.enemyClasses[1] = selectedId(enemyClasses[1]);
 	settings.mapId = selectedId(map);
-	settings.easy = difficulty->getSelectedItemId() == "easy";
+	settings.difficulty = difficulty->getSelectedItemId() == "easy" ? TrainingSettings::Difficulty::EASY
+		: difficulty->getSelectedItemId() == "hard" ? TrainingSettings::Difficulty::HARD : TrainingSettings::Difficulty::NORMAL;
 	settings.zone = mode->getSelectedItemId() == "zone";
 	settings.bonuses = bonuses->getSelectedItemId() == "1";
 

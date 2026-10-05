@@ -47,7 +47,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses, int hardTeam)
 {
 	GameData data;
 	std::string error;
@@ -166,8 +166,10 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			}
 
 			BotAction action;
+			BotOptions brain;
+			brain.planner = hardTeam != 0 && engine.getState().findFighter(active)->team == hardTeam;
 			if (actionsThisTurn++ < 12)
-				action = chooseBotAction(engine.getState(), engine.getMap(), data, active, rng);
+				action = chooseBotAction(engine.getState(), engine.getMap(), data, active, rng, brain);
 
 			ActionResult result;
 			if (action.kind == BotAction::Kind::CAST)
@@ -250,6 +252,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::cout << ", zone à tenir (" << zonePoints << " points)";
 	if (bonuses)
 		std::cout << ", bonus sur la carte";
+	if (hardTeam != 0)
+		std::cout << ", équipe " << hardTeam << " en difficulté « Difficile »";
 	std::cout << " ===\n";
 	std::cout << "IA simple (BotBrain) : les écarts importants signalent un déséquilibre,\n"
 		<< "les petits écarts ne disent rien du jeu entre humains.\n";

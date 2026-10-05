@@ -80,6 +80,12 @@ int main(int argc, char** argv)
 		settings.zone = config.trainingZone;
 		settings.bonuses = config.trainingBonuses;
 		settings.talentCount = config.trainingTalents;
+		if (config.trainingDifficulty == "easy")
+			settings.difficulty = tw::TrainingSettings::Difficulty::EASY;
+		else if (config.trainingDifficulty == "normal")
+			settings.difficulty = tw::TrainingSettings::Difficulty::NORMAL;
+		else if (config.trainingDifficulty == "hard")
+			settings.difficulty = tw::TrainingSettings::Difficulty::HARD;
 		settings.talents = config.talentChoice;
 		if (config.trainingStart)
 			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));

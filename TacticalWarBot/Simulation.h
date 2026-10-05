@@ -11,5 +11,6 @@
 // zonePoints > 0 : mode "zone à tenir", gagné au premier à zonePoints points (0 : au KO).
 // talents > 0 : chaque combattant reçoit ce nombre de talents de tournoi, tirés au hasard.
 // bonuses : bonus sur la carte (orbes au centre).
+// hardTeam (1 ou 2) : cette équipe joue en difficulté « Difficile » (0 : aucune), pour la comparer au niveau normal.
 int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath = "./assets/data/gamedata.json",
-	int zonePoints = 0, int talents = 0, bool bonuses = false);
+	int zonePoints = 0, int talents = 0, bool bonuses = false, int hardTeam = 0);

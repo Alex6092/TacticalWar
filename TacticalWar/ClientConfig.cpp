@@ -251,6 +251,11 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			training = trainingStart = true;
 			trainingAutoplay = true;
+		else if (arg == "--training-difficulty" && hasValue)
+		{
+			training = true;
+			trainingDifficulty = argv[++i];
+		}
 		}
 		else if (arg == "--spectator")
 		{

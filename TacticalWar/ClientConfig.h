@@ -63,6 +63,8 @@ public:
 	// (--class-screen N), pour les captures. -1 : désactivé. Bannissement en cours pendant S secondes
 	// (--class-screen-ban S), ou terminé avec la classe interdite (--class-screen-forbidden <id>).
 	int classScreenTalents = -1;
+	// Difficulté de l'entraînement (--training-difficulty easy|normal|hard), vide : celle des réglages.
+	std::string trainingDifficulty;
 	// Tutoriel guidé (--tutorial), à partir d'une étape (--tutorial-step N, de 1 à 9) pour les captures.
 	bool tutorial = false;
 	// Énigmes : la liste (--puzzles), une énigme (--puzzle N, de 1 à 6), jouée par la démonstration

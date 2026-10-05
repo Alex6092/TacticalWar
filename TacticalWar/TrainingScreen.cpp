@@ -67,7 +67,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	autoRng(std::random_device{}())
 {
 	timers = true;
-	botOptions.mistakePercent = settings.easy ? EASY_MISTAKE_PERCENT : 0;
+	botOptions.mistakePercent = settings.difficulty == TrainingSettings::Difficulty::EASY ? EASY_MISTAKE_PERCENT : 0;
+	botOptions.planner = settings.difficulty == TrainingSettings::Difficulty::HARD;
 
 	const battle::GameData & data = ClientGameData::get().data();
 	std::mt19937 rng(std::random_device{}());

@@ -21,6 +21,7 @@ int main(int argc, char ** argv)
 	int zonePoints = 5;
 	int talents = 0;
 	bool bonuses = false;
+	int hardTeam = 0;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string arg = argv[i];
@@ -48,6 +49,10 @@ int main(int argc, char ** argv)
 			zonePoints = std::atoi(argv[++i]);
 		else if (arg == "--bonuses")
 			bonuses = true;
+		else if (arg == "--level" && hasValue)
+			options.hard = std::string(argv[++i]) == "hard";
+		else if (arg == "--hard-team" && hasValue)
+			hardTeam = std::atoi(argv[++i]);
 		else if (arg == "--talents" && hasValue)
 			talents = std::max(0, std::atoi(argv[++i]));
 		else if (arg == "--seed" && hasValue)
@@ -63,12 +68,12 @@ int main(int argc, char ** argv)
 	}
 
 	if (simulate > 0)
-		return runSimulation(simulate, simulationMap, seed, dataPath, zoneMode ? std::max(1, zonePoints) : 0, talents, bonuses);
+		return runSimulation(simulate, simulationMap, seed, dataPath, zoneMode ? std::max(1, zonePoints) : 0, talents, bonuses, hardTeam);
 
 	if (options.login.empty())
 	{
-		std::cerr << "Usage : TacticalWarBot.exe --login <login> --password <mdp> [--server hote:port] [--class <id>] [--delay <ms>] [--verbose]" << std::endl;
-		std::cerr << "        TacticalWarBot.exe --simulate <combats> [--map <id>] [--seed <n>] [--data <gamedata.json>] [--mode zone [--points <n>]] [--talents <n>] [--bonuses]" << std::endl;
+		std::cerr << "Usage : TacticalWarBot.exe --login <login> --password <mdp> [--server hote:port] [--class <id>] [--delay <ms>] [--level hard] [--verbose]" << std::endl;
+		std::cerr << "        TacticalWarBot.exe --simulate <combats> [--map <id>] [--seed <n>] [--data <gamedata.json>] [--mode zone [--points <n>]] [--talents <n>] [--bonuses] [--hard-team 1|2]" << std::endl;
 		return 1;
 	}
 

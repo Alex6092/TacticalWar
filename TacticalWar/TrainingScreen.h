@@ -21,8 +21,10 @@ namespace tw
 		int enemyClasses[2] = { 0, 0 };
 		// Carte (0 : au hasard parmi les cartes du tournoi).
 		int mapId = 0;
-		// Facile : l'IA fait parfois une erreur volontaire.
-		bool easy = true;
+		// Facile : l'IA fait parfois une erreur volontaire ; Difficile : elle prépare ses coups sur une
+		// copie du combat (voir BotOptions::planner).
+		enum class Difficulty { EASY, NORMAL, HARD };
+		Difficulty difficulty = Difficulty::EASY;
 		// Mode "zone à tenir" (premier à ZONE_POINTS points), sinon au KO.
 		bool zone = false;
 		static const int ZONE_POINTS = 5;

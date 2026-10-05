@@ -1764,6 +1764,52 @@ TEST_CASE("Picking up an orb applies its effect")
 }
 
 TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")
+TEST_CASE("The hard AI plans a move then an attack, is deterministic, and retreats when wounded")
+{
+	BotOptions hard;
+	hard.planner = true;
+
+	// Archer affaibli hors de portée : le Guerrier avance puis frappe (Taillade), KO dans le tour.
+	Arena arena({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 6, 5 } } }, openMap(), 1, { { 0, 2, 4, 5 } });
+	arena.playUntilTurnOf(0);
+	BattleState state = arena.state();
+	state.findFighter(1)->hp = 12;
+	BattleEngine engine(gameData(), arena.map, state, 1);
+
+	// Même décision quel que soit l'état du générateur : pas de tirage.
+	std::mt19937 first(1);
+	std::mt19937 second(99);
+	BotAction a = chooseBotAction(engine.getState(), arena.map, gameData(), 0, first, hard);
+	BotAction b = chooseBotAction(engine.getState(), arena.map, gameData(), 0, second, hard);
+	CHECK((a.kind == b.kind));
+	CHECK(a.path == b.path);
+	CHECK(a.slot == b.slot);
+	CHECK((a.kind == BotAction::Kind::MOVE));
+
+	std::mt19937 rng(1);
+	for (int step = 0; step < 6 && engine.getState().findFighter(1)->alive && engine.getState().activeFighterId() == 0; step++)
+	{
+		BotAction action = chooseBotAction(engine.getState(), arena.map, gameData(), 0, rng, hard);
+		if (action.kind == BotAction::Kind::MOVE)
+			REQUIRE(engine.move(0, action.path, 0).ok);
+		else if (action.kind == BotAction::Kind::CAST)
+			REQUIRE(engine.cast(0, action.slot, action.target, 0).ok);
+		else
+			break;
+	}
+	CHECK_FALSE(engine.getState().findFighter(1)->alive);
+
+	// Archer blessé sans PA, Guerrier tout proche : il s'éloigne hors d'atteinte.
+	Arena retreat({ { ARCHER, { 5, 5 } } }, { { GUERRIER, { 8, 5 } } }, openMap(), 1);
+	retreat.playUntilTurnOf(0);
+	BattleState hurt = retreat.state();
+	hurt.findFighter(0)->hp = 15;
+	hurt.findFighter(0)->ap = 0;
+	BotAction away = chooseBotAction(hurt, retreat.map, gameData(), 0, rng, hard);
+	REQUIRE((away.kind == BotAction::Kind::MOVE));
+	CHECK(manhattan(away.path.back(), { 8, 5 }) > manhattan({ 5, 5 }, { 8, 5 }));
+}
+
 {
 	// Vague vers la droite depuis (2, 5) : cases (3, 5), (4, 5) et (5, 5).
 	Arena arena({ { MAGE, { 2, 5 } }, { GUERRIER, { 4, 5 } } }, { { ARCHER, { 3, 5 } }, { PROTECTEUR, { 5, 5 } }, { ARCHER, { 4, 7 } } },

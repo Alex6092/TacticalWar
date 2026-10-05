@@ -335,7 +335,9 @@ void Bot::act(std::int64_t now)
 	nextActionAt = now + options.actionDelayMs;
 	awaiting = true;
 
-	BotAction action = chooseBotAction(state, map, data, active->id, rng);
+	BotOptions brain;
+	brain.planner = options.hard;
+	BotAction action = chooseBotAction(state, map, data, active->id, rng, brain);
 	if (action.kind == BotAction::Kind::CAST)
 	{
 		send("CL" + json({ { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } }).dump());
