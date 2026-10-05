@@ -99,7 +99,7 @@ int Bot::run()
 		return 1;
 	}
 
-	send("HG" + options.login + ";" + options.password);
+	send("HG" + tw::protocol::loginPayload(options.login, options.password));
 
 	char buffer[16 * 1024];
 	while (true)

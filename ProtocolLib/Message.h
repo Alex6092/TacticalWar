@@ -30,5 +30,12 @@ namespace tw
 
 		// Sérialise du JSON en remplaçant les séquences UTF-8 invalides au lieu de lever une exception.
 		std::string dumpJson(const nlohmann::json & value);
+
+		// Connexion HG<login>;<mot de passe>;v<version> : retire le champ de version de "payload" et
+		// retourne la version (0 si absente : client d'avant la version 7, accepté). Le champ n'est lu
+		// qu'en troisième position (deux ';'), pour ne pas confondre un mot de passe avec une version.
+		int takeLoginVersion(std::string & payload);
+		// Contenu de HG envoyé par le client et le bot (identifiants vides : spectateur).
+		std::string loginPayload(const std::string & login, const std::string & password);
 	}
 }

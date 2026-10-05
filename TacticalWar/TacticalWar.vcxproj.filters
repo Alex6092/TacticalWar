@@ -165,10 +165,12 @@
     <ClCompile Include="PuzzleScreen.cpp" />
     <ClCompile Include="AppearanceChoice.cpp" />
     <ClCompile Include="OptionsPanel.cpp" />
+    <ClCompile Include="SystemBrowser.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClInclude Include="PuzzleScreen.h" />
     <ClInclude Include="AppearanceChoice.h" />
     <ClInclude Include="OptionsPanel.h" />
+    <ClInclude Include="SystemBrowser.h" />
     <ClInclude Include="UiScale.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
   </ItemGroup>

@@ -2,6 +2,8 @@
 
 #include "HttpFrontend.h"
 
+#include <Opcodes.h>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -70,8 +72,9 @@ bool HttpFrontend::start(std::string & error)
 		return false;
 	}
 
+	// Version du protocole : affichée par la page de téléchargement du client.
 	d->server.Get("/api/health", [](const httplib::Request &, httplib::Response & res) {
-		res.set_content("{\"ok\":true}", "application/json");
+		res.set_content("{\"ok\":true,\"protocol\":" + std::to_string(tw::protocol::PROTOCOL_VERSION) + "}", "application/json");
 	});
 
 	// État complet. Avec ?since=<version>, attend un changement (long-poll, 20 s maximum).

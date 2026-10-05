@@ -12,6 +12,9 @@
 #include "ClientConfig.h"
 #include "TrainingSetupScreen.h"
 #include "TutorialScreen.h"
+#include "SystemBrowser.h"
+#include <Message.h>
+#include <algorithm>
 
 using namespace tw;
 
@@ -116,10 +119,21 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	optionsButton->getRenderer()->setBackgroundColor(sf::Color(170, 190, 255, 180));
 	optionsButton->connect("pressed", [this]() { optionsPanel->show(); });
 
+	downloadButton = tgui::Button::create(L"Ouvrir la page de téléchargement");
+	downloadButton->setInheritedFont(font);
+	downloadButton->setTextSize(formFontSize);
+	downloadButton->getRenderer()->setBackgroundColor(sf::Color(255, 215, 0, 220));
+	downloadButton->setVisible(false);
+	downloadButton->connect("pressed", [this]() { openInBrowser(downloadUrl); });
+
 	errorMsg = tgui::Label::create();
 	errorMsg->setInheritedFont(font);
 	errorMsg->setTextSize(formFontSize);
 	errorMsg->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Center);
+	// Lisible sur le fond animé : texte clair et contour sombre.
+	errorMsg->getRenderer()->setTextColor(sf::Color(255, 215, 140));
+	errorMsg->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	errorMsg->getRenderer()->setTextOutlineThickness(2);
 	
 	gui->add(loginLabel, "loginLabel");
 	gui->add(login, "loginEdit");
@@ -134,6 +148,7 @@ LoginScreen::LoginScreen(tgui::Gui * gui)
 	gui->add(optionsButton, "optionsBtn");
 
 	gui->add(errorMsg, "errorMsg");
+	gui->add(downloadButton);
 
 	optionsPanel.reset(new tw::OptionsPanel(gui, font));
 	if (ClientConfig::get().openOptions)
@@ -194,8 +209,10 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	optionsBtn->setPosition(formX, formY + 9 * formElementHeight + 70);
 	optionsPanel->layout(window->getSize());
 
-	errorMsg->setSize(window->getSize().x, 40);
+	errorMsg->setSize(window->getSize().x, 60);
 	errorMsg->setPosition(0, formY + 10 * formElementHeight + 80);
+	downloadButton->setSize(std::max(400.f, login->getSize().x), 32);
+	downloadButton->setPosition(window->getSize().x / 2.f - downloadButton->getSize().x / 2.f, formY + 10 * formElementHeight + 128);
 	
 
 	sf::Event event;
@@ -229,7 +246,10 @@ void LoginScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 
 			if (LinkToServer::getInstance()->Connect())
 			{
-				LinkToServer::getInstance()->Send("HG" + login->getText() + ";" + password->getText());
+				std::basic_string<sf::Uint8> loginText = login->getText().toUtf8();
+				std::basic_string<sf::Uint8> passwordText = password->getText().toUtf8();
+				LinkToServer::getInstance()->SendRaw("HG" + tw::protocol::loginPayload(std::string(loginText.begin(), loginText.end()),
+					std::string(passwordText.begin(), passwordText.end())));
 				// The sentence will be treated in onMessageReceived callback.
 			}
 			else
@@ -336,6 +356,22 @@ void LoginScreen::onMessageReceived(std::string msg)
 		gui->removeAllWidgets();
 		ScreenManager::getInstance()->setCurrentScreen(new WaitMatchScreen(gui));
 		delete this;
+	}
+	else if (op == "HV")
+	{
+		// Ce client n'a pas la version du serveur : la connexion est refusée, la bonne version se
+		// télécharge sur la page web du serveur.
+		nlohmann::json version = nlohmann::json::parse(msg.substr(2), nullptr, false);
+		if (version.is_object())
+		{
+			downloadUrl = "http://" + ClientConfig::get().serverHost + ":" + std::to_string(version.value("httpPort", 8080))
+				+ version.value("page", std::string("/telecharger.html"));
+			LinkToServer::getInstance()->Disconnect();
+			messageDuration = 0;
+			errorMsg->setText(L"Ce jeu (version " + std::to_wstring(version.value("client", 0)) + L") ne correspond pas au serveur (version "
+				+ std::to_wstring(version.value("server", 0)) + L").\nTéléchargez la nouvelle version : " + fromServerText(downloadUrl));
+			downloadButton->setVisible(true);
+		}
 	}
 	else if (sentence.substring(0, 2) == "HK")
 	{

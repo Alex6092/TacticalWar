@@ -49,7 +49,8 @@ namespace tw
 			{ "ZQ", Direction::CLIENT_TO_SERVER, Role::ANY, "Keepalive (pong)" },
 
 			// Connexion / changement d'écran
-			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password (vide = spectateur). S->C : entrer en combat sur la carte <id>" },
+			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password;v<version du protocole> (identifiants vides = spectateur ; sans version : ancien client, accepté). S->C : entrer en combat sur la carte <id>" },
+			{ "HV", Direction::SERVER_TO_CLIENT, Role::ANY, "Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client}" },
 			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)}" },
 			{ "HS", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller au mode spectateur" },
 			{ "HW", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à l'attente de match" },

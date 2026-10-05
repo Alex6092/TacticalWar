@@ -195,6 +195,16 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		{
 			std::string payload = toParse.substr(2);
 
+			// Client d'une autre version : il doit être mis à jour (page de téléchargement du serveur).
+			int clientVersion = tw::protocol::takeLoginVersion(payload);
+			if (clientVersion != 0 && clientVersion != tw::protocol::PROTOCOL_VERSION)
+			{
+				std::cout << "Client en version " << clientVersion << " refuse (serveur en version " << tw::protocol::PROTOCOL_VERSION << ")" << std::endl;
+				send(client, tw::protocol::Message::encode("HV", { { "server", tw::protocol::PROTOCOL_VERSION }, { "client", clientVersion },
+					{ "httpPort", config.httpPort }, { "page", "/telecharger.html" } }));
+				return;
+			}
+
 			bool wrongIds = false;
 
 			// Connexion joueur :
