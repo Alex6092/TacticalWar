@@ -500,6 +500,15 @@ void IsometricRenderer::drawCharacterSprite(BaseCharacterModel * m, sf::RenderTa
 	sf::Color toApplycheveux = sf::Color(108, 70, 35);
 	sf::Color toApplypeau = sf::Color(202, 165, 150);
 
+	// Apparence choisie : variante de la couleur d'équipe et couleur des cheveux.
+	if (m->hasAppearanceColors())
+	{
+		const int * armor = m->getArmorColor();
+		const int * hair = m->getHairColor();
+		toApplyarmure1 = toApplyarmure2 = sf::Color(armor[0], armor[1], armor[2]);
+		toApplycheveux = sf::Color(hair[0], hair[1], hair[2]);
+	}
+
 	shader.setUniform("mask", *mask);
 	shader.setUniform("color1", sf::Glsl::Vec4(((m->getColorNumber() == 1) ? toApplyarmure1 : toApplyarmure2)));
 	shader.setUniform("color2", sf::Glsl::Vec4(toApplycheveux));

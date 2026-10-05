@@ -160,6 +160,7 @@ exit /b 0</Command>
   <ItemGroup>
     <ClCompile Include="HelpPanel.cpp" />
     <ClCompile Include="PuzzleScreen.cpp" />
+    <ClCompile Include="AppearanceChoice.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClCompile Include="TutorialScript.cpp" />
     <ClCompile Include="TutorialScreen.cpp" />
@@ -236,6 +237,7 @@ exit /b 0</Command>
   <ItemGroup>
     <ClInclude Include="HelpPanel.h" />
     <ClInclude Include="PuzzleScreen.h" />
+    <ClInclude Include="AppearanceChoice.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
     <ClInclude Include="TutorialScript.h" />
     <ClInclude Include="TutorialScreen.h" />

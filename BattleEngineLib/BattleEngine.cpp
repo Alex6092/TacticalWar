@@ -27,7 +27,7 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const B
 }
 
 int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells,
-	const std::vector<std::string> & talents)
+	const std::vector<std::string> & talents, const std::string & appearance)
 {
 	const ClassDef * classDef = data.findClass(classId);
 	if (classDef == nullptr || (team != 1 && team != 2) || state.phase != BattlePhase::PLACEMENT || state.round != 0)
@@ -53,6 +53,7 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name, co
 	fighter.mp = fighter.baseStats.get(Stat::MP);
 	fighter.position = { -1, -1 };
 	fighter.timeBankMs = (std::int64_t)data.rules.timeBankSeconds * 1000;
+	fighter.appearance = data.findAppearance(appearance) != nullptr ? appearance : std::string();
 
 	for (const SpellDef & spell : classDef->spells)
 		fighter.cooldowns[spell.id] = spell.initialCooldown;
@@ -913,6 +914,7 @@ json BattleEngine::fighterJson(const Fighter & fighter) const
 		{ "name", fighter.name },
 		{ "spells", fighter.spells },
 		{ "talents", fighter.talents },
+		{ "appearance", fighter.appearance },
 		{ "x", fighter.position.x },
 		{ "y", fighter.position.y },
 		{ "hp", fighter.hp },

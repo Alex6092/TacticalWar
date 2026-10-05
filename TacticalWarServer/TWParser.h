@@ -12,6 +12,8 @@
 #include <TeamStore.h>
 #include <TournamentService.h>
 #include <ReplayStore.h>
+#include <ProfileStore.h>
+#include <Appearances.h>
 #include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -38,6 +40,15 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	tw::CredentialSheet credentials;
 	// true si teams.json n'a pas pu être lu : aucune modification n'est alors enregistrée.
 	bool teamStoreReadOnly;
+	// Progression des joueurs (data/profiles.json) : elle débloque les apparences.
+	tw::ProfileStore profiles;
+	tw::battle::PlayerProgress progressOf(const std::string & login) const;
+	// PA : apparences débloquées du joueur, et celles qui viennent de l'être ("fresh").
+	void sendAppearances(ClientState * client, const std::string & login, const std::vector<std::string> & fresh = std::vector<std::string>());
+	// PZ : énigmes réussies, signalées par le client.
+	void handlePuzzles(ClientState * client, tw::Player * player, const std::string & body);
+	// Fin de combat : hauts faits, victoire et MVP de chaque joueur dans son profil.
+	void recordProfiles(BattleSession * session);
 
 	// Tous les joueurs déjà créés (login -> joueur), y compris ceux d'équipes désactivées
 	// ou supprimées, encore référencés par des matchs.

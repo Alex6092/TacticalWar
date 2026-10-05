@@ -14,6 +14,7 @@
 #include <Message.h>
 
 #include "AdminScreen.h"
+#include "AppearanceChoice.h"
 #include "BattleEventView.h"
 #include "ClassSelectionScreen.h"
 #include "ClientConfig.h"
@@ -510,6 +511,16 @@ void BattleScreen::onMessageReceived(std::string msg)
 		if (message.parseJson(error))
 			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
 	}
+	else if (message.op == "PA")
+	{
+		// Fin de combat : le serveur annonce les apparences débloquées par ce combat.
+		for (const std::string & id : takeFreshAppearances())
+		{
+			sf::String text = L"Nouvelle apparence débloquée : " + fromServerText(appearanceName(id)) + L" !";
+			hud->log(text, sf::Color(255, 215, 70));
+			hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
+		}
+	}
 	else if (message.op == "BG")
 	{
 		json ping;
@@ -609,6 +620,10 @@ void BattleScreen::syncView(const battle::Fighter & fighter)
 			return;
 		view->setColorNumber(fighter.team);
 		view->setPseudo(fighter.name);
+		int armor[3];
+		int hair[3];
+		appearanceColors(fighter.appearance, fighter.team, armor, hair);
+		view->setAppearanceColors(armor, hair);
 		views[fighter.id] = view;
 	}
 

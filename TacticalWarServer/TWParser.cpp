@@ -18,6 +18,7 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	teamStore(tw::store::joinPath(config.dataDir, "teams.json")),
 	credentials(tw::store::joinPath(config.dataDir, "exports/credentials.json"), tw::store::joinPath(config.dataDir, "exports/fiches-equipes.html")),
 	teamStoreReadOnly(false),
+	profiles(tw::store::joinPath(config.dataDir, "profiles.json")),
 	tournaments(config.dataDir),
 	replays(tw::store::joinPath(config.dataDir, "replays"))
 {
@@ -32,6 +33,9 @@ TWParser::TWParser(const tw::ServerConfig & config)
 
 	loadEnvironments();
 	loadTeams();
+	std::string profileError;
+	if (!profiles.load(&profileError))
+		std::cout << "Profils des joueurs illisibles (data/profiles.json) : " << profileError << std::endl;
 
 	std::string error;
 	if (!gameData.loadFromFile("./assets/data/gamedata.json", error))
@@ -221,6 +225,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 							connectedPlayerMap[p] = client;
 
 							sendGameData(client);
+							sendAppearances(client, pseudo);
 
 							tw::Match * match = tw::PlayerManager::getCurrentOrNextMatchForPlayer(p);
 							// Un match existe pour ce joueur :
@@ -354,6 +359,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			tw::Player * p = getPlayerFromClientState(client);
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
+		}
+		// Énigmes réussies sur le poste du joueur (apparences) :
+		else if (StringUtils::startsWith(toParse, "PZ"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handlePuzzles(client, p, toParse.substr(2));
 		}
 		// Classe regardée sur l'écran de choix (montrée au coéquipier) :
 		else if (StringUtils::startsWith(toParse, "PV"))

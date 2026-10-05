@@ -59,7 +59,7 @@ std::string TWParser::classSelectionMessage(tw::Player * player)
 {
 	BattleSession * session = sessionOfPlayer(player);
 	int talents = session != NULL ? session->talentSlots(player) : 0;
-	nlohmann::json body = { { "talents", talents } };
+	nlohmann::json body = { { "talents", talents }, { "team", session != NULL ? session->teamOf(player) : 0 } };
 	// Phase de bannissement en cours : secondes restantes.
 	if (session != NULL && session->getPhase() == BattleSession::Phase::BAN)
 		body["ban"] = std::max<std::int64_t>(1, (session->getBanDeadline() - nowMs() + 999) / 1000);
@@ -112,6 +112,7 @@ nlohmann::json TWParser::teammateState(BattleSession * session, tw::Player * pla
 		{ "class", chosen },
 		{ "viewing", session->viewingClass(player) },
 		{ "locked", chosen != 0 },
+		{ "appearance", session->appearanceOf(player) },
 		{ "present", getClientStateFromPlayer(player) != NULL && player->getHasJoinBattle() },
 		// Second personnage d'un joueur seul dans son équipe (jamais présent : il le joue aussi).
 		{ "standIn", isStandIn(player) }
@@ -171,6 +172,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 	int classId = 0;
 	std::vector<int> spells;
 	std::vector<std::string> talents;
+	std::string appearance;
 	bool forTeammate = false;
 	if (!body.empty() && body[0] == '{')
 	{
@@ -179,6 +181,7 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 		{
 			classId = pick.value("class", 0);
 			forTeammate = pick.value("teammate", false);
+			appearance = pick.value("appearance", std::string());
 			if (pick.contains("spells") && pick["spells"].is_array())
 			{
 				for (const nlohmann::json & index : pick["spells"])
@@ -204,8 +207,13 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 
 	// PC{..., "teammate": true} : choix pour le coéquipier absent (refusé s'il est là).
 	tw::Player * target = forTeammate ? absentTeammate(session, player) : player;
+	// Apparence : une de celles que le joueur qui choisit a débloquées (sinon classique).
+	appearance = tw::battle::allowedAppearance(gameData, progressOf(player->getPseudo()), appearance);
 	if (target != NULL && session->chooseClass(target, classId, spells, talents))
 	{
+		session->setAppearance(target, appearance);
+		if (target == player && !appearance.empty())
+			profiles.setAppearance(player->getPseudo(), appearance);
 		if (target == player)
 			send(client, "PO" + std::to_string(classId) + "\n");
 		sendTeammateStates(session, target);
@@ -454,6 +462,7 @@ void TWParser::finishBattle(BattleSession * session)
 		}
 	}
 	reportTournamentResult(session, state.winnerTeam, reason, session->getEngine()->teamHpPercent(1), session->getEngine()->teamHpPercent(2), state.round, players);
+	recordProfiles(session);
 
 	recentBattles.push_front({
 		{ "name", match->getMatchName() },
@@ -478,6 +487,81 @@ void TWParser::finishBattle(BattleSession * session)
 
 	// Déclenche la mise à jour des listes (admin, spectateurs).
 	match->setWinnerTeam(state.winnerTeam);
+}
+
+tw::battle::PlayerProgress TWParser::progressOf(const std::string & login) const
+{
+	tw::PlayerProfile profile = profiles.get(login);
+	tw::battle::PlayerProgress progress;
+	progress.achievements = profile.achievements;
+	progress.wins = profile.wins;
+	progress.mvp = profile.mvp;
+	progress.puzzles = profile.puzzles;
+	return progress;
+}
+
+void TWParser::sendAppearances(ClientState * client, const std::string & login, const std::vector<std::string> & fresh)
+{
+	if (client == NULL)
+		return;
+	tw::PlayerProfile profile = profiles.get(login);
+	nlohmann::json body = {
+		{ "unlocked", tw::battle::unlockedAppearances(gameData, progressOf(login)) },
+		{ "selected", profile.appearance },
+		{ "new", fresh },
+		{ "progress", {
+			{ "wins", profile.wins },
+			{ "mvp", profile.mvp },
+			{ "puzzles", (int)profile.puzzles.size() },
+			{ "achievements", std::vector<std::string>(profile.achievements.begin(), profile.achievements.end()) }
+		} }
+	};
+	send(client, encode("PA", body));
+}
+
+void TWParser::handlePuzzles(ClientState * client, tw::Player * player, const std::string & body)
+{
+	nlohmann::json request = nlohmann::json::parse(body, nullptr, false);
+	if (!request.is_object() || !request.contains("solved") || !request["solved"].is_array())
+		return;
+	std::vector<std::string> solved;
+	for (const nlohmann::json & id : request["solved"])
+	{
+		if (id.is_string())
+			solved.push_back(id.get<std::string>());
+	}
+	std::vector<std::string> before = tw::battle::unlockedAppearances(gameData, progressOf(player->getPseudo()));
+	if (!profiles.addPuzzles(player->getPseudo(), solved))
+		return;
+	std::vector<std::string> fresh;
+	for (const std::string & id : tw::battle::unlockedAppearances(gameData, progressOf(player->getPseudo())))
+	{
+		if (std::find(before.begin(), before.end(), id) == before.end())
+			fresh.push_back(id);
+	}
+	sendAppearances(client, player->getPseudo(), fresh);
+}
+
+void TWParser::recordProfiles(BattleSession * session)
+{
+	const tw::battle::BattleState & state = session->getEngine()->getState();
+	for (const tw::battle::Fighter & fighter : state.fighters)
+	{
+		tw::Player * player = session->playerOfFighter(fighter.id);
+		if (player == NULL || isStandIn(player))
+			continue;
+		std::string login = player->getPseudo();
+		std::vector<std::string> before = tw::battle::unlockedAppearances(gameData, progressOf(login));
+		profiles.recordBattle(login, fighter.record.badges, fighter.team == state.winnerTeam, fighter.id == state.mvpFighterId);
+		std::vector<std::string> fresh;
+		for (const std::string & id : tw::battle::unlockedAppearances(gameData, progressOf(login)))
+		{
+			if (std::find(before.begin(), before.end(), id) == before.end())
+				fresh.push_back(id);
+		}
+		if (!fresh.empty())
+			sendAppearances(getClientStateFromPlayer(player), login, fresh);
+	}
 }
 
 void TWParser::onPlayerConnectionChanged(tw::Player * player, bool connected)

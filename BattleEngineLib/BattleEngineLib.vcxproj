@@ -38,6 +38,7 @@
   <ItemGroup>
     <ClInclude Include="Puzzle.h" />
     <ClInclude Include="Achievements.h" />
+    <ClInclude Include="Appearances.h" />
     <ClInclude Include="BattleEngine.h" />
     <ClInclude Include="BattleMirror.h" />
     <ClInclude Include="BattlePreview.h" />
@@ -51,6 +52,7 @@
   <ItemGroup>
     <ClCompile Include="Puzzle.cpp" />
     <ClCompile Include="Achievements.cpp" />
+    <ClCompile Include="Appearances.cpp" />
     <ClCompile Include="BattleEffects.cpp" />
     <ClCompile Include="BattleEngine.cpp" />
     <ClCompile Include="BattleMirror.cpp" />

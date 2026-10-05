@@ -31,7 +31,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
 | `HG` | C ↔ S | tous | C-&gt;S : login;password (vide = spectateur). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
-| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours)} |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -98,11 +98,13 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
 | `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
-| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present, standIn : second personnage d'un joueur seul dans son équipe} |
+| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
+| `PZ` | C → S | joueur | Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]} |
+| `PA` | S → C | joueur | Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}} |
 | `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |

@@ -47,8 +47,9 @@ namespace tw
 			// (voir validSpellChoice) donne les premiers sorts de la classe.
 			// talents : talents de tournoi (identifiants connus et distincts gardés) ; leurs bonus sont
 			// ajoutés aux caractéristiques, leurs effets appliqués au début du combat.
+			// appearance : apparence du personnage (inconnue : classique).
 			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>(),
-				const std::vector<std::string> & talents = std::vector<std::string>());
+				const std::vector<std::string> & talents = std::vector<std::string>(), const std::string & appearance = std::string());
 
 			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
 			void enableZone(int pointsToWin);

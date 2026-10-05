@@ -5,6 +5,7 @@
 
 #include <EnvironmentManager.h>
 
+#include "AppearanceChoice.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
 #include "MusicManager.h"
@@ -105,7 +106,7 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	// Équipe 1 : le joueur (combattant 0) et son allié ; équipe 2 : les adversaires.
 	std::unique_ptr<battle::BattleEngine> created(new battle::BattleEngine(data, map, rng()));
 	int playerClass = pick(settings.playerClass);
-	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents);
+	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents, chosenAppearance());
 	bool allyControlled = settings.duo && settings.controlAlly;
 	if (settings.duo)
 	{

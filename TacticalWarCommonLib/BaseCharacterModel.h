@@ -454,5 +454,24 @@ namespace tw
 		{
 			this->colorNumber = colorNumber;
 		}
+
+		// Apparence (variante de la couleur d'équipe, cheveux) : remplace les couleurs par défaut.
+		void setAppearanceColors(const int armor[3], const int hair[3])
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				armorColor[i] = armor[i];
+				hairColor[i] = hair[i];
+			}
+			customColors = true;
+		}
+		bool hasAppearanceColors() const { return customColors; }
+		const int * getArmorColor() const { return armorColor; }
+		const int * getHairColor() const { return hairColor; }
+
+	private:
+		bool customColors = false;
+		int armorColor[3] = { 255, 255, 255 };
+		int hairColor[3] = { 108, 70, 35 };
 	};
 }

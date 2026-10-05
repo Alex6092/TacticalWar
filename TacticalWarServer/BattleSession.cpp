@@ -168,7 +168,9 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 			if (std::find(talents.begin(), talents.end(), id) == talents.end())
 				talents.push_back(id);
 		}
-		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells, talents);
+		auto appearance = appearances.find(player);
+		engine->addFighter(team, classId, name != names.end() ? name->second : player->getPseudo(), spells, talents,
+			appearance != appearances.end() ? appearance->second : std::string());
 	}
 
 	if (zonePoints > 0)

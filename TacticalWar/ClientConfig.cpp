@@ -55,6 +55,12 @@ void ClientConfig::load()
 		if (puzzleId.is_string())
 			solvedPuzzles.insert(puzzleId.get<std::string>());
 	}
+	for (const nlohmann::json & id : json.value("appearances", nlohmann::json::array()))
+	{
+		if (id.is_string())
+			knownAppearances.push_back(id.get<std::string>());
+	}
+	appearance = json.value("appearance", std::string());
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -84,6 +90,10 @@ void ClientConfig::save() const
 		json["talents"] = talentChoice;
 	if (!solvedPuzzles.empty())
 		json["puzzles"] = solvedPuzzles;
+	if (!knownAppearances.empty())
+		json["appearances"] = knownAppearances;
+	if (!appearance.empty())
+		json["appearance"] = appearance;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -233,9 +243,18 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenMate = std::atoi(argv[++i]);
 		}
+		else if (arg == "--class-screen-team" && hasValue)
+		{
+			classScreenTeam = std::atoi(argv[++i]);
+		}
 		else if (arg == "--class-screen-forbidden" && hasValue)
 		{
 			classScreenForbidden = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-difficulty" && hasValue)
+		{
+			training = true;
+			trainingDifficulty = argv[++i];
 		}
 		else if (arg == "--training-bonuses")
 		{
@@ -251,11 +270,6 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			training = trainingStart = true;
 			trainingAutoplay = true;
-		else if (arg == "--training-difficulty" && hasValue)
-		{
-			training = true;
-			trainingDifficulty = argv[++i];
-		}
 		}
 		else if (arg == "--spectator")
 		{

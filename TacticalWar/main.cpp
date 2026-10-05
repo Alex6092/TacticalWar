@@ -31,7 +31,8 @@ int main(int argc, char** argv)
 	}
 	else if (config.classScreenTalents >= 0)
 	{
-		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan) + "}";
+		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan)
+			+ ", \"team\": " + std::to_string(config.classScreenTeam) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
 		if (config.classScreenSolo)
@@ -48,7 +49,7 @@ int main(int argc, char** argv)
 		if (config.classScreenMate > 0)
 		{
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": " + std::to_string(config.classScreenMate)
-				+ ", \"viewing\": " + std::to_string(config.classScreenMate) + ", \"locked\": true, \"present\": true}");
+				+ ", \"viewing\": " + std::to_string(config.classScreenMate) + ", \"locked\": true, \"appearance\": \"braise\", \"present\": true}");
 		}
 		// Fin de bannissement simulée : la classe donnée est interdite, la suivante bannie par notre équipe.
 		if (config.classScreenForbidden > 0)
@@ -79,13 +80,13 @@ int main(int argc, char** argv)
 		settings.autoplay = config.trainingAutoplay;
 		settings.zone = config.trainingZone;
 		settings.bonuses = config.trainingBonuses;
-		settings.talentCount = config.trainingTalents;
 		if (config.trainingDifficulty == "easy")
 			settings.difficulty = tw::TrainingSettings::Difficulty::EASY;
 		else if (config.trainingDifficulty == "normal")
 			settings.difficulty = tw::TrainingSettings::Difficulty::NORMAL;
 		else if (config.trainingDifficulty == "hard")
 			settings.difficulty = tw::TrainingSettings::Difficulty::HARD;
+		settings.talentCount = config.trainingTalents;
 		settings.talents = config.talentChoice;
 		if (config.trainingStart)
 			tw::ScreenManager::getInstance()->setCurrentScreen(new tw::TrainingScreen(&gui, settings));

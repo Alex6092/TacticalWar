@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include <JsonFile.h>
+#include <ProfileStore.h>
 #include <ServerConfig.h>
 
 namespace fs = std::filesystem;
@@ -112,4 +113,31 @@ TEST_CASE("An invalid ServerConfig file is never overwritten")
 	std::ifstream file(fs::u8path(path));
 	std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	CHECK(content == "{ broken");
+}
+
+TEST_CASE("ProfileStore keeps each player's progress and appearance across restarts")
+{
+	TempDir dir;
+	std::string path = dir.file("data/profiles.json");
+	{
+		tw::ProfileStore store(path);
+		CHECK(store.load());
+		CHECK(store.get("lea").wins == 0);
+		store.recordBattle("Lea", { "first_blood", "combo_master" }, true, true);
+		store.recordBattle("lea", { "first_blood" }, false, false);
+		CHECK(store.addPuzzles("lea", { "p1", "p2" }));
+		CHECK_FALSE(store.addPuzzles("LEA", { "p2" }));
+		store.setAppearance("lea", "braise");
+	}
+
+	tw::ProfileStore reloaded(path);
+	std::string error;
+	REQUIRE(reloaded.load(&error));
+	tw::PlayerProfile profile = reloaded.get("LEA");
+	CHECK(profile.wins == 1);
+	CHECK(profile.mvp == 1);
+	CHECK(profile.achievements == std::set<std::string>({ "combo_master", "first_blood" }));
+	CHECK(profile.puzzles == std::set<std::string>({ "p1", "p2" }));
+	CHECK(profile.appearance == "braise");
+	CHECK(reloaded.get("tom").achievements.empty());
 }

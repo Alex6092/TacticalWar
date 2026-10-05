@@ -124,6 +124,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.name = value.value("name", std::string());
 		fighter.spells = value.value("spells", std::vector<int>());
 		fighter.talents = value.value("talents", std::vector<std::string>());
+		fighter.appearance = value.value("appearance", std::string());
 		fighter.position = { value.value("x", 0), value.value("y", 0) };
 		fighter.hp = value.value("hp", 0);
 		fighter.maxHp = value.value("maxHp", 0);

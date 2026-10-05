@@ -1,6 +1,7 @@
 ﻿#include "LinkToServer.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
+#include "AppearanceChoice.h"
 #include <EnvironmentManager.h>
 #include <Opcodes.h>
 #include <iostream>
@@ -111,6 +112,10 @@ void LinkToServer::UpdateReceivedData()
 			ClientGameData::get().loadFromServer(line.substr(2));
 			continue;
 		}
+
+		// Apparences du joueur : retenues pour tous les écrans (et annoncées par l'écran en cours).
+		if (line.compare(0, 2, "PA") == 0)
+			tw::applyAppearanceMessage(line.substr(2));
 
 		// Carte du prochain combat : utilisée à la place du fichier local (voir EnvironmentManager).
 		if (line.compare(0, 2, "MP") == 0)

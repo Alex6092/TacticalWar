@@ -266,6 +266,16 @@ const SpellDef * GameData::findSpell(const std::string & id) const
 	return nullptr;
 }
 
+const AppearanceDef * GameData::findAppearance(const std::string & id) const
+{
+	for (const AppearanceDef & appearance : appearances)
+	{
+		if (appearance.id == id)
+			return &appearance;
+	}
+	return nullptr;
+}
+
 const OrbDef * GameData::findOrb(const std::string & id) const
 {
 	for (const OrbDef & orb : bonuses.orbs)
@@ -329,6 +339,26 @@ bool GameData::loadFromJsonText(const std::string & text, std::string & error)
 				orb.shieldTurns = orbJson.value("turns", 0);
 				loaded.bonuses.orbs.push_back(orb);
 			}
+		}
+
+		for (const json & appearanceJson : root.value("appearances", json::array()))
+		{
+			AppearanceDef appearance;
+			appearance.id = appearanceJson.at("id").get<std::string>();
+			appearance.name = appearanceJson.value("name", appearance.id);
+			appearance.armorLight = appearanceJson.value("armorLight", 1.f);
+			appearance.armorSaturation = appearanceJson.value("armorSaturation", 1.f);
+			if (appearanceJson.contains("hair") && appearanceJson["hair"].is_array() && appearanceJson["hair"].size() == 3)
+			{
+				for (int i = 0; i < 3; i++)
+					appearance.hair[i] = appearanceJson["hair"][i].get<int>();
+			}
+			const json & unlock = appearanceJson.value("unlock", json::object());
+			appearance.unlockAchievement = unlock.value("achievement", std::string());
+			appearance.unlockWins = unlock.value("wins", 0);
+			appearance.unlockMvp = unlock.value("mvp", 0);
+			appearance.unlockPuzzles = unlock.value("puzzles", 0);
+			loaded.appearances.push_back(appearance);
 		}
 
 		for (const json & classJson : root.at("classes"))

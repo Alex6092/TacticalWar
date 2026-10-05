@@ -20,6 +20,10 @@ public:
 	std::vector<std::string> talentChoice;
 	// Énigmes tactiques réussies (identifiants), retenues d'une session à l'autre.
 	std::set<std::string> solvedPuzzles;
+	// Apparences débloquées sur le compte (dernier message PA, pour l'entraînement hors ligne) et
+	// apparence choisie.
+	std::vector<std::string> knownAppearances;
+	std::string appearance;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -59,12 +63,12 @@ public:
 	bool trainingZone = false;
 	// Entraînement avec bonus sur la carte (--training-bonuses).
 	bool trainingBonuses = false;
+	// Difficulté de l'entraînement (--training-difficulty easy|normal|hard), vide : celle des réglages.
+	std::string trainingDifficulty;
 	// Outil de développement : écran de choix de classe sans serveur, avec N talents à choisir
 	// (--class-screen N), pour les captures. -1 : désactivé. Bannissement en cours pendant S secondes
 	// (--class-screen-ban S), ou terminé avec la classe interdite (--class-screen-forbidden <id>).
 	int classScreenTalents = -1;
-	// Difficulté de l'entraînement (--training-difficulty easy|normal|hard), vide : celle des réglages.
-	std::string trainingDifficulty;
 	// Tutoriel guidé (--tutorial), à partir d'une étape (--tutorial-step N, de 1 à 9) pour les captures.
 	bool tutorial = false;
 	// Énigmes : la liste (--puzzles), une énigme (--puzzle N, de 1 à 6), jouée par la démonstration
@@ -77,6 +81,8 @@ public:
 	int classScreenForbidden = 0;
 	// Coéquipier simulé, qui a verrouillé cette classe (--class-screen-mate <id>, 0 : aucun).
 	int classScreenMate = 0;
+	// Équipe du joueur sur l'écran de classe de démonstration (couleur des apparences).
+	int classScreenTeam = 1;
 	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
 	bool classScreenSolo = false;
 	// Joueur seul dans son équipe simulé (--class-screen-alone 1 : son choix, 2 : le second personnage).

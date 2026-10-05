@@ -62,6 +62,13 @@ public:
 	void setTalentSlots(int team1, int team2) { talentSlotsByTeam[1] = team1; talentSlotsByTeam[2] = team2; }
 	int talentSlots(tw::Player * player) const;
 	int chosenClass(tw::Player * player) const;
+	// Apparence du personnage du joueur (vérifiée par l'appelant), avant le début du combat.
+	void setAppearance(tw::Player * player, const std::string & appearance) { appearances[player] = appearance; }
+	std::string appearanceOf(tw::Player * player) const
+	{
+		auto found = appearances.find(player);
+		return found != appearances.end() ? found->second : std::string();
+	}
 	// Classe affichée par le joueur sur son écran de choix (montrée à son coéquipier).
 	bool setViewing(tw::Player * player, int classId);
 	int viewingClass(tw::Player * player) const;
@@ -106,6 +113,7 @@ private:
 	std::map<tw::Player*, int> viewing;
 	std::map<tw::Player*, std::vector<int>> spellChoices;
 	std::map<tw::Player*, std::vector<std::string>> talentChoices;
+	std::map<tw::Player*, std::string> appearances;
 	int talentSlotsByTeam[3] = { 0, 0, 0 };
 	bool banPhase = false;
 	std::int64_t banDeadline = 0;

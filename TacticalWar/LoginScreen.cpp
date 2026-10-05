@@ -8,6 +8,8 @@
 #include "WaitMatchScreen.h"
 #include "MusicManager.h"
 #include "ClientConfig.h"
+#include <nlohmann/json.hpp>
+#include "ClientConfig.h"
 #include "TrainingSetupScreen.h"
 #include "TutorialScreen.h"
 
@@ -275,6 +277,11 @@ void LoginScreen::render(sf::RenderWindow * window)
 void LoginScreen::onMessageReceived(std::string msg)
 {
 	sf::String sentence = msg;
+
+	// Joueur connecté : ses énigmes réussies sur ce poste débloquent des apparences sur son compte.
+	std::string op = msg.substr(0, 2);
+	if ((op == "HG" || op == "HC" || op == "HW") && !ClientConfig::get().solvedPuzzles.empty())
+		LinkToServer::getInstance()->Send("PZ" + nlohmann::json({ { "solved", ClientConfig::get().solvedPuzzles } }).dump());
 
 	if (sentence.substring(0, 2) == "HG")
 	{

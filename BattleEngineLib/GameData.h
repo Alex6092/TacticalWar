@@ -266,6 +266,24 @@ namespace tw
 			std::vector<OrbDef> orbs;
 		};
 
+		// Apparence d'un personnage, à débloquer (Appearances.h) : variante de la couleur d'armure de son
+		// équipe (la teinte reste celle de l'équipe, pour que les équipes restent reconnaissables) et
+		// couleur des cheveux.
+		struct AppearanceDef
+		{
+			std::string id;
+			std::string name;
+			float armorLight = 1.f;			// Luminosité de l'armure (multiplicateur)
+			float armorSaturation = 1.f;	// Saturation de l'armure (multiplicateur)
+			int hair[3] = { 108, 70, 35 };
+			// Condition de déblocage (toutes celles données) : un haut fait, un nombre de victoires, de
+			// titres de MVP ou d'énigmes réussies. Aucune : disponible dès le départ.
+			std::string unlockAchievement;
+			int unlockWins = 0;
+			int unlockMvp = 0;
+			int unlockPuzzles = 0;
+		};
+
 		// Talent de tournoi : bonus gagné au fil du tournoi (un par match joué) et choisi avant chaque
 		// match, valable pour toutes les classes.
 		struct TalentDef
@@ -282,6 +300,7 @@ namespace tw
 			int version = 1;
 			BattleRules rules;
 			BonusRules bonuses;
+			std::vector<AppearanceDef> appearances;
 			std::vector<ClassDef> classes;
 			std::vector<TalentDef> talents;
 
@@ -290,6 +309,7 @@ namespace tw
 			// Sort de n'importe quelle classe, par son identifiant (nullptr si inconnu).
 			const SpellDef * findSpell(const std::string & id) const;
 			const OrbDef * findOrb(const std::string & id) const;
+			const AppearanceDef * findAppearance(const std::string & id) const;
 
 			// Charge les données (assets/data/gamedata.json). Retourne false et renseigne error en cas de problème.
 			bool loadFromJsonText(const std::string & text, std::string & error);

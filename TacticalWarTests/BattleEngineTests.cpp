@@ -8,6 +8,7 @@
 #include <set>
 
 #include <Achievements.h>
+#include <Appearances.h>
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
@@ -1763,7 +1764,6 @@ TEST_CASE("Picking up an orb applies its effect")
 	CHECK(push.getState().orbs.size() == 1);
 }
 
-TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")
 TEST_CASE("The hard AI plans a move then an attack, is deterministic, and retreats when wounded")
 {
 	BotOptions hard;
@@ -1810,6 +1810,7 @@ TEST_CASE("The hard AI plans a move then an attack, is deterministic, and retrea
 	CHECK(manhattan(away.path.back(), { 8, 5 }) > manhattan({ 5, 5 }, { 8, 5 }));
 }
 
+TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")
 {
 	// Vague vers la droite depuis (2, 5) : cases (3, 5), (4, 5) et (5, 5).
 	Arena arena({ { MAGE, { 2, 5 } }, { GUERRIER, { 4, 5 } } }, { { ARCHER, { 3, 5 } }, { PROTECTEUR, { 5, 5 } }, { ARCHER, { 4, 7 } } },
@@ -1945,4 +1946,73 @@ TEST_CASE("Tournament talents add their bonuses and their start-of-fight effects
 	BattleMap mirrorMap;
 	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(-1, 0));
 	CHECK(mirror.findFighter(0)->talents == warrior.talents);
+}
+
+TEST_CASE("Appearances unlock from account progress and keep the team hue")
+{
+	const GameData & data = gameData();
+	PlayerProgress progress;
+	std::vector<std::string> unlocked = unlockedAppearances(data, progress);
+	REQUIRE(unlocked.size() == 1);
+	CHECK(unlocked[0] == "classique");
+
+	// Énigmes, haut fait, victoires, MVP : chacun débloque sa propre apparence.
+	progress.puzzles = { "a", "b" };
+	CHECK(allowedAppearance(data, progress, "givre").empty());
+	progress.puzzles.insert("c");
+	CHECK(allowedAppearance(data, progress, "givre") == "givre");
+	CHECK(allowedAppearance(data, progress, "braise").empty());
+	progress.achievements.insert("first_blood");
+	CHECK(allowedAppearance(data, progress, "braise") == "braise");
+	progress.wins = 4;
+	CHECK(allowedAppearance(data, progress, "nuit").empty());
+	progress.wins = 5;
+	CHECK(allowedAppearance(data, progress, "nuit") == "nuit");
+	progress.mvp = 1;
+	CHECK(allowedAppearance(data, progress, "or") == "or");
+	CHECK(allowedAppearance(data, progress, "inconnue").empty());
+	unlocked = unlockedAppearances(data, progress);
+	CHECK(unlocked == std::vector<std::string>({ "classique", "givre", "braise", "nuit", "or" }));
+
+	// Chaque apparence verrouillée dit comment la débloquer.
+	for (const AppearanceDef & appearance : data.appearances)
+		CHECK_FALSE(unlockCondition(appearance).empty());
+	CHECK(unlockCondition(*data.findAppearance("givre")) == u8"3 énigmes réussies");
+
+	// La teinte reste celle de l'équipe : bleu reste bleu, rouge reste rouge.
+	const int blue[3] = { 0, 166, 214 };
+	const int red[3] = { 120, 17, 17 };
+	for (const AppearanceDef & appearance : data.appearances)
+	{
+		int out[3];
+		armorColor(&appearance, blue, out);
+		CHECK(out[2] >= out[0]);
+		CHECK(out[1] >= out[0]);
+		armorColor(&appearance, red, out);
+		CHECK(out[0] >= out[1]);
+		CHECK(out[0] >= out[2]);
+	}
+	int same[3];
+	armorColor(nullptr, blue, same);
+	CHECK(same[0] == 0);
+	CHECK(same[1] == 166);
+	CHECK(same[2] == 214);
+}
+
+TEST_CASE("A fighter's appearance travels through the snapshot to the mirror")
+{
+	BattleMap map = openMap();
+	map.startCells[1].push_back({ 2, 2 });
+	map.startCells[2].push_back({ 10, 10 });
+	BattleEngine engine(gameData(), map, 3);
+	int first = engine.addFighter(1, MAGE, "Givre", {}, {}, "givre");
+	int second = engine.addFighter(2, ARCHER, "Inconnue", {}, {}, "pas-une-apparence");
+	CHECK(engine.getState().findFighter(first)->appearance == "givre");
+	CHECK(engine.getState().findFighter(second)->appearance.empty());
+
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(0, 0));
+	CHECK(mirror.findFighter(first)->appearance == "givre");
+	CHECK(mirror.findFighter(second)->appearance.empty());
 }

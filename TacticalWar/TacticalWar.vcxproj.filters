@@ -167,8 +167,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PuzzleScreen.cpp" />
+    <ClCompile Include="AppearanceChoice.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClInclude Include="PuzzleScreen.h" />
+    <ClInclude Include="AppearanceChoice.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
   </ItemGroup>
   <ItemGroup>

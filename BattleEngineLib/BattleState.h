@@ -123,6 +123,8 @@ namespace tw
 			std::vector<int> spells;
 			// Talents de tournoi (identifiants), déjà ajoutés aux caractéristiques de base.
 			std::vector<std::string> talents;
+			// Apparence choisie (identifiant, gamedata.json "appearances") ; vide : classique.
+			std::string appearance;
 			std::map<std::string, int> cooldowns;			// sort -> tours restants
 			std::map<std::string, int> castsThisTurn;
 			std::map<std::string, std::map<int, int>> castsOnTarget;	// sort -> combattant -> lancers ce tour
