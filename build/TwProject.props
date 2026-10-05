@@ -2,7 +2,7 @@
 <!--
   Common settings for the projects added during the tournament modernization
   (ProtocolLib, ServerCoreLib, TournamentLib, TacticalWarTests, ...).
-  Sources are compiled as UTF-8 (/utf-8): string literals are UTF-8, like the network protocol.
+  Sources are compiled as UTF-8 (/utf-8, set for every native project in Directory.Build.props).
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
@@ -17,7 +17,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/utf-8 /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>$(TwRootDir)ProtocolLib;$(TwRootDir)ServerCoreLib;$(TwRootDir)TournamentLib;$(TwRootDir)BattleEngineLib;$(TwRootDir)UtilsLib;$(TwRootDir)TacticalWarCommonLib;$(TwRootDir)PathfindingLib;$(TwRootDir)ZoneAndSightLib;$(TwRootDir)EnvironmentPersistanceLib;$(TwRootDir)MapEditorLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

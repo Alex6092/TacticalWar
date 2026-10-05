@@ -2,6 +2,11 @@
   <!--
     Imported automatically by every project of the solution.
     Header-only third-party libraries (nlohmann/json, cpp-httplib, doctest) live in lib/include.
+    Every native project is compiled as UTF-8 (/utf-8): string literals are UTF-8, like the network
+    protocol and the texts decoded with fromServerText.
+    Whole program optimization (/GL, /LTCG) is off in every project: in Release it produced a client
+    that crashed while loading gamedata.json (a call to an nlohmann::json value() template without its
+    key argument), for a negligible speed gain in this game.
     The C++/CLI map editor (CLRSupport) is left untouched.
   -->
   <PropertyGroup>
@@ -14,6 +19,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(TwThirdPartyInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;_WIN32_WINNT=0x0A00;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>
