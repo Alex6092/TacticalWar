@@ -150,3 +150,40 @@ puis 1500 combats (graine 21) pour les cartes 9 et 11 :
   l'équipe 1 gagne 48 à 49,5 % des combats.
 - Les hautes herbes de la carte 10 (33 cases) ne pénalisent pas l'Archer plus que les rochers des
   cartes classiques (47 %).
+
+## Sorts de terrain (octobre 2026)
+
+Un 7e sort par classe, ajouté en fin de liste (les choix enregistrés et les énigmes restent valables).
+Mesures sur 2000 combats, taux de victoire de l'équipe 1 : 50,0 % ; par classe : Mage 48,5 %,
+Archer 48,1 %, Protecteur 57,2 %, Guerrier 46,2 %. Taux de victoire quand le sort est emporté (4 sorts
+tirés au hasard sur 7) :
+
+| Sort | Victoires |
+|---|---|
+| Palissade (Archer) | 44,7 % |
+| Éboulis (Guerrier) | 43,9 % |
+| Mur de glace (Mage) | 45,7 % |
+| Voile sacré (Protecteur) | 54,1 % |
+
+L'IA simple sous-estime les murs (elle les pose surtout pour protéger un allié) : ces chiffres sont
+une borne basse. Par carte (200 combats chacune), l'équipe 1 gagne entre 44,5 et 56,5 %.
+
+## Bonus sur la carte (octobre 2026)
+
+Avec les orbes (`--bonuses`), 2000 combats : équipe 1 à 50,0 % ; Mage 50,5 %, Archer 47,1 %,
+Protecteur 55,1 %, Guerrier 47,3 %. La carte 11 (la plus sensible au placement des orbes) donne 51 %
+sur 1000 combats.
+
+## Ordinateur Difficile (octobre 2026)
+
+`TacticalWarBot.exe --simulate 600 --hard-team 1` fait jouer l'équipe 1 au niveau Difficile contre
+l'équipe 2 au niveau Normal.
+
+| Version | Victoires du Difficile |
+|---|---|
+| Préparation du tour seule | 62 à 65 % (1200 combats) |
+| Plus la concentration sur l'ennemi le plus blessé | **66,7 % et 66,8 %** (deux séries de 600 combats, graines différentes) |
+
+D'autres pistes n'ont rien apporté au-delà du bruit de mesure (± 2 points) : finir son tour hors
+d'atteinte même sans être blessé, prudence au déplacement, KO mieux récompensé, sort suivant compté en
+entier. Le niveau Normal contre lui-même reste à 50 %.
