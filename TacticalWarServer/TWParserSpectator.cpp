@@ -100,7 +100,7 @@ void TWParser::removeSpectator(ClientState * client)
 
 void TWParser::handleSpectatorMessage(ClientState * client, const std::string & op, const nlohmann::json & body)
 {
-	if (op == "RL" || op == "RP")
+	if (op == "RL" || op == "RP" || op == "HL")
 	{
 		handleReplayMessage(client, op, body);
 	}

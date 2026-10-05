@@ -204,6 +204,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	{
 		std::unique_ptr<tw::store::ReplayWriter> writer;
 		std::int64_t startMs = 0;
+		// Gardés en mémoire pour les temps forts, calculés à la fin du combat.
+		nlohmann::json snapshot;
+		nlohmann::json teams;
+		std::vector<std::pair<std::int64_t, nlohmann::json>> batches;
 	};
 	struct ReplayPlayback
 	{
@@ -211,7 +215,9 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 		std::vector<std::int64_t> due;	// Moment d'envoi de chaque lot (ms après le début)
 		std::size_t next = 0;
 		std::int64_t startMs = 0;
+		bool extract = false;			// Extrait (temps fort) : RE à la fin
 	};
+	nlohmann::json highlightListJson();
 	tw::store::ReplayLibrary replays;
 	std::map<int, ReplayRecording> recordings;
 	std::map<tw::net::ConnId, ReplayPlayback> playbacks;

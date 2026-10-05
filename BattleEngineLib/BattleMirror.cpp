@@ -251,6 +251,16 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		fighter->maxHp = event.value("maxHp", fighter->maxHp);
 		fighter->shield = event.value("shield", fighter->shield);
 		fighter->alive = fighter->hp > 0;
+		// Part absorbée : retirée des boucliers comme le fait le moteur (les plus anciens d'abord).
+		int absorbed = type == "damage" ? event.value("absorbed", 0) : 0;
+		for (ActiveEffect & effect : fighter->effects)
+		{
+			if (effect.type != EffectType::SHIELD || absorbed <= 0)
+				continue;
+			int taken = std::min(effect.value, absorbed);
+			effect.value -= taken;
+			absorbed -= taken;
+		}
 	}
 	else if (type == "death" && fighter != nullptr)
 	{

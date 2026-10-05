@@ -1,5 +1,6 @@
 ﻿// Application des effets des sorts, des glyphes et des passifs.
 #include "BattleEngine.h"
+#include "StateJson.h"
 
 #include <algorithm>
 #include <cmath>
@@ -73,7 +74,7 @@ void BattleEngine::applySpellEffect(Fighter & caster, const SpellDef & spell, co
 		glyph.targets = effect.targets;
 		glyph.effects = effect.glyphEffects;
 		state.glyphs.push_back(glyph);
-		emit({ { "t", "glyph+" }, { "glyph", glyphJson(glyph) } });
+		emit({ { "t", "glyph+" }, { "glyph", statejson::glyph(glyph) } });
 		return;
 	}
 	case EffectType::WALL:
@@ -145,7 +146,7 @@ void BattleEngine::placeWall(Fighter & caster, const SpellDef & spell, const Eff
 		block.blocksMove = effect.wallBlocksMove;
 		block.blocksSight = effect.wallBlocksSight;
 		state.blocks.push_back(block);
-		blocks.push_back(blockJson(block));
+		blocks.push_back(statejson::block(block));
 	}
 	if (!blocks.empty())
 		emit({ { "t", "block+" }, { "f", caster.id }, { "blocks", blocks } });
@@ -474,7 +475,7 @@ void BattleEngine::addActiveEffect(Fighter & target, ActiveEffect effect, bool r
 	}
 
 	target.effects.push_back(effect);
-	emit({ { "t", "effect+" }, { "f", target.id }, { "effect", effectJson(effect) }, { "shield", target.shield } });
+	emit({ { "t", "effect+" }, { "f", target.id }, { "effect", statejson::effect(effect) }, { "shield", target.shield } });
 
 	if (effect.type == EffectType::STAT_MOD || effect.type == EffectType::SHIELD)
 		emitStats(target);

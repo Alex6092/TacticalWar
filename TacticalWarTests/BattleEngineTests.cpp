@@ -13,6 +13,8 @@
 #include <BattleMirror.h>
 #include <BattlePreview.h>
 #include <BotBrain.h>
+#include <StateJson.h>
+#include <Highlights.h>
 #include <Emotes.h>
 
 using namespace tw::battle;
@@ -2015,4 +2017,165 @@ TEST_CASE("A fighter's appearance travels through the snapshot to the mirror")
 	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(0, 0));
 	CHECK(mirror.findFighter(first)->appearance == "givre");
 	CHECK(mirror.findFighter(second)->appearance.empty());
+}
+
+namespace
+{
+	// Premier chemin où deux documents JSON diffèrent (vide : identiques).
+	std::string firstDifference(const nlohmann::json & a, const nlohmann::json & b, const std::string & path = "")
+	{
+		if (a.type() != b.type())
+			return path + " (type)";
+		if (a.is_object())
+		{
+			for (auto it = a.begin(); it != a.end(); ++it)
+			{
+				if (!b.contains(it.key()))
+					return path + "/" + it.key() + " (absent)";
+				std::string inner = firstDifference(it.value(), b[it.key()], path + "/" + it.key());
+				if (!inner.empty())
+					return inner;
+			}
+			return a.size() == b.size() ? std::string() : path + " (clés en trop)";
+		}
+		if (a.is_array())
+		{
+			if (a.size() != b.size())
+				return path + " (taille)";
+			for (std::size_t i = 0; i < a.size(); i++)
+			{
+				std::string inner = firstDifference(a[i], b[i], path + "/" + std::to_string(i));
+				if (!inner.empty())
+					return inner;
+			}
+			return std::string();
+		}
+		return a == b ? std::string() : path + " : " + a.dump() + " / " + b.dump();
+	}
+}
+
+TEST_CASE("The state rebuilt by the mirror serializes exactly like the engine snapshot")
+{
+	std::mt19937 rng(77);
+	int classIds[] = { MAGE, ARCHER, PROTECTEUR, GUERRIER };
+	for (int battle = 0; battle < 40; battle++)
+	{
+		CAPTURE(battle);
+		BattleMap map = openMap(13);
+		for (int i = 0; i < 10; i++)
+			map.setCell({ (int)(rng() % 9) + 2, (int)(rng() % 13) }, false, rng() % 2 == 0);
+		std::vector<std::vector<int>> spells;
+		int picked[4];
+		for (int i = 0; i < 4; i++)
+		{
+			picked[i] = classIds[rng() % 4];
+			spells.push_back(randomSpellChoice(*gameData().findClass(picked[i]), rng));
+		}
+		Arena arena({ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } }, { { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
+			map, (std::uint32_t)(1000 + battle), spells, battle % 2 == 1);
+
+		// Comme une rediffusion : l'état de départ, puis les lots d'événements.
+		BattleState mirror;
+		BattleMap mirrorMap;
+		BattleMirror::applySnapshot(mirror, mirrorMap, nlohmann::json::parse(arena.engine->snapshot(-1, arena.now).dump()));
+		std::uint64_t seq = 0;
+		auto compare = [&]() {
+			nlohmann::json batch = nlohmann::json::parse(arena.engine->flushEvents().dump());
+			seq = batch.value("seq", seq);
+			for (const nlohmann::json & event : batch["ev"])
+				BattleMirror::applyEvent(mirror, event);
+			nlohmann::json expected = arena.engine->snapshot(-1, arena.now);
+			nlohmann::json rebuilt = statejson::snapshot(mirror, mirrorMap, seq, -1, expected.value("ms", (std::int64_t)0));
+			// Les bilans (dégâts, soins…) ne sont transmis qu'avec la fin du combat ("end"), et les
+			// ressources d'un combattant hors combat ne s'affichent plus.
+			for (nlohmann::json * fighters : { &expected["fighters"], &rebuilt["fighters"] })
+			{
+				for (nlohmann::json & fighter : *fighters)
+				{
+					if (!arena.engine->isOver())
+						fighter.erase("record");
+					if (!fighter.value("alive", true))
+					{
+						for (const char * key : { "ap", "mp", "casts", "cooldowns", "effects" })
+							fighter.erase(key);
+					}
+				}
+			}
+			std::string difference = firstDifference(expected, rebuilt);
+			INFO(batch.dump());
+			REQUIRE(difference == "");
+		};
+
+		for (int action = 0; action < 3000 && !arena.engine->isOver(); action++)
+		{
+			compare();
+			int id = arena.active();
+			const Fighter & fighter = arena.fighter(id);
+			int choice = rng() % 3;
+			if (choice == 0 && fighter.mp > 0)
+			{
+				std::vector<Cell> reachable = reachableCells(arena.state(), arena.engine->getMap(), fighter);
+				if (!reachable.empty())
+				{
+					arena.engine->move(id, findPath(arena.state(), arena.engine->getMap(), fighter, reachable[rng() % reachable.size()]), arena.now);
+					continue;
+				}
+			}
+			if (choice == 1)
+			{
+				int index = rng() % 4;
+				const SpellDef * spell = spellOf(gameData(), fighter, index);
+				if (checkSpellResources(fighter, *spell).empty())
+				{
+					std::vector<Cell> cells = castableCells(arena.state(), arena.engine->getMap(), gameData(), fighter, *spell);
+					if (!cells.empty())
+					{
+						arena.engine->cast(id, index, cells[rng() % cells.size()], arena.now);
+						continue;
+					}
+				}
+			}
+			arena.now += 1000;
+			arena.engine->endTurn(id, arena.now);
+		}
+		compare();
+	}
+}
+
+TEST_CASE("Highlights of a recorded battle: double KO, combo and big hit, with their windows")
+{
+	Arena arena({ { MAGE, { 1, 1 } }, { GUERRIER, { 1, 3 } } }, { { ARCHER, { 8, 1 } }, { PROTECTEUR, { 8, 3 } } });
+	nlohmann::json start = nlohmann::json::parse(arena.engine->snapshot(-1, arena.now).dump());
+	using nlohmann::json;
+	std::vector<std::pair<std::int64_t, json>> batches = {
+		{ 0, { { "seq", 1 }, { "ev", json::array({ { { "t", "turn" }, { "f", 0 }, { "round", 1 } } }) } } },
+		{ 1000, { { "seq", 2 }, { "ev", json::array({ { { "t", "damage" }, { "f", 2 }, { "src", 0 }, { "amount", 30 }, { "absorbed", 0 }, { "hp", 50 }, { "maxHp", 80 }, { "shield", 0 } } }) } } },
+		{ 6000, { { "seq", 3 }, { "ev", json::array({ { { "t", "combo" }, { "f", 3 }, { "src", 1 }, { "name", "Brise-glace" } } }) } } },
+		{ 12000, { { "seq", 4 }, { "ev", json::array({
+			{ { "t", "turn" }, { "f", 0 }, { "round", 2 } },
+			{ { "t", "damage" }, { "f", 2 }, { "src", 0 }, { "amount", 20 }, { "absorbed", 0 }, { "hp", 0 }, { "maxHp", 80 }, { "shield", 0 } },
+			{ { "t", "death" }, { "f", 2 } },
+			{ { "t", "damage" }, { "f", 3 }, { "src", 0 }, { "amount", 18 }, { "absorbed", 0 }, { "hp", 0 }, { "maxHp", 100 }, { "shield", 0 } },
+			{ { "t", "death" }, { "f", 3 } } }) } } },
+		{ 13000, { { "seq", 5 }, { "ev", json::array({ { { "t", "end" }, { "winner", 1 }, { "reason", "KO" }, { "round", 2 } } }) } } },
+	};
+	std::vector<Highlight> highlights = detectHighlights(start, batches, "Les Bleus", "Les Rouges");
+	REQUIRE(highlights.size() == 3);
+	CHECK(highlights[0].kind == "big_hit");
+	CHECK(highlights[0].from == 0);
+	CHECK(highlights[0].to == 1);
+	CHECK(highlights[1].kind == "combo");
+	CHECK(highlights[1].title.find("Brise-glace") != std::string::npos);
+	CHECK(highlights[1].from == 2);
+	CHECK(highlights[1].to == 2);
+	CHECK(highlights[2].kind == "double_ko");
+	CHECK(highlights[2].title.find(arena.fighter(0).name) != std::string::npos);
+	CHECK(highlights[2].from == 3);
+	CHECK(highlights[2].to == 4);
+	CHECK(highlights[2].score > highlights[1].score);
+
+	// Un seul temps fort demandé : le mieux noté.
+	std::vector<Highlight> best = detectHighlights(start, batches, "Les Bleus", "Les Rouges", 1);
+	REQUIRE(best.size() == 1);
+	CHECK(best[0].kind == "double_ko");
 }

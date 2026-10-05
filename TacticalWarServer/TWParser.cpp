@@ -108,7 +108,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 	}
 
 	// Mode spectateur (contenu JSON) :
-	if (op == "SL" || op == "SW" || op == "SU" || op == "RL" || op == "RP" || (op == "BR" && getPlayerFromClientState(client) == NULL))
+	if (op == "SL" || op == "SW" || op == "SU" || op == "RL" || op == "RP" || op == "HL" || (op == "BR" && getPlayerFromClientState(client) == NULL))
 	{
 		tw::protocol::Message message;
 		nlohmann::json body = nlohmann::json::object();

@@ -8,6 +8,9 @@
 #include <Message.h>
 
 bool SpectatorModeScreen::directorMode = false;
+nlohmann::json SpectatorModeScreen::highlights = nlohmann::json::array();
+float SpectatorModeScreen::highlightsAge = 1e9f;
+std::size_t SpectatorModeScreen::nextHighlight = 0;
 sf::String SpectatorModeScreen::currentTab = L"En direct";
 
 SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
@@ -104,6 +107,29 @@ void SpectatorModeScreen::watch(int session)
 	LinkToServer::getInstance()->SendRaw("SW" + nlohmann::json({ { "session", session } }).dump());
 }
 
+void SpectatorModeScreen::playNextHighlight()
+{
+	// Liste vieille d'une minute (ou vide) : redemandée, au plus toutes les 10 secondes.
+	if ((highlights.empty() || highlightsAge > 60.f) && highlightRequest <= 0)
+	{
+		highlightRequest = 10.f;
+		LinkToServer::getInstance()->SendRaw("HL{}");
+	}
+	if (highlights.empty())
+	{
+		sessionsPanel->setStatus(L"Mode réalisateur : en attente d'un combat...", sf::Color(200, 220, 255));
+		return;
+	}
+
+	const nlohmann::json & highlight = highlights[nextHighlight % highlights.size()];
+	nextHighlight++;
+	sessionsPanel->setStatus(L"Mode réalisateur : temps fort « " + fromServerText(highlight.value("title", std::string())) + L" »",
+		sf::Color(255, 215, 120));
+	watchPending = 5.f;
+	LinkToServer::getInstance()->SendRaw("RP" + nlohmann::json({ { "id", highlight.value("replay", std::string()) },
+		{ "from", highlight.value("from", 0) }, { "to", highlight.value("to", 0) } }).dump());
+}
+
 void SpectatorModeScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 {
 	title.setPosition(window->getSize().x / 2 - title.getLocalBounds().width / 2, 10);
@@ -140,6 +166,9 @@ void SpectatorModeScreen::update(float deltatime)
 
 	if (watchPending > 0)
 		watchPending -= deltatime;
+	highlightsAge += deltatime;
+	if (highlightRequest > 0)
+		highlightRequest -= deltatime;
 
 	// Mode réalisateur : dès qu'un combat est regardable, on le rejoint.
 	sinceRefresh += deltatime;
@@ -154,7 +183,8 @@ void SpectatorModeScreen::update(float deltatime)
 		}
 		else
 		{
-			sessionsPanel->setStatus(L"Mode réalisateur : en attente d'un combat...", sf::Color(200, 220, 255));
+			// Aucun combat : les temps forts des derniers combats, en attendant le prochain.
+			playNextHighlight();
 		}
 	}
 
@@ -189,6 +219,16 @@ void SpectatorModeScreen::onMessageReceived(std::string msg)
 		nlohmann::json body;
 		if (message.parseJson(body))
 			sessionsPanel->onSessionList(body);
+	}
+	else if (message.op == "HL")
+	{
+		nlohmann::json body;
+		if (message.parseJson(body))
+		{
+			highlights = body.value("highlights", nlohmann::json::array());
+			highlightsAge = 0;
+			nextHighlight = 0;
+		}
 	}
 	else if (message.op == "RL")
 	{

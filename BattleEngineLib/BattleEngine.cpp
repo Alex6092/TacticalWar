@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "StateJson.h"
 #include "Achievements.h"
 #include "Emotes.h"
 
@@ -8,13 +9,6 @@
 using namespace tw::battle;
 using nlohmann::json;
 
-namespace
-{
-	json cellJson(const Cell & cell)
-	{
-		return json::array({ cell.x, cell.y });
-	}
-}
 
 BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, std::uint32_t seed)
 	: data(data), map(map), rng(seed), seed(seed), seq(0), pendingEvents(json::array())
@@ -411,7 +405,7 @@ ActionResult BattleEngine::move(int fighterId, const std::vector<Cell> & path, s
 
 	json pathJson = json::array();
 	for (const Cell & cell : preview.path)
-		pathJson.push_back(cellJson(cell));
+		pathJson.push_back(statejson::cell(cell));
 
 	json tackles = json::array();
 	for (const TackleLoss & loss : preview.tackles)
@@ -745,7 +739,7 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	json records = json::array();
 	for (const Fighter & fighter : state.fighters)
 	{
-		json record = recordJson(fighter.record);
+		json record = statejson::record(fighter.record);
 		record["f"] = fighter.id;
 		records.push_back(record);
 	}
@@ -808,188 +802,8 @@ json BattleEngine::flushEvents()
 	return batch;
 }
 
-json BattleEngine::effectJson(const ActiveEffect & effect) const
-{
-	const char * kind = "STAT_MOD";
-	switch (effect.type)
-	{
-	case EffectType::SHIELD: kind = "SHIELD"; break;
-	case EffectType::DOT: kind = "DOT"; break;
-	case EffectType::HOT: kind = "HOT"; break;
-	case EffectType::STATE: kind = "STATE"; break;
-	default: break;
-	}
-
-	return {
-		{ "uid", effect.uid },
-		{ "kind", kind },
-		{ "stat", toString(effect.stat) },
-		{ "value", effect.value },
-		{ "min", effect.minValue },
-		{ "max", effect.maxValue },
-		{ "turns", effect.remainingTurns },
-		{ "skip", effect.skipNextDecrement },
-		{ "name", effect.name },
-		{ "spell", effect.spellId },
-		{ "caster", effect.casterId },
-		{ "positive", effect.positive },
-		{ "state", effect.state }
-	};
-}
-
-json BattleEngine::glyphJson(const Glyph & glyph) const
-{
-	json cells = json::array();
-	for (const Cell & cell : glyph.cells)
-		cells.push_back(cellJson(cell));
-
-	return {
-		{ "uid", glyph.uid },
-		{ "caster", glyph.casterId },
-		{ "team", glyph.team },
-		{ "spell", glyph.spellId },
-		{ "name", glyph.name },
-		{ "cells", cells },
-		{ "turns", glyph.remainingTurns }
-	};
-}
-
-json BattleEngine::blockJson(const Block & block)
-{
-	return {
-		{ "uid", block.uid },
-		{ "group", block.group },
-		{ "caster", block.casterId },
-		{ "team", block.team },
-		{ "spell", block.spellId },
-		{ "name", block.name },
-		{ "x", block.cell.x },
-		{ "y", block.cell.y },
-		{ "hp", block.hp },
-		{ "maxHp", block.maxHp },
-		{ "turns", block.remainingTurns },
-		{ "move", block.blocksMove },
-		{ "sight", block.blocksSight }
-	};
-}
-
-json BattleEngine::recordJson(const FighterRecord & record)
-{
-	return {
-		{ "dealt", record.dealt },
-		{ "taken", record.taken },
-		{ "healed", record.healed },
-		{ "shielded", record.shielded },
-		{ "kills", record.kills },
-		{ "casts", record.casts },
-		{ "combos", record.combos },
-		{ "zonePoints", record.zonePoints },
-		{ "badges", record.badges }
-	};
-}
-
-json BattleEngine::fighterJson(const Fighter & fighter) const
-{
-	json cooldowns = json::object();
-	for (const auto & cooldown : fighter.cooldowns)
-		cooldowns[cooldown.first] = cooldown.second;
-
-	json casts = json::object();
-	for (const auto & entry : fighter.castsThisTurn)
-		casts[entry.first] = entry.second;
-
-	json effects = json::array();
-	for (const ActiveEffect & effect : fighter.effects)
-		effects.push_back(effectJson(effect));
-
-	json stats = json::object();
-	for (int i = 0; i < STAT_COUNT; i++)
-		stats[toString((Stat)i)] = fighter.baseStats.get((Stat)i);
-
-	return {
-		{ "id", fighter.id },
-		{ "stats", stats },
-		{ "team", fighter.team },
-		{ "classId", fighter.classId },
-		{ "name", fighter.name },
-		{ "spells", fighter.spells },
-		{ "talents", fighter.talents },
-		{ "appearance", fighter.appearance },
-		{ "x", fighter.position.x },
-		{ "y", fighter.position.y },
-		{ "hp", fighter.hp },
-		{ "maxHp", fighter.maxHp },
-		{ "shield", fighter.shield },
-		{ "ap", fighter.ap },
-		{ "mp", fighter.mp },
-		{ "alive", fighter.alive },
-		{ "ready", fighter.ready },
-		{ "connected", fighter.connected },
-		{ "piloted", fighter.piloted },
-		{ "bank", fighter.timeBankMs },
-		{ "cooldowns", cooldowns },
-		{ "casts", casts },
-		{ "effects", effects },
-		{ "record", recordJson(fighter.record) }
-	};
-}
-
 json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 {
-	json fighters = json::array();
-	for (const Fighter & fighter : state.fighters)
-		fighters.push_back(fighterJson(fighter));
-
-	json glyphs = json::array();
-	for (const Glyph & glyph : state.glyphs)
-		glyphs.push_back(glyphJson(glyph));
-
-	json blocks = json::array();
-	for (const Block & block : state.blocks)
-		blocks.push_back(blockJson(block));
-
-	json orbs = json::array();
-	for (const Orb & orb : state.orbs)
-		orbs.push_back({ { "uid", orb.uid }, { "kind", orb.kind }, { "x", orb.cell.x }, { "y", orb.cell.y } });
-
-	json startCells = json::object();
-	for (int team = 1; team <= 2; team++)
-	{
-		json cells = json::array();
-		for (const Cell & cell : map.startCells[team])
-			cells.push_back(cellJson(cell));
-		startCells[std::to_string(team)] = cells;
-	}
-
 	std::int64_t remaining = state.deadlineMs > nowMs ? state.deadlineMs - nowMs : 0;
-
-	return {
-		{ "seq", seq },
-		{ "you", viewerFighterId },
-		{ "phase", toString(state.phase) },
-		{ "round", state.round },
-		{ "active", state.activeFighterId() },
-		{ "order", state.turnOrder },
-		{ "ms", remaining },
-		{ "fighters", fighters },
-		{ "glyphs", glyphs },
-		{ "blocks", blocks },
-		{ "bonuses", state.bonuses },
-		{ "orbs", orbs },
-		{ "startCells", startCells },
-		{ "winner", state.winnerTeam },
-		{ "reason", toString(state.endReason) },
-		{ "mvp", state.mvpFighterId },
-		{ "zone", zoneJson(state.zone) }
-	};
-}
-
-json BattleEngine::zoneJson(const ZoneState & zone)
-{
-	if (!zone.enabled)
-		return nullptr;
-	json cells = json::array();
-	for (const Cell & cell : zone.cells)
-		cells.push_back(cellJson(cell));
-	return { { "cells", cells }, { "points", zone.pointsToWin }, { "scores", { zone.scores[1], zone.scores[2] } }, { "holder", zone.holder } };
+	return statejson::snapshot(state, map, seq, viewerFighterId, remaining);
 }

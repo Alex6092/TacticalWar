@@ -91,7 +91,9 @@ namespace tw
 			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
 			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder (combat ou rediffusion)" },
 			{ "RL", Direction::BOTH, Role::SPECTATOR, "Rediffusions des combats terminés (S->C : {replays})" },
-			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat)" },
+			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE" },
+			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} : RE{}" },
+			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts des dernières rediffusions. C->S : HL{} ; S->C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },

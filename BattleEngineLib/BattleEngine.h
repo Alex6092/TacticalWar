@@ -139,12 +139,6 @@ namespace tw
 			void applyOnCastPassive(Fighter & caster);
 			int roll(int min, int max);
 
-			nlohmann::json fighterJson(const Fighter & fighter) const;
-			nlohmann::json effectJson(const ActiveEffect & effect) const;
-			nlohmann::json glyphJson(const Glyph & glyph) const;
-			static nlohmann::json blockJson(const Block & block);
-			static nlohmann::json recordJson(const FighterRecord & record);
-			static nlohmann::json zoneJson(const ZoneState & zone);
 			// "Sort" des effets posés par les talents au début du combat.
 			static constexpr const char * TALENT_SPELL_ID = "__talent";
 			void emit(const nlohmann::json & event);

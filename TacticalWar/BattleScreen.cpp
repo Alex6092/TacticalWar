@@ -522,6 +522,12 @@ void BattleScreen::onMessageReceived(std::string msg)
 		if (message.parseJson(error))
 			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
 	}
+	else if (message.op == "RE")
+	{
+		// Fin d'un extrait (temps fort rejoué par le réalisateur) : retour à la liste.
+		if (mode == Mode::SPECTATOR)
+			autoCloseRemaining = 2.5f;
+	}
 	else if (message.op == "PA")
 	{
 		// Fin de combat : le serveur annonce les apparences débloquées par ce combat.

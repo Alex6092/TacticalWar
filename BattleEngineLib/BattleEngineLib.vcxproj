@@ -40,6 +40,8 @@
     <ClInclude Include="Achievements.h" />
     <ClInclude Include="Appearances.h" />
     <ClInclude Include="Commentary.h" />
+    <ClInclude Include="StateJson.h" />
+    <ClInclude Include="Highlights.h" />
     <ClInclude Include="BattleEngine.h" />
     <ClInclude Include="BattleMirror.h" />
     <ClInclude Include="BattlePreview.h" />
@@ -55,6 +57,8 @@
     <ClCompile Include="Achievements.cpp" />
     <ClCompile Include="Appearances.cpp" />
     <ClCompile Include="Commentary.cpp" />
+    <ClCompile Include="StateJson.cpp" />
+    <ClCompile Include="Highlights.cpp" />
     <ClCompile Include="BattleEffects.cpp" />
     <ClCompile Include="BattleEngine.cpp" />
     <ClCompile Include="BattleMirror.cpp" />
