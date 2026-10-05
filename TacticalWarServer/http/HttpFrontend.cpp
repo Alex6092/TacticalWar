@@ -30,6 +30,7 @@ struct HttpFrontend::Impl
 	std::uint64_t version = 0;
 	bool stopping = false;
 	std::atomic<int> eventStreams{ 0 };
+	std::map<int, std::string> maps;
 
 	std::shared_ptr<const std::string> snapshot(std::uint64_t * versionOut)
 	{
@@ -60,6 +61,11 @@ HttpFrontend::~HttpFrontend()
 	stop();
 }
 
+void HttpFrontend::setMaps(const std::map<int, std::string> & maps)
+{
+	impl->maps = maps;
+}
+
 bool HttpFrontend::start(std::string & error)
 {
 	Impl * d = impl.get();
@@ -75,6 +81,19 @@ bool HttpFrontend::start(std::string & error)
 	// Version du protocole : affichée par la page de téléchargement du client.
 	d->server.Get("/api/health", [](const httplib::Request &, httplib::Response & res) {
 		res.set_content("{\"ok\":true,\"protocol\":" + std::to_string(tw::protocol::PROTOCOL_VERSION) + "}", "application/json");
+	});
+
+	// Carte compacte d'un combat (mosaïque de la vue projetée).
+	d->server.Get(R"(/api/map/(\d+))", [d](const httplib::Request & req, httplib::Response & res) {
+		auto map = d->maps.find(std::atoi(req.matches[1].str().c_str()));
+		if (map == d->maps.end())
+		{
+			res.status = 404;
+			res.set_content("carte inconnue", "text/plain; charset=utf-8");
+			return;
+		}
+		res.set_header("Cache-Control", "max-age=3600");
+		res.set_content(map->second, "application/json; charset=utf-8");
 	});
 
 	// État complet. Avec ?since=<version>, attend un changement (long-poll, 20 s maximum).

@@ -71,27 +71,28 @@ function boardTabs(tournament) {
   return tabs;
 }
 
+// Onglets du tableau, avec la mosaïque des combats en premier quand des combats sont en cours.
+function allTabs(tournament) {
+  const tabs = tournament ? boardTabs(tournament) : [];
+  if (liveFights(tournament).length) tabs.unshift({ id: "mosaic", label: "Combats" });
+  return tabs;
+}
+
 function renderBoard(tournament) {
   const board = el("board");
   const tabsBox = el("board-tabs");
-  if (!tournament) {
-    board.innerHTML = '<p class="empty">Aucun tournoi en cours.</p>';
-    lastBoardHtml = null;
-    tabsBox.innerHTML = "";
-    return;
-  }
-
-  const tabs = boardTabs(tournament);
+  const tabs = allTabs(tournament);
   if (!tabs.length) {
-    board.innerHTML = '<p class="empty">Le tournoi n\'a pas encore commencé.</p>';
+    board.innerHTML = tournament ? '<p class="empty">Le tournoi n\'a pas encore commencé.</p>' : '<p class="empty">Aucun tournoi en cours.</p>';
     lastBoardHtml = null;
     tabsBox.innerHTML = "";
     return;
   }
 
-  // Par défaut : l'arbre dès qu'il existe (phase finale), sinon les poules.
+  // Par défaut : les combats en cours, sinon l'arbre dès qu'il existe (phase finale), sinon les poules.
   if (!activeTab || !tabs.some((t) => t.id === activeTab) || !userPickedTab) {
-    activeTab = tabs.some((t) => t.id === "ceremony") ? "ceremony" : tabs.some((t) => t.id === "bracket") ? "bracket" : tabs[0].id;
+    activeTab = tabs.some((t) => t.id === "mosaic") ? "mosaic" : tabs.some((t) => t.id === "ceremony") ? "ceremony"
+      : tabs.some((t) => t.id === "bracket") ? "bracket" : tabs[0].id;
     if (userPickedTab && !tabs.some((t) => t.id === activeTab)) userPickedTab = false;
   }
 
@@ -107,7 +108,8 @@ function renderBoard(tournament) {
   });
 
   el("board-title").textContent = tabs.find((t) => t.id === activeTab).label;
-  const html = activeTab === "ceremony" ? renderCeremony(tournament)
+  const html = activeTab === "mosaic" ? renderMosaic(tournament)
+    : activeTab === "ceremony" ? renderCeremony(tournament)
     : activeTab === "bracket" ? renderBracket(tournament)
     : activeTab === "leaders" ? renderLeaders(tournament)
     : renderStandings(tournament);
@@ -116,6 +118,95 @@ function renderBoard(tournament) {
     board.innerHTML = html;
     lastBoardHtml = html;
   }
+}
+
+// ---------------------------------------------------------------- mosaïque des combats
+
+// Cartes compactes (/api/map/<id>), chargées une fois.
+const maps = {};
+function mapOf(id) {
+  if (maps[id] === undefined) {
+    maps[id] = null;
+    fetch(`api/map/${id}`).then((response) => response.json()).then((map) => {
+      maps[id] = map;
+      lastBoardHtml = null;
+      render();
+    }).catch(() => { delete maps[id]; });
+  }
+  return maps[id];
+}
+
+function liveFights(tournament) {
+  return (state ? state.live : []).filter((b) => b.fighters && b.mapId && (!tournament || !b.tournament || b.tournament === tournament.id));
+}
+
+const CELL_COLORS = { ".": "#2e4a36", "#": "#11151f", "~": "#1d4a72", h: "#3f6e33", e: "#7a3418", s: "#1d6c6c" };
+const ORB_COLORS = { soin: "#4fd18b", energie: "#ffd34d", protection: "#7fb6ff" };
+const TEAM_COLORS = { 1: "#4c8dff", 2: "#ff5d55" };
+
+function teamHp(battle, team) {
+  const fighters = battle.fighters.filter((f) => f.team === team);
+  const max = fighters.reduce((sum, f) => sum + Math.max(1, f.initialMaxHp), 0);
+  const hp = fighters.reduce((sum, f) => sum + (f.alive ? Math.max(0, f.hp) : 0), 0);
+  return max ? Math.round(hp * 100 / max) : 0;
+}
+
+// Carte vue de dessus : cases, zone à tenir, murs, orbes, puis les combattants (initiale de la
+// classe, anneau de PV, le combattant actif cerclé d'or).
+function miniMap(battle, map) {
+  const S = 10;
+  const parts = [];
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const kind = map.cells[y * map.width + x] || ".";
+      parts.push(`<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="${CELL_COLORS[kind] || CELL_COLORS["."]}"/>`);
+    }
+  }
+  if (battle.zone && battle.zone.cells) {
+    battle.zone.cells.forEach(([x, y]) => parts.push(`<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="#ffd34d" opacity="0.28"/>`));
+  }
+  (battle.blocks || []).forEach((b) => {
+    parts.push(`<rect x="${b.x * S + 1}" y="${b.y * S + 1}" width="${S - 2}" height="${S - 2}" rx="1.5" fill="${b.move ? "#9aa3b8" : "#cfe9ff"}" opacity="${b.move ? 1 : 0.6}"/>`);
+    parts.push(`<rect x="${b.x * S + 1}" y="${b.y * S + S - 2.4}" width="${(S - 2) * Math.max(0, b.hp) / Math.max(1, b.maxHp)}" height="1.4" fill="#ff5d55"/>`);
+  });
+  (battle.orbs || []).forEach((o) => {
+    const cx = o.x * S + S / 2;
+    const cy = o.y * S + S / 2;
+    parts.push(`<path d="M${cx} ${cy - 3.2} L${cx + 3.2} ${cy} L${cx} ${cy + 3.2} L${cx - 3.2} ${cy} Z" fill="${ORB_COLORS[o.kind] || "#fff"}"/>`);
+  });
+  battle.fighters.forEach((f) => {
+    const cx = f.x * S + S / 2;
+    const cy = f.y * S + S / 2;
+    if (!f.alive) {
+      parts.push(`<text x="${cx}" y="${cy + 2.2}" text-anchor="middle" font-size="6" fill="#8b97bd">✕</text>`);
+      return;
+    }
+    const ratio = Math.max(0, Math.min(1, f.hp / Math.max(1, f.initialMaxHp)));
+    const ring = 2 * Math.PI * 4.6;
+    if (f.id === battle.active) parts.push(`<circle cx="${cx}" cy="${cy}" r="6.4" fill="none" stroke="#ffd34d" stroke-width="1.4"/>`);
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="3.6" fill="${TEAM_COLORS[f.team] || "#fff"}" stroke="#000" stroke-width="0.5"/>`);
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="4.6" fill="none" stroke="#4fd18b" stroke-width="1.1" stroke-dasharray="${(ring * ratio).toFixed(2)} ${ring.toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`);
+    parts.push(`<text x="${cx}" y="${cy + 1.7}" text-anchor="middle" font-size="4.6" font-weight="700" fill="#fff">${esc((f.className || "?").charAt(0))}</text>`);
+  });
+  return `<svg viewBox="0 0 ${map.width * S} ${map.height * S}" preserveAspectRatio="xMidYMid meet">${parts.join("")}</svg>`;
+}
+
+function renderMosaic(tournament) {
+  const fights = liveFights(tournament);
+  if (!fights.length) return '<p class="empty">Aucun combat en cours.</p>';
+  return `<div class="mosaic">${fights.map((battle) => {
+    const map = mapOf(battle.mapId);
+    const label = tournament && battle.match ? tournament.labels[String(battle.match)] : battle.name;
+    const phase = battle.phase === "PLACEMENT" ? "Placement" : `Tour ${battle.round}`;
+    const score = battle.zone ? `<span class="mini-zone">${battle.zone.scores[0]} - ${battle.zone.scores[1]}</span>` : '<span class="mini-vs">VS</span>';
+    return `<div class="mini">
+      <div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>
+      <div class="mini-map">${map ? miniMap(battle, map) : '<p class="empty">Carte...</p>'}</div>
+      <div class="mini-teams">
+        <span class="t1">${esc(battle.teams[0])} <strong>${teamHp(battle, 1)} %</strong></span>${score}<span class="t2"><strong>${teamHp(battle, 2)} %</strong> ${esc(battle.teams[1])}</span>
+      </div>
+    </div>`;
+  }).join("")}</div>`;
 }
 
 // Cérémonie de fin : podium des trois premières équipes (avec leurs joueurs), MVP du tournoi (meilleur
@@ -482,8 +573,7 @@ function tickClock() {
 if (rotateSeconds > 0) {
   setInterval(() => {
     const tournament = currentTournament();
-    if (!tournament) return;
-    const tabs = boardTabs(tournament);
+    const tabs = allTabs(tournament);
     if (tabs.length < 2) return;
     const index = tabs.findIndex((t) => t.id === activeTab);
     activeTab = tabs[(index + 1) % tabs.length].id;

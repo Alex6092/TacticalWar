@@ -226,3 +226,13 @@ table.leaders td.mvp-count { color: var(--gold); }
   from { background: rgba(255, 211, 77, 0.35); }
   to { background: var(--bg-2); }
 }
+
+.mosaic { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 0.8rem; align-items: start; }
+.mini { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.6rem; background: var(--bg-2); display: flex; flex-direction: column; gap: 0.35rem; }
+.mini-map svg { width: 100%; height: auto; max-height: 62vh; display: block; border-radius: 4px; }
+.mini-teams { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.mini-teams .t1 strong { color: var(--blue); }
+.mini-teams .t2 { text-align: right; }
+.mini-teams .t2 strong { color: var(--red); }
+.mini-zone { color: var(--gold); font-weight: 700; }
+.mini-vs { color: var(--muted); font-size: 0.8rem; }

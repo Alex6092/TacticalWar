@@ -243,6 +243,12 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::int64_t lastPublicPublish;
 	std::string displayNameOf(tw::Player * player);
 	nlohmann::json publicStateJson();
+public:
+	// Cartes vues de dessus pour la mosaïque : {id, name, width, height, cells} où cells donne un
+	// caractère par case, ligne par ligne : '.' sol, '#' obstacle, '~' eau ou vide (on voit à travers),
+	// 'h' hautes herbes (on s'y cache), 'e' braises, 's' source.
+	std::map<int, std::string> compactMaps();
+private:
 	// Derniers combats terminés (bilan et MVP), du plus récent au plus ancien.
 	std::deque<nlohmann::json> recentBattles;
 	// Commentateur de chaque combat en cours, et fil des 30 dernières phrases (tous combats, le plus

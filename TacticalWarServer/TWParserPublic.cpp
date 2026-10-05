@@ -6,6 +6,7 @@
 #include <ctime>
 
 #include "http/HttpFrontend.h"
+#include <EnvironmentMap.h>
 #include <Message.h>
 
 void TWParser::setHttpFrontend(HttpFrontend * http)
@@ -32,6 +33,36 @@ std::string TWParser::displayNameOf(tw::Player * player)
 	int index = 0;
 	const tw::Team * team = teamStore.findTeamByLogin(player->getPseudo(), &index);
 	return team != NULL ? team->players[index].displayName : player->getPseudo();
+}
+
+std::map<int, std::string> TWParser::compactMaps()
+{
+	std::map<int, std::string> maps;
+	for (tw::Environment * environment : environments)
+	{
+		tw::battle::BattleMap map = tw::battle::battleMapFromEnvironment(environment);
+		std::string cells;
+		for (int y = 0; y < map.getHeight(); y++)
+		{
+			for (int x = 0; x < map.getWidth(); x++)
+			{
+				tw::battle::Cell cell = { x, y };
+				char kind = '.';
+				if (!map.isWalkable(cell))
+					kind = map.blocksSight(cell) ? '#' : '~';
+				else if (map.blocksSight(cell))
+					kind = 'h';
+				else if (map.turnDamage(cell) > 0)
+					kind = 'e';
+				else if (map.turnHeal(cell) > 0)
+					kind = 's';
+				cells += kind;
+			}
+		}
+		maps[environment->getId()] = tw::protocol::dumpJson({ { "id", environment->getId() }, { "name", environment->getName() },
+			{ "width", map.getWidth() }, { "height", map.getHeight() }, { "cells", cells } });
+	}
+	return maps;
 }
 
 nlohmann::json TWParser::publicStateJson()
@@ -83,6 +114,17 @@ nlohmann::json TWParser::publicStateJson()
 			battle["phase"] = tw::battle::toString(state.phase);
 			battle["round"] = state.round;
 			battle["active"] = state.activeFighterId();
+			// Mosaïque : carte, murs, orbes et zone (les combattants portent leur case).
+			if (match->getEnvironment() != NULL)
+				battle["mapId"] = match->getEnvironment()->getId();
+			nlohmann::json blocks = nlohmann::json::array();
+			for (const tw::battle::Block & block : state.blocks)
+				blocks.push_back({ { "x", block.cell.x }, { "y", block.cell.y }, { "hp", block.hp }, { "maxHp", block.maxHp }, { "move", block.blocksMove } });
+			battle["blocks"] = blocks;
+			nlohmann::json orbs = nlohmann::json::array();
+			for (const tw::battle::Orb & orb : state.orbs)
+				orbs.push_back({ { "x", orb.cell.x }, { "y", orb.cell.y }, { "kind", orb.kind } });
+			battle["orbs"] = orbs;
 
 			nlohmann::json fighters = nlohmann::json::array();
 			for (const tw::battle::Fighter & fighter : state.fighters)
@@ -104,13 +146,20 @@ nlohmann::json TWParser::publicStateJson()
 					{ "initialMaxHp", fighter.initialMaxHp() },
 					{ "shield", fighter.shield },
 					{ "alive", fighter.alive },
+					{ "x", fighter.position.x },
+					{ "y", fighter.position.y },
 					{ "connected", fighter.connected },
 					{ "talents", talents }
 				});
 			}
 			battle["fighters"] = fighters;
 			if (state.zone.enabled)
-				battle["zone"] = { { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "points", state.zone.pointsToWin } };
+			{
+				nlohmann::json cells = nlohmann::json::array();
+				for (const tw::battle::Cell & cell : state.zone.cells)
+					cells.push_back({ cell.x, cell.y });
+				battle["zone"] = { { "scores", { state.zone.scores[1], state.zone.scores[2] } }, { "points", state.zone.pointsToWin }, { "cells", cells } };
+			}
 		}
 
 		live.push_back(battle);
