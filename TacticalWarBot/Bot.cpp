@@ -196,6 +196,16 @@ void Bot::onLine(const std::string & line)
 	{
 		log("En attente d'un match...");
 	}
+	else if (op == "DI")
+	{
+		// Défi d'une autre équipe (match amical) : les bots refusent.
+		nlohmann::json challenge = nlohmann::json::parse(message.payload, nullptr, false);
+		if (challenge.is_object())
+		{
+			log("Defi refuse : " + challenge.value("name", std::string()));
+			send("DA" + nlohmann::json({ { "from", challenge.value("from", 0) }, { "accept", false } }).dump());
+		}
+	}
 	else if (op == "HC")
 	{
 		nlohmann::json selection = nlohmann::json::parse(message.payload, nullptr, false);

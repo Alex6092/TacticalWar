@@ -6,6 +6,7 @@
 #include <map>
 #include <Match.h>
 #include "BattleSession.h"
+#include <ChallengeBoard.h>
 #include <Environment.h>
 #include <CredentialSheet.h>
 #include <ServerConfig.h>
@@ -95,6 +96,15 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	nlohmann::json friendlyListJson();
 	void handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void notifyFriendlyMatches(ClientState * only = NULL);
+
+	// Défis entre équipes (TWParserChallenges.cpp) : matchs amicaux libres, hors tournoi en cours.
+	tw::ChallengeBoard challenges;
+	bool tournamentRunning();
+	bool teamFree(int teamId);
+	void sendToTeam(int teamId, const std::string & message);
+	void handleChallengeMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void sendChallengeList(ClientState * client, tw::Player * player);
+	void tickChallenges(std::int64_t now);
 
 
 

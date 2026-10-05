@@ -41,6 +41,7 @@
     <ClInclude Include="LegacyImport.h" />
     <ClInclude Include="PasswordHasher.h" />
     <ClInclude Include="ProfileStore.h" />
+    <ClInclude Include="ChallengeBoard.h" />
     <ClInclude Include="ReplayStore.h" />
     <ClInclude Include="ServerConfig.h" />
     <ClInclude Include="Team.h" />
@@ -53,6 +54,7 @@
     <ClCompile Include="LegacyImport.cpp" />
     <ClCompile Include="PasswordHasher.cpp" />
     <ClCompile Include="ProfileStore.cpp" />
+    <ClCompile Include="ChallengeBoard.cpp" />
     <ClCompile Include="ReplayStore.cpp" />
     <ClCompile Include="ServerConfig.cpp" />
     <ClCompile Include="TeamStore.cpp" />

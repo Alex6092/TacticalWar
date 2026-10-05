@@ -107,6 +107,11 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
 | `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
+| `DL` | C ↔ S | joueur | Équipes à défier (match amical hors tournoi). C-&gt;S : DL{} ; S-&gt;C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible} |
+| `DD` | C → S | joueur | Défier une équipe : DD{team} |
+| `DI` | S → C | joueur | Défi reçu par l'équipe du joueur : DI{from, name, seconds} |
+| `DA` | C → S | joueur | Réponse à un défi : DA{from, accept} (le premier joueur de l'équipe qui répond décide) |
+| `DR` | S → C | joueur | Résultat d'un défi : DR{ok, message, from, to} |
 | `PZ` | C → S | joueur | Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]} |
 | `PA` | S → C | joueur | Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}} |
 | `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |

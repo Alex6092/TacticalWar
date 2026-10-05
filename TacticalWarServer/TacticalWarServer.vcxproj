@@ -163,6 +163,7 @@ exit /b 0</Command>
     <ClCompile Include="TWParserTournament.cpp" />
     <ClCompile Include="BattleSession.cpp" />
     <ClCompile Include="TWParserBattle.cpp" />
+    <ClCompile Include="TWParserChallenges.cpp" />
     <ClCompile Include="TWParserTeams.cpp" />
     <ClCompile Include="net\NetServer.cpp" />
     <ClCompile Include="ClientState.cpp" />

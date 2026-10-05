@@ -142,6 +142,17 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		return;
 	}
 
+	// Défis entre équipes (contenu JSON) :
+	if (op == "DL" || op == "DD" || op == "DA")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleChallengeMessage(client, op, body);
+		return;
+	}
+
 	// Matchs amicaux de l'admin (contenu JSON) :
 	if (op == "FL" || op == "FC" || op == "FX")
 	{
@@ -588,6 +599,7 @@ void TWParser::onTick(tw::net::Clock::time_point now)
 {
 	tickBattles();
 	tickReplays(nowMs());
+	tickChallenges(nowMs());
 }
 
 void TWParser::onDisconnected(tw::net::ConnId id)
