@@ -575,13 +575,20 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 
 	float lifeBgY = isoY + 30 - height - pseudoTxt->getGlobalBounds().height - lifeBg->getGlobalBounds().height + 20;
 	lifeBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0), lifeBgY);
-	lifeTxt->setPosition(isoX + 60 - (lifeTxt->getGlobalBounds().width / 2.0), lifeBgY + lifeBg->getGlobalBounds().height / 2.0 - lifeTxt->getGlobalBounds().height / 2.0 - 8);
+	// PV centrés sur le cœur d'après leurs limites réelles (le « 1 » de Neuropol a une marge à gauche),
+	// avec un contour sombre ; dessinés après l'étoile des PA et le carré des PM, qui ne les cachent plus.
+	sf::FloatRect lifeBounds = lifeTxt->getLocalBounds();
+	lifeTxt->setOutlineColor(sf::Color(40, 0, 0));
+	lifeTxt->setOutlineThickness(1);
+	lifeTxt->setPosition(std::round(isoX + 60 - lifeBounds.width / 2.0f - lifeBounds.left),
+		std::round(lifeBgY + lifeBg->getGlobalBounds().height / 2.0f - 4 - lifeBounds.height / 2.0f - lifeBounds.top));
 	window->draw(*lifeBg);
-	window->draw(*lifeTxt);
 
+	// Étoile des PA un peu à gauche du cœur, pour ne pas toucher le premier chiffre des PV.
+	const float paShift = 6;
 	paBg->setScale(0.75, 0.75);
-	paBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paBg->getGlobalBounds().width / 2.0) + 2, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0));
-	paTxt->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paTxt->getGlobalBounds().width / 2.0) + 2, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0) + (paBg->getGlobalBounds().height / 2.0) - (paTxt->getGlobalBounds().height / 2.0));
+	paBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paBg->getGlobalBounds().width / 2.0) + 2 - paShift, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0));
+	paTxt->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paTxt->getGlobalBounds().width / 2.0) + 2 - paShift, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0) + (paBg->getGlobalBounds().height / 2.0) - (paTxt->getGlobalBounds().height / 2.0));
 	window->draw(*paBg);
 	window->draw(*paTxt);
 
@@ -590,6 +597,7 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	pmTxt->setPosition(isoX + 60 + (lifeBg->getGlobalBounds().width / 2.0) - (pmTxt->getGlobalBounds().width / 2.0), lifeBgY - 5 + (pmBg->getGlobalBounds().height / 2.0) + (pmBg->getGlobalBounds().height / 2.0) - (pmTxt->getGlobalBounds().height / 2.0));
 	window->draw(*pmBg);
 	window->draw(*pmTxt);
+	window->draw(*lifeTxt);
 
 	// Bouclier : écusson bleu avec sa valeur, posé sur le haut du cœur (il absorbe les dégâts en premier).
 	if (m->getCurrentShield() > 0 && m->getCurrentLife() > 0)
