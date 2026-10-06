@@ -94,6 +94,12 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	// Crée le match et sa session (choix des classes envoyé aux joueurs connectés). mapId 0 : au
 	// hasard. NULL avec un message d'erreur en français si c'est impossible.
 	tw::Match * createFriendlyMatch(const std::string & name, int teamA, int teamB, int mapId, std::string & error);
+	// Annule un match amical prévu ou en cours (les joueurs reviennent à l'attente).
+	void cancelFriendly(FriendlyMatch & friendly);
+	// Tournoi qui démarre : les matchs amicaux prévus ou en cours sont annulés, leurs joueurs prévenus.
+	void cancelFriendlyMatchesForTournament();
+	// L'équipe joue un tournoi en cours (elle ne peut pas jouer de match amical).
+	bool teamInRunningTournament(int teamId);
 	nlohmann::json friendlyListJson();
 	void handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void notifyFriendlyMatches(ClientState * only = NULL);

@@ -280,7 +280,13 @@ void TWParser::handleTournamentAdminMessage(ClientState * client, const std::str
 		else if (op == "UB")
 		{
 			error = tournaments.start(id);
-			sendTournamentAck(client, error, "Tournoi démarré : les matchs vont être lancés automatiquement.", id);
+			// Les matchs amicaux retarderaient le tournoi : annulés, puis premiers matchs lancés tout de suite.
+			if (error.empty())
+			{
+				cancelFriendlyMatchesForTournament();
+				dispatchTournamentMatches();
+			}
+			sendTournamentAck(client, error, "Tournoi démarré : les matchs amicaux sont annulés, les matchs du tournoi lancés.", id);
 		}
 		else if (op == "UP")
 		{
