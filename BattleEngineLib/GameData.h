@@ -93,7 +93,8 @@ namespace tw
 			TELEPORT,		// Le lanceur se téléporte sur la cellule (ou échange avec un allié si allowSwap)
 			DISPEL,			// Retire les effets positifs ou négatifs
 			GLYPH,			// Pose un glyphe sur la zone pendant "duration" tours du lanceur
-			STATE			// Ajoute un état ("unmovable"...) pendant "duration" tours
+			STATE,			// Ajoute un état ("unmovable"...) pendant "duration" tours
+			WALL			// Pose un mur : un bloc destructible par case libre de la zone, pendant "duration" tours du lanceur
 		};
 
 		enum class DispelMode
@@ -130,6 +131,11 @@ namespace tw
 			ZoneShape glyphShape = ZoneShape::SINGLE;
 			int glyphSize = 0;
 			std::vector<EffectDef> glyphEffects;
+
+			// Mur ("wall": {"hp", "move", "sight"}) : PV de chaque bloc, et ce qu'il bloque (passage, vue).
+			int wallHp = 0;
+			bool wallBlocksMove = true;
+			bool wallBlocksSight = true;
 		};
 
 		struct ZoneDef
@@ -153,6 +159,8 @@ namespace tw
 			std::string glyph;				// En boucle sur chaque case d'un glyphe du sort
 			std::string glyphTrigger;		// Quand le glyphe se déclenche
 			std::string impactSound;		// Son joué à l'impact
+			std::string block;				// Image d'un bloc du mur (chemin d'un PNG)
+			std::string blockBreak;			// Quand un bloc du mur est détruit
 		};
 
 		struct SpellDef
@@ -237,6 +245,45 @@ namespace tw
 			double tackleApFactor = 0.5;	// Part de la perte de PA par rapport à la perte de PM
 		};
 
+		// Bonus sur la carte : orbe ramassé par le premier combattant qui passe sur sa case.
+		struct OrbDef
+		{
+			std::string id;
+			std::string name;
+			std::string icon;
+			int heal = 0;			// PV rendus
+			int ap = 0;				// PA en plus, tout de suite
+			int shield = 0;			// Bouclier, pendant shieldTurns tours
+			int shieldTurns = 0;
+		};
+
+		// Apparition des orbes (combat avec bonus) : au tour firstRound, puis tous les "every" tours,
+		// quand aucun orbe n'est en jeu.
+		struct BonusRules
+		{
+			int firstRound = 3;
+			int every = 3;
+			std::vector<OrbDef> orbs;
+		};
+
+		// Apparence d'un personnage, à débloquer (Appearances.h) : variante de la couleur d'armure de son
+		// équipe (la teinte reste celle de l'équipe, pour que les équipes restent reconnaissables) et
+		// couleur des cheveux.
+		struct AppearanceDef
+		{
+			std::string id;
+			std::string name;
+			float armorLight = 1.f;			// Luminosité de l'armure (multiplicateur)
+			float armorSaturation = 1.f;	// Saturation de l'armure (multiplicateur)
+			int hair[3] = { 108, 70, 35 };
+			// Condition de déblocage (toutes celles données) : un haut fait, un nombre de victoires, de
+			// titres de MVP ou d'énigmes réussies. Aucune : disponible dès le départ.
+			std::string unlockAchievement;
+			int unlockWins = 0;
+			int unlockMvp = 0;
+			int unlockPuzzles = 0;
+		};
+
 		// Talent de tournoi : bonus gagné au fil du tournoi (un par match joué) et choisi avant chaque
 		// match, valable pour toutes les classes.
 		struct TalentDef
@@ -252,11 +299,17 @@ namespace tw
 		{
 			int version = 1;
 			BattleRules rules;
+			BonusRules bonuses;
+			std::vector<AppearanceDef> appearances;
 			std::vector<ClassDef> classes;
 			std::vector<TalentDef> talents;
 
 			const ClassDef * findClass(int classId) const;
 			const TalentDef * findTalent(const std::string & id) const;
+			// Sort de n'importe quelle classe, par son identifiant (nullptr si inconnu).
+			const SpellDef * findSpell(const std::string & id) const;
+			const OrbDef * findOrb(const std::string & id) const;
+			const AppearanceDef * findAppearance(const std::string & id) const;
 
 			// Charge les données (assets/data/gamedata.json). Retourne false et renseigne error en cas de problème.
 			bool loadFromJsonText(const std::string & text, std::string & error);

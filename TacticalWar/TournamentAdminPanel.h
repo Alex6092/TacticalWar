@@ -71,6 +71,7 @@ private:
 	tgui::ComboBox::Ptr bans;
 	tgui::Label::Ptr mapsLabel;
 	tgui::ComboBox::Ptr maps;
+	tgui::CheckBox::Ptr bonuses;
 	tgui::ListView::Ptr teamList;
 	tgui::Button::Ptr saveButton;
 	tgui::Button::Ptr startButton;

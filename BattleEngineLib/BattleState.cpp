@@ -107,6 +107,41 @@ const Fighter * BattleState::fighterAt(const Cell & cell) const
 	return nullptr;
 }
 
+const Block * BattleState::blockAt(const Cell & cell) const
+{
+	for (const Block & block : blocks)
+	{
+		if (block.cell == cell)
+			return &block;
+	}
+	return nullptr;
+}
+
+const Orb * BattleState::orbAt(const Cell & cell) const
+{
+	for (const Orb & orb : orbs)
+	{
+		if (orb.cell == cell)
+			return &orb;
+	}
+	return nullptr;
+}
+
+Block * BattleState::findBlock(int uid)
+{
+	for (Block & block : blocks)
+	{
+		if (block.uid == uid)
+			return &block;
+	}
+	return nullptr;
+}
+
+const Block * BattleState::findBlock(int uid) const
+{
+	return const_cast<BattleState *>(this)->findBlock(uid);
+}
+
 const char * tw::battle::toString(BattlePhase phase)
 {
 	switch (phase)

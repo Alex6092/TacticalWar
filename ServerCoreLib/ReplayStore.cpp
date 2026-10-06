@@ -171,6 +171,8 @@ namespace tw
 					summary["winner"] = end.value("winner", 0);
 					summary["reason"] = end.value("reason", std::string());
 					summary["rounds"] = end.value("rounds", 0);
+					if (end.contains("highlights"))
+						summary["highlights"] = end["highlights"];
 				}
 				result.push_back(summary);
 			}

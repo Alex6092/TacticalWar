@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **6**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **7**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -30,8 +30,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `HG` | C ↔ S | tous | C-&gt;S : login;password (vide = spectateur). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
-| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours)} |
+| `HG` | C ↔ S | tous | C-&gt;S : login;password;v&lt;version du protocole&gt; (identifiants vides = spectateur ; sans version : ancien client, accepté). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
+| `HV` | S → C | tous | Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client} |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -83,7 +84,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `SW` | C → S | spectateur | Regarder un combat {session} (réponse : HG puis BI, puis le flux BV) |
 | `SU` | C → S | spectateur | Arrêter de regarder (combat ou rediffusion) |
 | `RL` | C ↔ S | spectateur | Rediffusions des combats terminés (S-&gt;C : {replays}) |
-| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat) |
+| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE |
+| `RE` | S → C | spectateur | Fin de l'extrait demandé par RP{id, from, to} : RE{} |
+| `HL` | C ↔ S | spectateur | Temps forts des dernières rediffusions. C-&gt;S : HL{} ; S-&gt;C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord |
 
 ## Création de match manuelle
 
@@ -92,17 +95,28 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `CM` | C → S | admin | Créer un match : nom;equipe1;equipe2 |
 | `CO` | S → C | admin | Match créé |
 | `CN` | S → C | admin | Une équipe est déjà occupée |
+| `FL` | C ↔ S | admin | Matchs amicaux (hors tournoi). C-&gt;S : FL{} ; S-&gt;C : FL{matches:[{id, name, teamA:{id, name}, teamB, map, status: planned\|playing\|finished\|cancelled, winner, session}], maps:[{id, name}]} |
+| `FC` | C → S | admin | Créer un match amical : FC{name, teamA, teamB, map (0 : au hasard)} |
+| `FX` | C → S | admin | Annuler un match amical prévu ou en cours : FX{id} |
+| `FR` | S → C | admin | Réponse à FC ou FX : FR{ok, message} |
 | `CF` | S → C | admin | Même équipe deux fois |
 
 ## Choix de classe
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
 | `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
 | `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
-| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present, standIn : second personnage d'un joueur seul dans son équipe} |
+| `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
+| `DL` | C ↔ S | joueur | Équipes à défier (match amical hors tournoi). C-&gt;S : DL{} ; S-&gt;C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible} |
+| `DD` | C → S | joueur | Défier une équipe : DD{team} |
+| `DI` | S → C | joueur | Défi reçu par l'équipe du joueur : DI{from, name, seconds} |
+| `DA` | C → S | joueur | Réponse à un défi : DA{from, accept} (le premier joueur de l'équipe qui répond décide) |
+| `DR` | S → C | joueur | Résultat d'un défi : DR{ok, message, from, to} |
+| `PZ` | C → S | joueur | Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]} |
+| `PA` | S → C | joueur | Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}} |
 | `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |

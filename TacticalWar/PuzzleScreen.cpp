@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "AppearanceChoice.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
 #include "LinkToServer.h"
@@ -256,9 +257,20 @@ void PuzzleScreen::update(float deltatime)
 		{
 			result = Result::SOLVED;
 			ClientConfig & config = ClientConfig::get();
+			std::vector<std::string> before = availableAppearances();
 			if (config.solvedPuzzles.insert(puzzle.id).second)
 				config.save();
 			hud->showMessage(L"Énigme réussie !", sf::Color(120, 255, 120), 2.f);
+			// Les énigmes débloquent des apparences (envoyées au serveur à la prochaine connexion).
+			for (const std::string & id : availableAppearances())
+			{
+				if (std::find(before.begin(), before.end(), id) == before.end())
+				{
+					sf::String text = L"Énigme réussie ! Nouvelle apparence débloquée : " + fromServerText(appearanceName(id));
+					hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
+					hud->log(text, sf::Color(255, 215, 70));
+				}
+			}
 			refreshPanel();
 		}
 		else if (battle::puzzleFailed(state))

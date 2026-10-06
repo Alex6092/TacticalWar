@@ -1,4 +1,5 @@
 ﻿#include "BattleEngine.h"
+#include "StateJson.h"
 #include "Achievements.h"
 #include "Emotes.h"
 
@@ -8,13 +9,6 @@
 using namespace tw::battle;
 using nlohmann::json;
 
-namespace
-{
-	json cellJson(const Cell & cell)
-	{
-		return json::array({ cell.x, cell.y });
-	}
-}
 
 BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, std::uint32_t seed)
 	: data(data), map(map), rng(seed), seed(seed), seq(0), pendingEvents(json::array())
@@ -27,7 +21,7 @@ BattleEngine::BattleEngine(const GameData & data, const BattleMap & map, const B
 }
 
 int BattleEngine::addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells,
-	const std::vector<std::string> & talents)
+	const std::vector<std::string> & talents, const std::string & appearance)
 {
 	const ClassDef * classDef = data.findClass(classId);
 	if (classDef == nullptr || (team != 1 && team != 2) || state.phase != BattlePhase::PLACEMENT || state.round != 0)
@@ -53,6 +47,7 @@ int BattleEngine::addFighter(int team, int classId, const std::string & name, co
 	fighter.mp = fighter.baseStats.get(Stat::MP);
 	fighter.position = { -1, -1 };
 	fighter.timeBankMs = (std::int64_t)data.rules.timeBankSeconds * 1000;
+	fighter.appearance = data.findAppearance(appearance) != nullptr ? appearance : std::string();
 
 	for (const SpellDef & spell : classDef->spells)
 		fighter.cooldowns[spell.id] = spell.initialCooldown;
@@ -68,6 +63,13 @@ void BattleEngine::enableZone(int pointsToWin)
 	state.zone.enabled = true;
 	state.zone.cells = objectiveZone(map);
 	state.zone.pointsToWin = std::max(1, pointsToWin);
+}
+
+void BattleEngine::enableMapBonuses()
+{
+	if (state.phase != BattlePhase::PLACEMENT || state.round > 0)
+		return;
+	state.bonuses = !data.bonuses.orbs.empty();
 }
 
 void BattleEngine::startPlacement(std::int64_t nowMs)
@@ -215,6 +217,7 @@ void BattleEngine::startFight(std::int64_t nowMs)
 	state.turnIndex = 0;
 
 	emit({ { "t", "fight" }, { "order", state.turnOrder } });
+	spawnOrbs();
 	beginTurn(nowMs);
 }
 
@@ -242,7 +245,7 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 
 		emit({ { "t", "turn" }, { "f", fighter.id }, { "round", state.round } });
 
-		// Les glyphes du combattant s'usent au début de ses tours.
+		// Les glyphes et les murs du combattant s'usent au début de ses tours.
 		for (auto it = state.glyphs.begin(); it != state.glyphs.end();)
 		{
 			if (it->casterId == fighter.id && --it->remainingTurns <= 0)
@@ -255,6 +258,12 @@ void BattleEngine::beginTurn(std::int64_t nowMs)
 				it++;
 			}
 		}
+		for (Block & block : state.blocks)
+		{
+			if (block.casterId == fighter.id)
+				block.remainingTurns--;
+		}
+		removeBlocks([&](const Block & block) { return block.casterId == fighter.id && block.remainingTurns <= 0; }, "expired");
 
 		tickEffectsAtTurnStart(fighter);
 		if (fighter.alive)
@@ -344,6 +353,7 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		scoreZone();
 		if (state.phase == BattlePhase::ENDED)
 			return;
+		spawnOrbs();
 	}
 
 	if (state.round > data.rules.maxRounds)
@@ -395,7 +405,7 @@ ActionResult BattleEngine::move(int fighterId, const std::vector<Cell> & path, s
 
 	json pathJson = json::array();
 	for (const Cell & cell : preview.path)
-		pathJson.push_back(cellJson(cell));
+		pathJson.push_back(statejson::cell(cell));
 
 	json tackles = json::array();
 	for (const TackleLoss & loss : preview.tackles)
@@ -407,6 +417,13 @@ ActionResult BattleEngine::move(int fighterId, const std::vector<Cell> & path, s
 	fighter.ap = preview.apAfter;
 
 	emit({ { "t", "move" }, { "f", fighter.id }, { "path", pathJson }, { "tackles", tackles }, { "ap", fighter.ap }, { "mp", fighter.mp } });
+
+	// Orbes sur le chemin : ramassés au passage.
+	for (const Cell & cell : preview.path)
+	{
+		if (state.orbAt(cell) != nullptr)
+			pickUpOrb(fighter, cell);
+	}
 
 	if (fighter.ap <= 0 && fighter.mp <= 0)
 		finishTurn(nowMs);
@@ -441,20 +458,24 @@ ActionResult BattleEngine::cast(int fighterId, int spellIndex, const Cell & targ
 
 	emit({ { "t", "cast" }, { "f", caster.id }, { "spell", spell->id }, { "slot", spellIndex }, { "x", target.x }, { "y", target.y } });
 
-	// Les combattants touchés sont déterminés au moment du lancer (avant poussées et bonds).
+	// Les combattants et les blocs touchés sont déterminés au moment du lancer (avant poussées et bonds).
 	std::vector<int> targetIds;
+	std::vector<int> blockIds;
 	for (const Cell & cell : impactCells(map, caster.position, target, spell->impact))
 	{
 		const Fighter * hit = state.fighterAt(cell);
 		if (hit != nullptr)
 			targetIds.push_back(hit->id);
+		const Block * block = state.blockAt(cell);
+		if (block != nullptr)
+			blockIds.push_back(block->uid);
 	}
 
 	for (const EffectDef & effect : spell->effects)
 	{
 		if (state.phase == BattlePhase::ENDED)
 			break;
-		applySpellEffect(caster, *spell, effect, target, targetIds);
+		applySpellEffect(caster, *spell, effect, target, targetIds, blockIds);
 	}
 
 	if (caster.alive)
@@ -601,6 +622,74 @@ void BattleEngine::scoreZone()
 		endBattle(holder, EndReason::OBJECTIVE);
 }
 
+void BattleEngine::spawnOrbs()
+{
+	if (!state.bonuses || data.bonuses.orbs.empty() || !state.orbs.empty() || state.round < data.bonuses.firstRound
+		|| (state.round - data.bonuses.firstRound) % data.bonuses.every != 0)
+		return;
+
+	// Groupe de cases symétriques libres (praticables, sans combattant ni bloc), tiré au hasard.
+	std::vector<std::vector<Cell>> free;
+	for (const std::vector<Cell> & spot : orbSpots(map))
+	{
+		bool usable = true;
+		for (const Cell & cell : spot)
+			usable = usable && cellWalkable(state, map, cell) && state.fighterAt(cell) == nullptr && state.blockAt(cell) == nullptr;
+		if (usable)
+			free.push_back(spot);
+	}
+	if (free.empty())
+		return;
+
+	const std::vector<Cell> & spot = free[rng() % free.size()];
+	const OrbDef & kind = data.bonuses.orbs[rng() % data.bonuses.orbs.size()];
+	json orbs = json::array();
+	for (const Cell & cell : spot)
+	{
+		Orb orb;
+		orb.uid = state.nextUid++;
+		orb.kind = kind.id;
+		orb.cell = cell;
+		state.orbs.push_back(orb);
+		orbs.push_back({ { "uid", orb.uid }, { "kind", orb.kind }, { "x", cell.x }, { "y", cell.y } });
+	}
+	emit({ { "t", "orb+" }, { "orbs", orbs } });
+}
+
+void BattleEngine::pickUpOrb(Fighter & fighter, const Cell & cell)
+{
+	auto it = std::find_if(state.orbs.begin(), state.orbs.end(), [&](const Orb & orb) { return orb.cell == cell; });
+	if (it == state.orbs.end() || !fighter.alive)
+		return;
+	Orb orb = *it;
+	state.orbs.erase(it);
+	emit({ { "t", "orb-" }, { "uid", orb.uid }, { "f", fighter.id }, { "kind", orb.kind }, { "x", cell.x }, { "y", cell.y } });
+
+	// Effet de l'orbe ; un soin d'orbe ne compte pas dans le bilan.
+	const OrbDef * def = data.findOrb(orb.kind);
+	if (def == nullptr)
+		return;
+	if (def->heal > 0)
+		heal(fighter, def->heal, -1, "orb");
+	if (def->ap > 0)
+	{
+		fighter.ap += def->ap;
+		emitStats(fighter);
+	}
+	if (def->shield > 0)
+	{
+		ActiveEffect shield;
+		shield.type = EffectType::SHIELD;
+		shield.value = def->shield;
+		shield.remainingTurns = std::max(1, def->shieldTurns);
+		shield.casterId = fighter.id;
+		shield.spellId = "__orb";
+		shield.name = def->name;
+		shield.positive = true;
+		addActiveEffect(fighter, shield, true);
+	}
+}
+
 int BattleEngine::decideWinner() const
 {
 	if (state.zone.enabled && state.zone.scores[1] != state.zone.scores[2])
@@ -650,7 +739,7 @@ void BattleEngine::endBattle(int winnerTeam, EndReason reason)
 	json records = json::array();
 	for (const Fighter & fighter : state.fighters)
 	{
-		json record = recordJson(fighter.record);
+		json record = statejson::record(fighter.record);
 		record["f"] = fighter.id;
 		records.push_back(record);
 	}
@@ -713,157 +802,8 @@ json BattleEngine::flushEvents()
 	return batch;
 }
 
-json BattleEngine::effectJson(const ActiveEffect & effect) const
-{
-	const char * kind = "STAT_MOD";
-	switch (effect.type)
-	{
-	case EffectType::SHIELD: kind = "SHIELD"; break;
-	case EffectType::DOT: kind = "DOT"; break;
-	case EffectType::HOT: kind = "HOT"; break;
-	case EffectType::STATE: kind = "STATE"; break;
-	default: break;
-	}
-
-	return {
-		{ "uid", effect.uid },
-		{ "kind", kind },
-		{ "stat", toString(effect.stat) },
-		{ "value", effect.value },
-		{ "min", effect.minValue },
-		{ "max", effect.maxValue },
-		{ "turns", effect.remainingTurns },
-		{ "skip", effect.skipNextDecrement },
-		{ "name", effect.name },
-		{ "spell", effect.spellId },
-		{ "caster", effect.casterId },
-		{ "positive", effect.positive },
-		{ "state", effect.state }
-	};
-}
-
-json BattleEngine::glyphJson(const Glyph & glyph) const
-{
-	json cells = json::array();
-	for (const Cell & cell : glyph.cells)
-		cells.push_back(cellJson(cell));
-
-	return {
-		{ "uid", glyph.uid },
-		{ "caster", glyph.casterId },
-		{ "team", glyph.team },
-		{ "spell", glyph.spellId },
-		{ "name", glyph.name },
-		{ "cells", cells },
-		{ "turns", glyph.remainingTurns }
-	};
-}
-
-json BattleEngine::recordJson(const FighterRecord & record)
-{
-	return {
-		{ "dealt", record.dealt },
-		{ "taken", record.taken },
-		{ "healed", record.healed },
-		{ "shielded", record.shielded },
-		{ "kills", record.kills },
-		{ "casts", record.casts },
-		{ "combos", record.combos },
-		{ "zonePoints", record.zonePoints },
-		{ "badges", record.badges }
-	};
-}
-
-json BattleEngine::fighterJson(const Fighter & fighter) const
-{
-	json cooldowns = json::object();
-	for (const auto & cooldown : fighter.cooldowns)
-		cooldowns[cooldown.first] = cooldown.second;
-
-	json casts = json::object();
-	for (const auto & entry : fighter.castsThisTurn)
-		casts[entry.first] = entry.second;
-
-	json effects = json::array();
-	for (const ActiveEffect & effect : fighter.effects)
-		effects.push_back(effectJson(effect));
-
-	json stats = json::object();
-	for (int i = 0; i < STAT_COUNT; i++)
-		stats[toString((Stat)i)] = fighter.baseStats.get((Stat)i);
-
-	return {
-		{ "id", fighter.id },
-		{ "stats", stats },
-		{ "team", fighter.team },
-		{ "classId", fighter.classId },
-		{ "name", fighter.name },
-		{ "spells", fighter.spells },
-		{ "talents", fighter.talents },
-		{ "x", fighter.position.x },
-		{ "y", fighter.position.y },
-		{ "hp", fighter.hp },
-		{ "maxHp", fighter.maxHp },
-		{ "shield", fighter.shield },
-		{ "ap", fighter.ap },
-		{ "mp", fighter.mp },
-		{ "alive", fighter.alive },
-		{ "ready", fighter.ready },
-		{ "connected", fighter.connected },
-		{ "piloted", fighter.piloted },
-		{ "bank", fighter.timeBankMs },
-		{ "cooldowns", cooldowns },
-		{ "casts", casts },
-		{ "effects", effects },
-		{ "record", recordJson(fighter.record) }
-	};
-}
-
 json BattleEngine::snapshot(int viewerFighterId, std::int64_t nowMs) const
 {
-	json fighters = json::array();
-	for (const Fighter & fighter : state.fighters)
-		fighters.push_back(fighterJson(fighter));
-
-	json glyphs = json::array();
-	for (const Glyph & glyph : state.glyphs)
-		glyphs.push_back(glyphJson(glyph));
-
-	json startCells = json::object();
-	for (int team = 1; team <= 2; team++)
-	{
-		json cells = json::array();
-		for (const Cell & cell : map.startCells[team])
-			cells.push_back(cellJson(cell));
-		startCells[std::to_string(team)] = cells;
-	}
-
 	std::int64_t remaining = state.deadlineMs > nowMs ? state.deadlineMs - nowMs : 0;
-
-	return {
-		{ "seq", seq },
-		{ "you", viewerFighterId },
-		{ "phase", toString(state.phase) },
-		{ "round", state.round },
-		{ "active", state.activeFighterId() },
-		{ "order", state.turnOrder },
-		{ "ms", remaining },
-		{ "fighters", fighters },
-		{ "glyphs", glyphs },
-		{ "startCells", startCells },
-		{ "winner", state.winnerTeam },
-		{ "reason", toString(state.endReason) },
-		{ "mvp", state.mvpFighterId },
-		{ "zone", zoneJson(state.zone) }
-	};
-}
-
-json BattleEngine::zoneJson(const ZoneState & zone)
-{
-	if (!zone.enabled)
-		return nullptr;
-	json cells = json::array();
-	for (const Cell & cell : zone.cells)
-		cells.push_back(cellJson(cell));
-	return { { "cells", cells }, { "points", zone.pointsToWin }, { "scores", { zone.scores[1], zone.scores[2] } }, { "holder", zone.holder } };
+	return statejson::snapshot(state, map, seq, viewerFighterId, remaining);
 }

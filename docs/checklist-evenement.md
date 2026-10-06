@@ -3,7 +3,10 @@
 ## Avant l'événement
 
 - [ ] Préparer les paquets : `powershell -ExecutionPolicy Bypass -File tools\package.ps1 -ServerHost <IP du serveur>`
-      (compile en Release, lance les tests, crée `dist\*.zip`).
+      (compile en Release, lance les tests, crée `dist\*.zip`). Le zip du client est aussi déposé dans
+      le paquet du serveur : les élèves peuvent le télécharger sur `http://<IP>:8080/telecharger.html`.
+- [ ] **Version des clients** : un client d'une autre version que le serveur est refusé à la connexion,
+      avec l'adresse de la page de téléchargement. Distribuer le nouveau zip après chaque mise à jour.
 - [ ] **Réseau** : un réseau local filaire ou un point d'accès Wi-Fi dédié. Le Wi-Fi des établissements
       isole souvent les postes entre eux (« isolation des clients ») : le jeu ne fonctionne pas dans ce cas.
 - [ ] Choisir le PC serveur, lui donner une adresse IP fixe si possible.
@@ -18,6 +21,8 @@
 - [ ] Proposer aux élèves de faire le **tutoriel** (bouton « Tutoriel » de l'écran de connexion,
       quelques minutes, sans serveur), puis de s'entraîner : bouton « Entraînement », et ses
       « Énigmes » (voir `docs/regles-du-jeu.md`).
+- [ ] Conserver le `data\profiles.json` d'un événement à l'autre : il garde les apparences débloquées
+      par chaque joueur (hauts faits, victoires, énigmes).
 - [ ] **Imprimer le guide du joueur**, un par joueur, en recto-verso : `http://<IP>:8080/guide.html`
       (serveur lancé) ou bouton « Guide » de l'onglet Tournoi. Il peut être distribué avant
       l'événement avec le tutoriel.
@@ -26,7 +31,9 @@
 
 1. Lancer le serveur, créer 4 à 8 équipes et un tournoi.
 2. Lancer un bot par joueur : `TacticalWarBot.exe --login <login> --password <mdp> --server <IP> --delay 800`.
-3. Suivre l'avancée sur `http://<IP>:8080/` et avec un client en mode réalisateur.
+3. Suivre l'avancée sur `http://<IP>:8080/` (onglet « Combats » : mosaïque des combats en cours ;
+   panneau « Commentaire ») et avec un client en mode réalisateur.
+4. Une fois des combats terminés, sans combat en cours, le réalisateur rejoue leurs temps forts.
 
 ## Le jour J
 
@@ -37,9 +44,13 @@
    - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11).
      La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs ».
      À la fin du tournoi, elle passe sur la « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
-   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré) ;
-   - temps forts : chaque combat est enregistré (`data\replays\`) et peut être revu depuis l'écran
-     spectateur, onglet « Rediffusions » (client connecté sans identifiants).
+   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré). Entre deux combats,
+     il rejoue automatiquement les **temps forts** des derniers combats (KO, double KO, combinaisons,
+     retournements…) et repasse en direct dès qu'un combat commence ;
+   - la page projetée montre aussi la **mosaïque** de tous les combats en cours (onglet « Combats ») et
+     le **commentaire** automatique ;
+   - rediffusions complètes : chaque combat est enregistré (`data\replays\`) et peut être revu depuis
+     l'écran spectateur, onglet « Rediffusions » (client connecté sans identifiants).
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
@@ -47,8 +58,14 @@
    Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
    finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
    Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
+   Réglage « Bonus sur la carte » : des orbes (soin, énergie, protection) apparaissent au centre à partir
+   du tour 3 ; désactivé par défaut.
+   Onglet **Matchs** : matchs amicaux hors tournoi (équipes, carte), à regarder ou annuler.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
-   match, ou en démonstration (`TacticalWar.exe --training-autoplay`, combats entre ordinateurs).
+   match (niveau Difficile pour les plus aguerris), ou en démonstration (`TacticalWar.exe
+   --training-autoplay`, combats entre ordinateurs).
+6. **Avant ou après le tournoi**, les équipes qui attendent peuvent se **défier** en match amical depuis
+   leur écran d'attente. Les défis sont fermés pendant un tournoi en cours.
 
 ## En cas de problème
 
@@ -58,7 +75,9 @@
 | Le serveur s'est arrêté | Le relancer : le tournoi reprend, les matchs en cours sont rejoués. |
 | Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
 | Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
-| Un PC n'a pas de son | Lancer le client avec `--no-sound`. |
+| Un PC n'a pas de son | Lancer le client avec `--no-sound`, ou décocher « Sons et musique » dans Options. |
+| Un joueur distingue mal les couleurs | Options : mode daltonien (couleurs, hachures, symboles d'équipe). Texte trop petit : taille du texte 115 ou 130 %. |
+| « Ce jeu ne correspond pas au serveur » | Le client n'a pas la bonne version : bouton « Ouvrir la page de téléchargement », dézipper le nouveau client, le lancer. |
 | Les émotes des joueurs gênent | Mettre `"emotes": false` dans `server.json`, puis relancer le serveur. |
 
 ## Après le tournoi

@@ -108,6 +108,7 @@ int main(int argc, char** argv)
 	}
 
 	HttpFrontend http(config.httpPort, "./assets/web");
+	http.setMaps(parser.compactMaps());
 	if (!http.start(error))
 		std::cerr << "Vue projetée indisponible : " << error << std::endl;
 	else

@@ -39,9 +39,6 @@
     <ClCompile Include="ServerMessageListener.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="MatchView.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="ClassSelectionScreen.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
@@ -81,9 +78,6 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="ServerMessageListener.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="MatchView.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="ClassSelectionScreen.h">
@@ -127,7 +121,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LiveSessionsPanel.cpp" />
+    <ClCompile Include="MatchesAdminPanel.cpp" />
     <ClInclude Include="LiveSessionsPanel.h" />
+    <ClInclude Include="MatchesAdminPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ReplaysPanel.cpp" />
@@ -167,8 +163,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PuzzleScreen.cpp" />
+    <ClCompile Include="AppearanceChoice.cpp" />
+    <ClCompile Include="OptionsPanel.cpp" />
+    <ClCompile Include="SystemBrowser.cpp" />
     <ClCompile Include="PuzzleSelectScreen.cpp" />
     <ClInclude Include="PuzzleScreen.h" />
+    <ClInclude Include="AppearanceChoice.h" />
+    <ClInclude Include="OptionsPanel.h" />
+    <ClInclude Include="SystemBrowser.h" />
+    <ClInclude Include="UiScale.h" />
     <ClInclude Include="PuzzleSelectScreen.h" />
   </ItemGroup>
   <ItemGroup>

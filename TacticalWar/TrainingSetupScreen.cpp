@@ -19,7 +19,9 @@ namespace
 {
 	const float PANEL_WIDTH = 780;
 	const float LABEL_WIDTH = 230;
-	const float ROW_HEIGHT = 40;
+	// Lignes serrées : tout tient dans une fenêtre de 720 pixels de haut.
+	const float ROW_HEIGHT = 34;
+	const float ROWS_TOP = 76;
 	const float FIELD_HEIGHT = 28;
 	const unsigned int TEXT_SIZE = 16;
 }
@@ -50,8 +52,8 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	help->setInheritedFont(font);
 	help->setTextSize(14);
 	help->getRenderer()->setTextColor(sf::Color(220, 220, 220));
-	help->setPosition(20, 14);
-	help->setSize(PANEL_WIDTH - 40, 60);
+	help->setPosition(20, 12);
+	help->setSize(PANEL_WIDTH - 40, 56);
 	panel->add(help);
 
 	format = addRow(L"Format");
@@ -79,10 +81,17 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	mode->addItem(L"Zone à tenir (premier à " + std::to_wstring(TrainingSettings::ZONE_POINTS) + L" points)", "zone");
 	mode->setSelectedItemById(settings.zone ? "zone" : "ko");
 
+	bonuses = addRow(L"Bonus sur la carte");
+	bonuses->addItem(L"Aucun", "0");
+	bonuses->addItem(L"Orbes au centre (soin, énergie, protection)", "1");
+	bonuses->setSelectedItemById(settings.bonuses ? "1" : "0");
+
 	difficulty = addRow(L"Difficulté");
 	difficulty->addItem(L"Facile (l'IA fait des erreurs)", "easy");
 	difficulty->addItem(L"Normal", "normal");
-	difficulty->setSelectedItemById(settings.easy ? "easy" : "normal");
+	difficulty->addItem(L"Difficile (l'IA prépare ses coups)", "hard");
+	difficulty->setSelectedItemById(settings.difficulty == TrainingSettings::Difficulty::EASY ? "easy"
+		: settings.difficulty == TrainingSettings::Difficulty::HARD ? "hard" : "normal");
 
 	talentCount = addRow(L"Talents de tournoi");
 	talentCount->addItem(L"Aucun", "0");
@@ -93,7 +102,7 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 		talentCount->setSelectedItemById("0");
 	talentCount->connect("ItemSelected", [this]() { refresh(); });
 
-	float top = 90 + labels.size() * ROW_HEIGHT;
+	float top = ROWS_TOP + labels.size() * ROW_HEIGHT;
 	description = tgui::Label::create();
 	description->setInheritedFont(font);
 	description->setTextSize(14);
@@ -102,7 +111,7 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	description->setSize(PANEL_WIDTH - 40, 56);
 	panel->add(description);
 
-	// Sorts emportés : les 6 de la classe, 4 choisis (survol : description du sort).
+	// Sorts emportés : 4 parmi ceux de la classe (survol : description du sort).
 	spellPicker.reset(new SpellPicker(font, SpellPicker::Layout::ROW));
 	spellPicker->setGeometry(PANEL_WIDTH - 40, 0);
 	spellPicker->getWidget()->setPosition(20, top + 60);
@@ -165,7 +174,7 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 
 tgui::ComboBox::Ptr TrainingSetupScreen::addRow(const sf::String & text)
 {
-	float top = 90 + labels.size() * ROW_HEIGHT;
+	float top = ROWS_TOP + labels.size() * ROW_HEIGHT;
 
 	tgui::Label::Ptr label = tgui::Label::create(text);
 	label->setInheritedFont(font);
@@ -251,8 +260,10 @@ void TrainingSetupScreen::save()
 	settings.enemyClasses[0] = selectedId(enemyClasses[0]);
 	settings.enemyClasses[1] = selectedId(enemyClasses[1]);
 	settings.mapId = selectedId(map);
-	settings.easy = difficulty->getSelectedItemId() == "easy";
+	settings.difficulty = difficulty->getSelectedItemId() == "easy" ? TrainingSettings::Difficulty::EASY
+		: difficulty->getSelectedItemId() == "hard" ? TrainingSettings::Difficulty::HARD : TrainingSettings::Difficulty::NORMAL;
 	settings.zone = mode->getSelectedItemId() == "zone";
+	settings.bonuses = bonuses->getSelectedItemId() == "1";
 
 	settings.talentCount = selectedId(talentCount);
 	settings.talents = talentPicker->getChosen();
@@ -280,8 +291,11 @@ void TrainingSetupScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gu
 {
 	float width = (float)window->getSize().x;
 	float height = (float)window->getSize().y;
-	title.setPosition(width / 2 - title.getLocalBounds().width / 2, 20);
-	float top = std::max(130.f, (height - panel->getSize().y) / 2 + 40);
+	// Fenêtre basse : titre réduit, panneau remonté.
+	bool compact = height < 900;
+	title.setCharacterSize(compact ? 44 : 72);
+	title.setPosition(width / 2 - title.getLocalBounds().width / 2, compact ? 6.f : 20.f);
+	float top = std::max(compact ? 64.f : 130.f, (height - panel->getSize().y) / 2 + (compact ? 30.f : 40.f));
 	panel->setPosition((width - PANEL_WIDTH) / 2, top);
 
 	sf::Event event;

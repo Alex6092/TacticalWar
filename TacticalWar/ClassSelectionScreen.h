@@ -81,6 +81,13 @@ private:
 	tgui::Label::Ptr mateTitle;
 	tgui::Label::Ptr mateStatus;
 	tgui::Label::Ptr mateCombos;
+	// Apparence : une pastille par apparence (verrouillées en grisé), nom ou condition de déblocage.
+	std::vector<tgui::Button::Ptr> appearanceButtons;
+	tgui::Label::Ptr appearanceLabel;
+	std::string selectedAppearance;
+	sf::String appearanceHint;
+	int myTeam = 1;
+	void refreshAppearances();
 
 	bool readyToLock;
 	bool locked;
@@ -104,6 +111,7 @@ private:
 	bool matePresent = false;
 	// Le « coéquipier » est le second personnage d'un joueur seul dans son équipe.
 	bool mateStandIn = false;
+	std::string mateAppearance;
 	// Classe verrouillée par le joueur (PO), rappelée pendant le choix pour le second personnage.
 	int myClass = 0;
 	int viewSent = -1;

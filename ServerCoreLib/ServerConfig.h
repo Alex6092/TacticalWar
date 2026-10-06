@@ -45,6 +45,8 @@ namespace tw
 		// Les tournois ont leur propre réglage.
 		std::string battleMode = "KO";
 		int zonePoints = 5;
+		// Bonus sur la carte (orbes) dans les matchs hors tournoi.
+		bool mapBonuses = false;
 
 		AdminConfig admin;
 

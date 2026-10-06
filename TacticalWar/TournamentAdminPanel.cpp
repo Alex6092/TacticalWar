@@ -172,9 +172,15 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	maps->addItem(L"À cases spéciales", "SPECIAL");
 	maps->addItem(L"Toutes", "ALL");
 	maps->setSelectedItemById("CLASSIC");
+	// Bonus sur la carte : orbes au centre (soin, énergie, protection).
+	bonuses = tgui::CheckBox::create(L"Bonus sur la carte (orbes)");
+	bonuses->setInheritedFont(font);
+	bonuses->setTextSize(TEXT_SIZE);
+	bonuses->getRenderer()->setTextColor(sf::Color::White);
+	bonuses->setChecked(false);
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps, bonuses })
 		settings->add(widget);
 
 	settings->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -471,6 +477,9 @@ float TournamentAdminPanel::layoutSettings(float w)
 	maps->setPosition(x + 160, y);
 	maps->setSize(w - 160, 26);
 	y += 34;
+	bonuses->setPosition(x, y);
+	bonuses->setSize(18, 18);
+	y += 30;
 
 	tgui::Label::Ptr teamsLabel = settings->get<tgui::Label>("teamsLabel");
 	teamsLabel->setMaximumTextWidth(w);
@@ -617,6 +626,7 @@ void TournamentAdminPanel::refreshForm()
 		bans->setSelectedItemById(banMode == "FINALS" || banMode == "ALL" ? banMode : "NONE");
 		std::string mapPool = settings.value("maps", std::string("CLASSIC"));
 		maps->setSelectedItemById(mapPool == "SPECIAL" || mapPool == "ALL" ? mapPool : "CLASSIC");
+		bonuses->setChecked(settings.value("bonuses", false));
 	}
 	refreshFormatOptions();
 
@@ -666,6 +676,7 @@ void TournamentAdminPanel::refreshForm()
 	maxTalents->setEnabled(draft);
 	bans->setEnabled(draft);
 	maps->setEnabled(draft);
+	bonuses->setEnabled(draft);
 	teamList->setEnabled(draft);
 	saveButton->setEnabled(draft);
 	startButton->setEnabled(draft && selectedId != 0);
@@ -769,7 +780,8 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "zonePoints", number(zonePoints) },
 		{ "maxTalents", number(maxTalents) },
 		{ "bans", bans->getSelectedItemId().toAnsiString() },
-		{ "maps", maps->getSelectedItemId().toAnsiString() }
+		{ "maps", maps->getSelectedItemId().toAnsiString() },
+		{ "bonuses", bonuses->isChecked() }
 	};
 }
 

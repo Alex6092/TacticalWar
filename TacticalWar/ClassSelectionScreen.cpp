@@ -9,6 +9,8 @@
 
 #include "BattleScreen.h"
 #include "ClientConfig.h"
+#include "AppearanceChoice.h"
+#include <Appearances.h>
 #include "ClientGameData.h"
 #include "LinkToServer.h"
 #include "LoginScreen.h"
@@ -126,6 +128,51 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	nlohmann::json message = nlohmann::json::parse(selection, nullptr, false);
 	if (!message.is_object())
 		message = nlohmann::json::object();
+	myTeam = message.value("team", 1) == 2 ? 2 : 1;
+
+	// Apparences : pastilles aux couleurs de l'équipe (armure) et des cheveux.
+	selectedAppearance = tw::chosenAppearance();
+	for (const tw::battle::AppearanceDef & look : ClientGameData::get().data().appearances)
+	{
+		int armor[3];
+		int hair[3];
+		tw::appearanceColors(look.id, myTeam, armor, hair);
+		tgui::Button::Ptr swatch = tgui::Button::create();
+		swatch->getRenderer()->setBackgroundColor(sf::Color(armor[0], armor[1], armor[2]));
+		swatch->getRenderer()->setBackgroundColorHover(sf::Color(armor[0], armor[1], armor[2]));
+		swatch->getRenderer()->setBorders(4);
+		swatch->getRenderer()->setBorderColor(sf::Color(hair[0], hair[1], hair[2]));
+		std::string id = look.id;
+		sf::String name = fromServerText(look.name);
+		sf::String condition = fromServerText(tw::battle::unlockCondition(look));
+		tgui::Label::Ptr tip = tgui::Label::create(name + L"\n" + (look.unlockAchievement.empty() && look.unlockWins == 0 && look.unlockMvp == 0
+			&& look.unlockPuzzles == 0 ? sf::String(L"Disponible dès le départ") : L"Débloquée par : " + condition));
+		tip->setInheritedFont(textFont);
+		tip->setTextSize(13);
+		tip->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 235));
+		tip->getRenderer()->setTextColor(sf::Color::White);
+		tip->getRenderer()->setBorders(1);
+		tip->getRenderer()->setBorderColor(sf::Color(255, 215, 0));
+		tip->getRenderer()->setPadding(6);
+		swatch->setToolTip(tip);
+		swatch->connect("pressed", [this, id, name, condition]() {
+			std::vector<std::string> available = tw::availableAppearances();
+			bool unlocked = std::find(available.begin(), available.end(), id) != available.end();
+			if (unlocked && !(locked && !forMate))
+				selectedAppearance = id;
+			appearanceHint = unlocked ? sf::String() : name + L" : à débloquer (" + condition + L")";
+			refreshAppearances();
+		});
+		gui->add(swatch);
+		appearanceButtons.push_back(swatch);
+	}
+	appearanceLabel = tgui::Label::create();
+	appearanceLabel->setInheritedFont(textFont);
+	appearanceLabel->setTextSize(14);
+	appearanceLabel->getRenderer()->setTextColor(sf::Color(235, 235, 235));
+	appearanceLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	appearanceLabel->getRenderer()->setTextOutlineThickness(1);
+	gui->add(appearanceLabel);
 	talentPicker.reset(new tw::TalentPicker(gui, font));
 	talentPicker->setSlots(message.value("talents", 0));
 	talentPicker->setChosen(ClientConfig::get().talentChoice);
@@ -177,6 +224,32 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	gui->add(matePanel);
 
 	showClass(0);
+	refreshAppearances();
+}
+
+void ClassSelectionScreen::refreshAppearances()
+{
+	std::vector<std::string> available = tw::availableAppearances();
+	const std::vector<tw::battle::AppearanceDef> & looks = ClientGameData::get().data().appearances;
+	for (std::size_t i = 0; i < looks.size() && i < appearanceButtons.size(); i++)
+	{
+		bool unlocked = std::find(available.begin(), available.end(), looks[i].id) != available.end();
+		bool selected = looks[i].id == selectedAppearance;
+		appearanceButtons[i]->getRenderer()->setOpacity(unlocked ? 1.f : 0.35f);
+		appearanceButtons[i]->getRenderer()->setBorders(selected ? 5 : 3);
+		int armor[3];
+		int hair[3];
+		tw::appearanceColors(looks[i].id, myTeam, armor, hair);
+		appearanceButtons[i]->getRenderer()->setBorderColor(selected ? sf::Color(255, 215, 0) : sf::Color(hair[0], hair[1], hair[2]));
+		if (selected)
+		{
+			characterPicture->setTint(armor, hair);
+			if (appearanceHint.isEmpty())
+				appearanceLabel->setText(L"Apparence : " + fromServerText(looks[i].name));
+		}
+	}
+	if (!appearanceHint.isEmpty())
+		appearanceLabel->setText(appearanceHint);
 }
 
 ClassSelectionScreen::~ClassSelectionScreen()
@@ -266,7 +339,8 @@ void ClassSelectionScreen::refreshMate()
 		status = L"Votre personnage : " + classLabel(myClass) + L" (verrouillé). Choisissez maintenant "
 			+ (mateStandIn ? sf::String(L"le second.") : L"celui de " + mateName + L".");
 	else if (mateLocked)
-		status = (matePresent ? sf::String(L"A choisi : ") : sf::String(L"Choisi : ")) + classLabel(mateClass) + L" (verrouillé)";
+		status = (matePresent ? sf::String(L"A choisi : ") : sf::String(L"Choisi : ")) + classLabel(mateClass) + L" (verrouillé)"
+			+ (mateAppearance.empty() ? sf::String() : L", apparence " + fromServerText(tw::appearanceName(mateAppearance)));
 	else if (mateStandIn)
 		status = L"Seul dans votre équipe, vous jouez les deux personnages : choisissez le vôtre, puis le second.";
 	else if (!matePresent)
@@ -418,7 +492,7 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 
 	// Gauche : sorts (lignes ajustées à la hauteur disponible), puis talents.
 	float leftWidth = width * 0.36f;
-	float rowHeight = std::max(56.f, std::min(82.f, (bottom - 60 - top - 30) / 6));
+	float rowHeight = std::max(56.f, std::min(82.f, (bottom - 60 - top - 30) / std::max(6, spellPicker->rows())));
 	spellPicker->setGeometry(leftWidth, rowHeight);
 	spellPicker->getWidget()->setPosition(margin, top);
 	spellsPanel->setPosition(margin - 10, top - 8);
@@ -446,9 +520,19 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	nextButton->setSize(48, 64);
 	nextButton->setPosition(cardX + cardWidth + 8, cardY + cardHeight / 2 - 32);
 	characterPicture->setPosition(centerX + centerWidth / 2 - 40, cardY + cardHeight + 12);
-
 	// Droite : caractéristiques et description.
 	float rightX = centerX + centerWidth + width * 0.03f;
+
+	// Apparences : deux rangées de pastilles à droite du personnage, leur nom dessous.
+	float swatchX = centerX + centerWidth / 2 + 8;
+	float swatchY = cardY + cardHeight + 22;
+	for (std::size_t i = 0; i < appearanceButtons.size(); i++)
+	{
+		appearanceButtons[i]->setSize(28, 28);
+		appearanceButtons[i]->setPosition(swatchX + (i % 4) * 34, swatchY + (i / 4) * 34);
+	}
+	appearanceLabel->setPosition(swatchX, swatchY + 70);
+	appearanceLabel->setMaximumTextWidth(std::max(120.f, rightX - swatchX - 12));
 	float rightWidth = width - rightX - margin;
 	statsPanel->setPosition(rightX, top);
 	statsPanel->setSize(rightWidth, 200);
@@ -536,7 +620,7 @@ void ClassSelectionScreen::update(float deltatime)
 		readyToLock = false;
 		mateSent = true;
 		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", currentClassId() }, { "spells", spellPicker->getChosen() },
-			{ "talents", talentPicker->getChosen() }, { "teammate", true } }).dump());
+			{ "talents", talentPicker->getChosen() }, { "appearance", selectedAppearance }, { "teammate", true } }).dump());
 		refreshLock();
 	}
 	if (readyToLock)
@@ -548,9 +632,10 @@ void ClassSelectionScreen::update(float deltatime)
 		config.spellChoices[classId] = spellPicker->getChosen();
 		if (talentPicker->getSlots() > 0)
 			config.talentChoice = talentPicker->getChosen();
+		config.appearance = selectedAppearance;
 		config.save();
 		LinkToServer::getInstance()->Send("PC" + nlohmann::json({ { "class", classId }, { "spells", spellPicker->getChosen() },
-			{ "talents", talentPicker->getChosen() } }).dump());
+			{ "talents", talentPicker->getChosen() }, { "appearance", selectedAppearance } }).dump());
 	}
 
 	LinkToServer::getInstance()->UpdateReceivedData();
@@ -595,6 +680,12 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		refreshLock();
 		updateMatePick();
 	}
+	else if (m.substring(0, 2) == "PA")
+	{
+		// Apparences mises à jour (énigmes signalées à la connexion…).
+		tw::takeFreshAppearances();
+		refreshAppearances();
+	}
 	else if (m.substring(0, 2) == "PT")
 	{
 		// État du coéquipier : nom, classe regardée ou verrouillée, présence.
@@ -608,6 +699,7 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 			mateLocked = mate.value("locked", false);
 			matePresent = mate.value("present", true);
 			mateStandIn = mate.value("standIn", false);
+			mateAppearance = mate.value("appearance", std::string());
 			refreshMate();
 			updateMatePick();
 			refreshLock();

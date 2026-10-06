@@ -12,8 +12,10 @@
 #include <EnvironmentManager.h>
 #include <EnvironmentMap.h>
 #include <Message.h>
+#include <Palette.h>
 
 #include "AdminScreen.h"
+#include "AppearanceChoice.h"
 #include "BattleEventView.h"
 #include "ClassSelectionScreen.h"
 #include "ClientConfig.h"
@@ -23,6 +25,7 @@
 #include "MusicManager.h"
 #include "ScreenManager.h"
 #include "SpectatorModeScreen.h"
+#include "UiScale.h"
 #include "WaitMatchScreen.h"
 
 using namespace tw;
@@ -129,6 +132,10 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
+	hud->onOptionsChanged = [this]() { applyOptions(); };
+	renderer->setTextScale(ui::scale());
+	if (ClientConfig::get().openHelp)
+		hud->toggleHelp();
 
 	if (MusicManager::getInstance()->isEnabled())
 		sounds.resize(8);
@@ -249,6 +256,11 @@ void BattleScreen::update(float deltatime)
 		float remaining = std::max(0.f, deadline - clock.getElapsedTime().asSeconds());
 		hud->refresh(shown, ClientGameData::get().data(), actor(), hoveredFighter, selectedSpell, isMyTurn(), remaining);
 		refreshPreview();
+		// Alerte de fin de tour : un tic à chaque seconde des 5 dernières.
+		int alertSecond = hud->turnAlertSecond();
+		if (alertSecond > 0 && alertSecond != lastAlertSecond)
+			playSound("./assets/sound/ui/tick.ogg");
+		lastAlertSecond = alertSecond;
 	}
 
 	if (closeRequested)
@@ -271,6 +283,35 @@ void BattleScreen::render(sf::RenderWindow * window)
 
 	std::vector<AbstractSpellView<sf::Sprite*>*> effects;
 	fx.collectViews(effects);
+
+	// Blocs de mur (sorts de terrain) de l'état affiché ; un bloc traversable est translucide.
+	std::vector<IsometricRenderer::Prop> props;
+	for (const battle::Block & block : shown.blocks)
+	{
+		IsometricRenderer::Prop prop;
+		prop.x = (float)block.cell.x;
+		prop.y = (float)block.cell.y;
+		prop.texture = blockTexture(block.spellId);
+		prop.alpha = block.blocksMove ? 255 : 215;
+		prop.hp = block.hp;
+		prop.maxHp = block.maxHp;
+		auto top = blockTops.find(block.spellId);
+		if (top != blockTops.end())
+			prop.barAbove = prop.anchorY - top->second + 10.f;
+		props.push_back(prop);
+	}
+	// Orbes bonus : ils flottent au-dessus de leur case.
+	float bob = std::sin(clock.getElapsedTime().asSeconds() * 2.5f) * 4.f;
+	for (const battle::Orb & orb : shown.orbs)
+	{
+		IsometricRenderer::Prop prop;
+		prop.x = (float)orb.cell.x;
+		prop.y = (float)orb.cell.y;
+		prop.texture = orbTexture(orb.kind);
+		prop.anchorY = 120.f + bob;
+		props.push_back(prop);
+	}
+	renderer->setProps(props);
 
 	renderer->render(environment, characters, effects, getDeltatime());
 
@@ -382,15 +423,19 @@ void BattleScreen::drawAimPreview(sf::RenderWindow * window)
 	// bouclier et effets (au-dessus des PV, ils passeraient sous les panneaux du haut de l'écran).
 	for (const battle::TargetPreview & preview : aimPreviews)
 	{
-		BaseCharacterModel * view = viewOf(preview.fighterId);
-		if (view == NULL)
+		// Bloc de mur visé : sa case ; sinon le combattant touché.
+		const battle::Block * block = preview.blockUid >= 0 ? truth.findBlock(preview.blockUid) : NULL;
+		BaseCharacterModel * view = block == NULL ? viewOf(preview.fighterId) : NULL;
+		if (view == NULL && block == NULL)
 			continue;
+		float cellX = block != NULL ? (float)block->cell.x : view->getInterpolatedX();
+		float cellY = block != NULL ? (float)block->cell.y : view->getInterpolatedY();
 
 		std::vector<std::pair<sf::String, sf::Color>> lines;
 		if (preview.koCertain)
-			lines.push_back({ L"KO !", sf::Color(255, 215, 60) });
+			lines.push_back({ block != NULL ? sf::String(L"Détruit !") : sf::String(L"KO !"), sf::Color(255, 215, 60) });
 		else if (preview.koPossible)
-			lines.push_back({ L"KO possible", sf::Color(255, 175, 60) });
+			lines.push_back({ block != NULL ? sf::String(L"Détruit possible") : sf::String(L"KO possible"), sf::Color(255, 175, 60) });
 		// Dégâts : PV perdus en rouge, part absorbée par le bouclier en bleu.
 		int minLost = preview.minDamage - preview.minAbsorbed;
 		int maxLost = preview.maxDamage - preview.maxAbsorbed;
@@ -405,8 +450,8 @@ void BattleScreen::drawAimPreview(sf::RenderWindow * window)
 		for (const std::string & note : preview.notes)
 			lines.push_back({ fromServerText(note), sf::Color(235, 235, 235) });
 
-		float x = (view->getInterpolatedX() - view->getInterpolatedY()) * 60.f + 60.f + 52.f;
-		float y = (view->getInterpolatedX() + view->getInterpolatedY()) * 30.f + 30.f - 100.f;
+		float x = (cellX - cellY) * 60.f + 60.f + 52.f;
+		float y = (cellX + cellY) * 30.f + 30.f - 100.f;
 		for (auto line = lines.begin(); line != lines.end(); ++line)
 		{
 			sf::Text text(line->first, font, line->second == sf::Color(235, 235, 235) ? 15 : 19);
@@ -476,6 +521,22 @@ void BattleScreen::onMessageReceived(std::string msg)
 		awaitingServer = false;
 		if (message.parseJson(error))
 			hud->showMessage(fromServerText(error.value("message", std::string())), sf::Color(255, 110, 90), 2.5f);
+	}
+	else if (message.op == "RE")
+	{
+		// Fin d'un extrait (temps fort rejoué par le réalisateur) : retour à la liste.
+		if (mode == Mode::SPECTATOR)
+			autoCloseRemaining = 2.5f;
+	}
+	else if (message.op == "PA")
+	{
+		// Fin de combat : le serveur annonce les apparences débloquées par ce combat.
+		for (const std::string & id : takeFreshAppearances())
+		{
+			sf::String text = L"Nouvelle apparence débloquée : " + fromServerText(appearanceName(id)) + L" !";
+			hud->log(text, sf::Color(255, 215, 70));
+			hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
+		}
 	}
 	else if (message.op == "BG")
 	{
@@ -576,6 +637,10 @@ void BattleScreen::syncView(const battle::Fighter & fighter)
 			return;
 		view->setColorNumber(fighter.team);
 		view->setPseudo(fighter.name);
+		int armor[3];
+		int hair[3];
+		appearanceColors(fighter.appearance, fighter.team, armor, hair);
+		view->setAppearanceColors(armor, hair);
 		views[fighter.id] = view;
 	}
 
@@ -942,7 +1007,8 @@ void BattleScreen::refreshPreview()
 		{
 			bool enemy = me == NULL || hovered->team != me->team;
 			colorator->setThreat(battle::nextTurnReach(truth, map, data, *hovered), enemy);
-			hud->setHint(fromServerText(hovered->name) + (enemy ? L" : déplacement possible au prochain tour en orange" : L" : déplacement possible au prochain tour en turquoise"));
+			hud->setHint(fromServerText(hovered->name) + L" : déplacement possible au prochain tour en "
+				+ fromServerText(palette::name(enemy ? palette::Role::THREAT_ENEMY : palette::Role::THREAT_ALLY)));
 		}
 		else if (!terrain.isEmpty())
 		{
@@ -972,7 +1038,7 @@ void BattleScreen::refreshPreview()
 		std::vector<battle::Cell> range;
 		for (const battle::Cell & cell : battle::launchCells(truth, map, data, *me, *spell))
 		{
-			if (map.isWalkable(cell) || truth.fighterAt(cell) != NULL)
+			if (map.isWalkable(cell) || truth.fighterAt(cell) != NULL || truth.blockAt(cell) != NULL)
 				range.push_back(cell);
 		}
 		colorator->setRange(range);
@@ -1005,12 +1071,13 @@ void BattleScreen::refreshPreview()
 		else if (castable.empty())
 		{
 			aimPreviews.clear();
-			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en bleu clair (Échap pour annuler)");
+			hud->setHint(name + L" : aucune case ciblable d'ici, la portée du sort est en " + fromServerText(palette::name(palette::Role::RANGE))
+				+ L" (Échap pour annuler)");
 		}
 		else
 		{
 			aimPreviews.clear();
-			hud->setHint(name + L" : cliquez sur une case bleue (Échap pour annuler)");
+			hud->setHint(name + L" : cliquez sur une case " + fromServerText(palette::name(palette::Role::CASTABLE)) + L" (Échap pour annuler)");
 		}
 		return;
 	}
@@ -1045,6 +1112,20 @@ sf::String BattleScreen::terrainName(const battle::Cell & cell) const
 
 sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
 {
+	// Orbe bonus : ramassé par le premier qui passe dessus.
+	const battle::Orb * orb = truth.orbAt(cell);
+	if (orb != NULL)
+		return orbLabel(orb->kind) + L" : pour le premier qui passe sur la case";
+
+	// Bloc de mur d'un sort de terrain : PV, durée et ce qu'il bloque.
+	const battle::Block * block = truth.blockAt(cell);
+	if (block != NULL)
+	{
+		sf::String blocks = block->blocksMove && block->blocksSight ? sf::String(L"bloque le passage et la vue")
+			: block->blocksMove ? sf::String(L"bloque le passage, pas la vue") : sf::String(L"bloque la vue, on peut le traverser");
+		return fromServerText(block->name) + L" : " + num(block->hp) + L"/" + num(block->maxHp) + L" PV, encore " + num(block->remainingTurns)
+			+ (block->remainingTurns > 1 ? L" tours, " : L" tour, ") + blocks + L" (un sort de dégâts peut le casser)";
+	}
 	if (!map.contains(cell) || !map.isWalkable(cell))
 		return sf::String();
 	int damage = map.turnDamage(cell);
@@ -1207,14 +1288,68 @@ void BattleScreen::onEvent(void * e)
 void BattleScreen::addFloatingText(int fighterId, const sf::String & text, const sf::Color & color)
 {
 	const battle::Fighter * fighter = shown.findFighter(fighterId);
-	if (fighter == NULL)
-		return;
+	if (fighter != NULL)
+		addFloatingTextAt(fighter->position, text, color);
+}
 
+const sf::Texture * BattleScreen::blockTexture(const std::string & spellId)
+{
+	auto cached = blockTextures.find(spellId);
+	if (cached != blockTextures.end())
+		return cached->second.getSize().x > 0 ? &cached->second : NULL;
+	sf::Texture & texture = blockTextures[spellId];
+	const battle::SpellDef * spell = ClientGameData::get().data().findSpell(spellId);
+	sf::Image image;
+	if (spell != NULL && !spell->visual.block.empty() && image.loadFromFile(spell->visual.block))
+	{
+		texture.loadFromImage(image);
+		texture.setSmooth(true);
+		// Première ligne non transparente de l'image.
+		unsigned int row = 0;
+		for (bool found = false; row < image.getSize().y && !found; row++)
+		{
+			for (unsigned int x = 0; x < image.getSize().x && !found; x++)
+				found = image.getPixel(x, row).a > 40;
+		}
+		blockTops[spellId] = (float)row;
+	}
+	return texture.getSize().x > 0 ? &texture : NULL;
+}
+
+const sf::Texture * BattleScreen::orbTexture(const std::string & kind)
+{
+	auto cached = orbTextures.find(kind);
+	if (cached != orbTextures.end())
+		return cached->second.getSize().x > 0 ? &cached->second : NULL;
+	sf::Texture & texture = orbTextures[kind];
+	const battle::OrbDef * orb = ClientGameData::get().data().findOrb(kind);
+	if (orb != NULL && !orb->icon.empty() && texture.loadFromFile(orb->icon))
+		texture.setSmooth(true);
+	return texture.getSize().x > 0 ? &texture : NULL;
+}
+
+sf::String BattleScreen::orbLabel(const std::string & kind) const
+{
+	const battle::OrbDef * orb = ClientGameData::get().data().findOrb(kind);
+	if (orb == NULL)
+		return L"Orbe";
+	sf::String effect;
+	if (orb->heal > 0)
+		effect = L"+" + num(orb->heal) + L" PV";
+	else if (orb->ap > 0)
+		effect = L"+" + num(orb->ap) + L" PA tout de suite";
+	else if (orb->shield > 0)
+		effect = L"bouclier de " + num(orb->shield) + L" pendant " + num(orb->shieldTurns) + L" tours";
+	return fromServerText(orb->name) + L" (" + effect + L")";
+}
+
+void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String & text, const sf::Color & color)
+{
 	FloatingText floating;
 	floating.text = text;
 	floating.color = color;
-	floating.x = (float)fighter->position.x;
-	floating.y = (float)fighter->position.y;
+	floating.x = (float)cell.x;
+	floating.y = (float)cell.y;
 	// Les textes simultanés sur un même combattant sont décalés.
 	for (const FloatingText & other : floatingTexts)
 	{
@@ -1224,9 +1359,27 @@ void BattleScreen::addFloatingText(int fighterId, const sf::String & text, const
 	floatingTexts.push_back(floating);
 }
 
+void BattleScreen::applyOptions()
+{
+	renderer->setTextScale(ui::scale());
+	for (const battle::Fighter & fighter : shown.fighters)
+	{
+		BaseCharacterModel * view = viewOf(fighter.id);
+		if (view == NULL)
+			continue;
+		int armor[3];
+		int hair[3];
+		appearanceColors(fighter.appearance, fighter.team, armor, hair);
+		view->setAppearanceColors(armor, hair);
+	}
+}
+
 void BattleScreen::playSound(const std::string & path)
 {
-	if (path.empty() || sounds.empty())
+	// Son réactivé dans les options pendant le combat.
+	if (sounds.empty() && MusicManager::getInstance()->isEnabled())
+		sounds.resize(8);
+	if (path.empty() || sounds.empty() || !MusicManager::getInstance()->isEnabled())
 		return;
 
 	auto it = soundBuffers.find(path);

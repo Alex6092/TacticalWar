@@ -28,7 +28,7 @@ namespace
 	const battle::Cell SPRING = { 4, 4 };
 	const float PANEL_TOP = 52;
 	const float FINAL_WIDTH = 860;
-	const float FINAL_HEIGHT = 640;
+	const float FINAL_HEIGHT = 680;
 
 	sf::String num(int value)
 	{
@@ -255,18 +255,20 @@ void TutorialScreen::showFinal()
 		+ std::to_wstring(data.rules.timeBankSeconds) + L" s pour tout le combat s'entame.\n";
 	tgui::Label::Ptr body = tgui::Label::create(
 		L"Le jour du tournoi, vous jouerez en équipe de deux contre une autre équipe.\n\n"
-		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 6 sorts. Le bloc « Votre "
+		L"-  Avant chaque match, choisissez votre classe et emportez 4 de ses 7 sorts (dont un sort de terrain). Le bloc « Votre "
 		L"coéquipier » montre sa classe et vos combinaisons possibles.\n"
 		L"-  Talents : chaque match joué vous en fait gagner un (3 au plus), à choisir avant chaque match. "
 		L"Le talent Garde, qui vous a protégé ici, en est un.\n"
 		L"-  Bannissement, si l'organisateur l'a prévu : chaque équipe interdit une classe à l'autre avant le match.\n"
-		L"-  On gagne en mettant l'équipe adverse hors combat, ou en tenant la zone dorée au centre de la carte.\n"
+		L"-  On gagne en mettant l'équipe adverse hors combat, ou en tenant la zone dorée au centre de la carte. "
+		L"Si l'organisateur les active, des orbes (soin, énergie, protection) apparaissent au centre.\n"
 		+ time +
 		L"-  Seul dans votre équipe, ou si votre coéquipier est absent : vous jouez les deux personnages.\n"
 		L"-  En combat, H affiche l'aide des commandes. Parlez avec votre coéquipier : les signaux (Alt + clic : "
 		L"Ici, Attaquez, Repli, Danger) et les combinaisons de sorts font la différence.\n\n"
-		L"Entraînez-vous contre l'ordinateur, résolvez les énigmes tactiques, et gardez le guide du joueur "
-		L"à côté du clavier !");
+		L"Hauts faits, victoires et énigmes débloquent des apparences ; bouton Options : mode daltonien, taille "
+		L"du texte. Entraînez-vous contre l'ordinateur (jusqu'au niveau Difficile), résolvez les énigmes, et "
+		L"gardez le guide du joueur à côté du clavier !");
 	body->setInheritedFont(textFont);
 	body->setTextSize(18);
 	body->setMaximumTextWidth(FINAL_WIDTH - 52);

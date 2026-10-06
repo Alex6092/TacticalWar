@@ -80,6 +80,24 @@ Glyph BattleMirror::glyphFromJson(const json & value)
 	return glyph;
 }
 
+Block BattleMirror::blockFromJson(const json & value)
+{
+	Block block;
+	block.uid = value.value("uid", 0);
+	block.group = value.value("group", 0);
+	block.casterId = value.value("caster", -1);
+	block.team = value.value("team", 0);
+	block.spellId = value.value("spell", std::string());
+	block.name = value.value("name", std::string());
+	block.cell = { value.value("x", 0), value.value("y", 0) };
+	block.hp = value.value("hp", 0);
+	block.maxHp = value.value("maxHp", block.hp);
+	block.remainingTurns = value.value("turns", 0);
+	block.blocksMove = value.value("move", true);
+	block.blocksSight = value.value("sight", true);
+	return block;
+}
+
 void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const json & snapshot)
 {
 	BattleState fresh;
@@ -106,6 +124,7 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fighter.name = value.value("name", std::string());
 		fighter.spells = value.value("spells", std::vector<int>());
 		fighter.talents = value.value("talents", std::vector<std::string>());
+		fighter.appearance = value.value("appearance", std::string());
 		fighter.position = { value.value("x", 0), value.value("y", 0) };
 		fighter.hp = value.value("hp", 0);
 		fighter.maxHp = value.value("maxHp", 0);
@@ -133,6 +152,11 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 
 	for (const json & glyph : snapshot.value("glyphs", json::array()))
 		fresh.glyphs.push_back(glyphFromJson(glyph));
+	for (const json & block : snapshot.value("blocks", json::array()))
+		fresh.blocks.push_back(blockFromJson(block));
+	fresh.bonuses = snapshot.value("bonuses", false);
+	for (const json & orb : snapshot.value("orbs", json::array()))
+		fresh.orbs.push_back({ orb.value("uid", 0), orb.value("kind", std::string()), { orb.value("x", 0), orb.value("y", 0) } });
 
 	const json & zone = snapshot.contains("zone") ? snapshot["zone"] : json();
 	if (zone.is_object())
@@ -195,11 +219,18 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		fighter->castsThisTurn.clear();
 		fighter->castsOnTarget.clear();
 
-		// Les glyphes du combattant s'usent au début de ses tours.
+		// Les glyphes et les murs du combattant s'usent au début de ses tours.
 		for (auto it = state.glyphs.begin(); it != state.glyphs.end();)
 		{
 			if (it->casterId == fighter->id && --it->remainingTurns <= 0)
 				it = state.glyphs.erase(it);
+			else
+				it++;
+		}
+		for (auto it = state.blocks.begin(); it != state.blocks.end();)
+		{
+			if (it->casterId == fighter->id && --it->remainingTurns <= 0)
+				it = state.blocks.erase(it);
 			else
 				it++;
 		}
@@ -220,6 +251,16 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		fighter->maxHp = event.value("maxHp", fighter->maxHp);
 		fighter->shield = event.value("shield", fighter->shield);
 		fighter->alive = fighter->hp > 0;
+		// Part absorbée : retirée des boucliers comme le fait le moteur (les plus anciens d'abord).
+		int absorbed = type == "damage" ? event.value("absorbed", 0) : 0;
+		for (ActiveEffect & effect : fighter->effects)
+		{
+			if (effect.type != EffectType::SHIELD || absorbed <= 0)
+				continue;
+			int taken = std::min(effect.value, absorbed);
+			effect.value -= taken;
+			absorbed -= taken;
+		}
 	}
 	else if (type == "death" && fighter != nullptr)
 	{
@@ -232,6 +273,9 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 			else
 				it++;
 		}
+		int deadId = fighter->id;
+		state.blocks.erase(std::remove_if(state.blocks.begin(), state.blocks.end(),
+			[deadId](const Block & block) { return block.casterId == deadId; }), state.blocks.end());
 	}
 	else if (type == "effect+" && fighter != nullptr)
 	{
@@ -289,6 +333,34 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 		int uid = event.value("uid", 0);
 		state.glyphs.erase(std::remove_if(state.glyphs.begin(), state.glyphs.end(),
 			[uid](const Glyph & glyph) { return glyph.uid == uid; }), state.glyphs.end());
+	}
+	else if (type == "orb+")
+	{
+		for (const json & orb : event.value("orbs", json::array()))
+			state.orbs.push_back({ orb.value("uid", 0), orb.value("kind", std::string()), { orb.value("x", 0), orb.value("y", 0) } });
+	}
+	else if (type == "orb-")
+	{
+		int uid = event.value("uid", 0);
+		state.orbs.erase(std::remove_if(state.orbs.begin(), state.orbs.end(),
+			[uid](const Orb & orb) { return orb.uid == uid; }), state.orbs.end());
+	}
+	else if (type == "block+")
+	{
+		for (const json & block : event.value("blocks", json::array()))
+			state.blocks.push_back(blockFromJson(block));
+	}
+	else if (type == "blockhit")
+	{
+		Block * block = state.findBlock(event.value("uid", 0));
+		if (block != nullptr)
+			block->hp = event.value("hp", block->hp);
+	}
+	else if (type == "block-")
+	{
+		int uid = event.value("uid", 0);
+		state.blocks.erase(std::remove_if(state.blocks.begin(), state.blocks.end(),
+			[uid](const Block & block) { return block.uid == uid; }), state.blocks.end());
 	}
 	else if (type == "timer" && fighter != nullptr && event.contains("bank"))
 	{

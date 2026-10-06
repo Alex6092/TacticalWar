@@ -5,6 +5,7 @@
 
 #include <EnvironmentManager.h>
 
+#include "AppearanceChoice.h"
 #include "ClientConfig.h"
 #include "ClientGameData.h"
 #include "MusicManager.h"
@@ -67,7 +68,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	autoRng(std::random_device{}())
 {
 	timers = true;
-	botOptions.mistakePercent = settings.easy ? EASY_MISTAKE_PERCENT : 0;
+	botOptions.mistakePercent = settings.difficulty == TrainingSettings::Difficulty::EASY ? EASY_MISTAKE_PERCENT : 0;
+	botOptions.planner = settings.difficulty == TrainingSettings::Difficulty::HARD;
 
 	const battle::GameData & data = ClientGameData::get().data();
 	std::mt19937 rng(std::random_device{}());
@@ -104,7 +106,7 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	// Équipe 1 : le joueur (combattant 0) et son allié ; équipe 2 : les adversaires.
 	std::unique_ptr<battle::BattleEngine> created(new battle::BattleEngine(data, map, rng()));
 	int playerClass = pick(settings.playerClass);
-	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents);
+	created->addFighter(1, playerClass, u8"Joueur", playerSpells(playerClass), playerTalents, chosenAppearance());
 	bool allyControlled = settings.duo && settings.controlAlly;
 	if (settings.duo)
 	{
@@ -121,6 +123,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 	}
 	if (settings.zone)
 		created->enableZone(TrainingSettings::ZONE_POINTS);
+	if (settings.bonuses)
+		created->enableMapBonuses();
 	created->startPlacement(nowMs);
 
 	// Les combattants de l'IA se placent au hasard sur les cases de départ de leur équipe, puis sont prêts.

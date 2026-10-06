@@ -56,6 +56,11 @@ namespace tw
 		float onGlyphAdded(const Context & c);
 		float onGlyphRemoved(const Context & c);
 		float onGlyphTriggered(const Context & c);
+		float onBlockAdded(const Context & c);
+		float onBlockHit(const Context & c);
+		float onBlockRemoved(const Context & c);
+		float onOrbAdded(const Context & c);
+		float onOrbTaken(const Context & c);
 		float onDeath(const Context & c);
 		float onEmote(const Context & c);
 		float onTimeout(const Context & c);

@@ -20,6 +20,7 @@ namespace tw
 
 			static ActiveEffect effectFromJson(const nlohmann::json & json);
 			static Glyph glyphFromJson(const nlohmann::json & json);
+			static Block blockFromJson(const nlohmann::json & json);
 			static FighterRecord recordFromJson(const nlohmann::json & json);
 			static Cell cellFromJson(const nlohmann::json & json);
 		};

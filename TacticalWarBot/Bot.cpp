@@ -99,7 +99,7 @@ int Bot::run()
 		return 1;
 	}
 
-	send("HG" + options.login + ";" + options.password);
+	send("HG" + tw::protocol::loginPayload(options.login, options.password));
 
 	char buffer[16 * 1024];
 	while (true)
@@ -195,6 +195,16 @@ void Bot::onLine(const std::string & line)
 	else if (op == "HW")
 	{
 		log("En attente d'un match...");
+	}
+	else if (op == "DI")
+	{
+		// Défi d'une autre équipe (match amical) : les bots refusent.
+		nlohmann::json challenge = nlohmann::json::parse(message.payload, nullptr, false);
+		if (challenge.is_object())
+		{
+			log("Defi refuse : " + challenge.value("name", std::string()));
+			send("DA" + nlohmann::json({ { "from", challenge.value("from", 0) }, { "accept", false } }).dump());
+		}
 	}
 	else if (op == "HC")
 	{
@@ -335,7 +345,9 @@ void Bot::act(std::int64_t now)
 	nextActionAt = now + options.actionDelayMs;
 	awaiting = true;
 
-	BotAction action = chooseBotAction(state, map, data, active->id, rng);
+	BotOptions brain;
+	brain.planner = options.hard;
+	BotAction action = chooseBotAction(state, map, data, active->id, rng, brain);
 	if (action.kind == BotAction::Kind::CAST)
 	{
 		send("CL" + json({ { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } }).dump());

@@ -1,24 +1,49 @@
-#pragma once
+﻿#pragma once
+
+#include <nlohmann/json.hpp>
 
 #include "Screen.h"
 #include "ServerMessageListener.h"
 
+// Attente d'un match. Hors tournoi en cours, l'équipe peut défier une équipe libre (match amical) :
+// liste des équipes (DL), défi (DD), défi reçu avec compte à rebours (DI), réponse (DA), résultat (DR).
 class WaitMatchScreen : public tw::Screen, ServerMessageListener
 {
 private:
 	sf::Font font;
+	sf::Font textFont;
 	sf::Text title;
 	sf::Text subtitle;
-
-	tgui::Label::Ptr matchPanelTitle;
-	tgui::ScrollablePanel::Ptr m_matchListpanel;
-	//static void scrollPanel(tgui::Panel::Ptr panel, int value);
-	//static int previousScrollbarValue;
-
 
 	sf::Shader shader;
 
 	tgui::Gui * gui;
+
+	// Panneau « Défier une équipe ».
+	tgui::Panel::Ptr challengePanel;
+	tgui::Label::Ptr challengeTitle;
+	tgui::Label::Ptr challengeNote;
+	tgui::ListView::Ptr teamList;
+	tgui::Button::Ptr challengeButton;
+	tgui::Label::Ptr challengeStatus;
+	nlohmann::json teams = nlohmann::json::array();
+	float listRefresh = 0;
+
+	// Fenêtre du défi reçu.
+	tgui::Panel::Ptr invitePanel;
+	tgui::Label::Ptr inviteText;
+	tgui::Button::Ptr acceptButton;
+	tgui::Button::Ptr declineButton;
+	int inviteFrom = 0;
+	sf::String inviteTeam;
+	float inviteRemaining = 0;
+
+	void createChallengePanel();
+	void onTeamList(const nlohmann::json & body);
+	void sendChallenge();
+	void answer(bool accept);
+	void setStatus(const sf::String & text, const sf::Color & color);
+	void layout(const sf::Vector2u & size);
 
 public:
 	WaitMatchScreen(tgui::Gui * gui);

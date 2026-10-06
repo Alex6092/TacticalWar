@@ -16,9 +16,15 @@ MusicManager::MusicManager()
 	enabled = ClientConfig::get().soundEnabled;
 	iTakeDamageInstance = 0;
 
-	if (!enabled)
-		return;
+	if (enabled)
+		load();
+}
 
+void MusicManager::load()
+{
+	if (loaded)
+		return;
+	loaded = true;
 	menuMusic.reset(new sf::Music());
 	battleMusic.reset(new sf::Music());
 	menuMusic->openFromFile("./assets/music/SAM1_BGM16_sence_anxiety.wav");
@@ -35,8 +41,30 @@ MusicManager::MusicManager()
 	battleMusic->setVolume(50.0);
 }
 
+void MusicManager::setEnabled(bool value)
+{
+	if (value == enabled)
+		return;
+	enabled = value;
+	if (!enabled)
+	{
+		if (loaded)
+		{
+			menuMusic->stop();
+			battleMusic->stop();
+		}
+		return;
+	}
+	load();
+	if (current == 1)
+		menuMusic->play();
+	else if (current == 2)
+		battleMusic->play();
+}
+
 void MusicManager::setMenuMusic()
 {
+	current = 1;
 	if (!enabled)
 		return;
 
@@ -51,6 +79,7 @@ void MusicManager::setMenuMusic()
 
 void MusicManager::setBattleMusic()
 {
+	current = 2;
 	if (!enabled)
 		return;
 
@@ -65,6 +94,7 @@ void MusicManager::setBattleMusic()
 
 void MusicManager::stopMusic()
 {
+	current = 0;
 	if (!enabled)
 		return;
 

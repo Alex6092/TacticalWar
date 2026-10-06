@@ -8,10 +8,13 @@
 #include <set>
 
 #include <Achievements.h>
+#include <Appearances.h>
 #include <BattleEngine.h>
 #include <BattleMirror.h>
 #include <BattlePreview.h>
 #include <BotBrain.h>
+#include <StateJson.h>
+#include <Highlights.h>
 #include <Emotes.h>
 
 using namespace tw::battle;
@@ -70,7 +73,7 @@ namespace
 
 		// spells : sorts emportés par chaque combattant, dans l'ordre de création (par défaut, ceux de la classe).
 		Arena(const std::vector<std::pair<int, Cell>> & team1, const std::vector<std::pair<int, Cell>> & team2, BattleMap baseMap = openMap(), std::uint32_t seed = 1,
-			const std::vector<std::vector<int>> & spells = std::vector<std::vector<int>>())
+			const std::vector<std::vector<int>> & spells = std::vector<std::vector<int>>(), bool bonuses = false)
 			: map(baseMap)
 		{
 			for (const auto & entry : team1)
@@ -84,6 +87,8 @@ namespace
 				engine->addFighter(1, entry.first, "A" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
 			for (const auto & entry : team2)
 				engine->addFighter(2, entry.first, "B" + std::to_string(entry.first), spellsOf(engine->getState().fighters.size()));
+			if (bonuses)
+				engine->enableMapBonuses();
 
 			engine->startPlacement(now);
 			for (const Fighter & fighter : engine->getState().fighters)
@@ -132,7 +137,7 @@ namespace
 	};
 }
 
-TEST_CASE("Game data defines the four classes with six spells each")
+TEST_CASE("Game data defines the four classes with seven spells each")
 {
 	const GameData & data = gameData();
 	REQUIRE(data.classes.size() == 4);
@@ -140,7 +145,7 @@ TEST_CASE("Game data defines the four classes with six spells each")
 	{
 		const ClassDef * classDef = data.findClass(classId);
 		REQUIRE(classDef != nullptr);
-		CHECK(classDef->spells.size() == 6);
+		CHECK(classDef->spells.size() == 7);
 		CHECK(classDef->baseStats.get(Stat::AP) == 6);
 		CHECK((classDef->passive.type != PassiveType::NONE));
 	}
@@ -472,10 +477,17 @@ TEST_CASE("Random battles always end and every event serializes")
 			map.setCell(obstacle, false, rng() % 2 == 0);
 		}
 
+		int picked[4];
+		std::vector<std::vector<int>> spells;
+		for (int i = 0; i < 4; i++)
+		{
+			picked[i] = classIds[rng() % 4];
+			spells.push_back(randomSpellChoice(*gameData().findClass(picked[i]), rng));
+		}
 		Arena arena(
-			{ { classIds[rng() % 4], { 0, 4 } }, { classIds[rng() % 4], { 0, 8 } } },
-			{ { classIds[rng() % 4], { 12, 4 } }, { classIds[rng() % 4], { 12, 8 } } },
-			map, (std::uint32_t)battle);
+			{ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } },
+			{ { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
+			map, (std::uint32_t)battle, spells, battle % 2 == 0);
 
 		// Copie tenue par un client : snapshot initial puis événements.
 		BattleState mirror;
@@ -492,6 +504,18 @@ TEST_CASE("Random battles always end and every event serializes")
 			REQUIRE((mirror.phase == truth.phase));
 			REQUIRE(mirror.activeFighterId() == truth.activeFighterId());
 			REQUIRE(mirror.glyphs.size() == truth.glyphs.size());
+			REQUIRE(mirror.blocks.size() == truth.blocks.size());
+			REQUIRE(mirror.orbs.size() == truth.orbs.size());
+			for (const Orb & orb : truth.orbs)
+				REQUIRE(mirror.orbAt(orb.cell) != nullptr);
+			for (const Block & block : truth.blocks)
+			{
+				const Block * copy = mirror.findBlock(block.uid);
+				REQUIRE(copy != nullptr);
+				REQUIRE(copy->hp == block.hp);
+				REQUIRE(copy->cell == block.cell);
+				REQUIRE(copy->remainingTurns == block.remainingTurns);
+			}
 			for (const Fighter & real : truth.fighters)
 			{
 				const Fighter & copy = *mirror.findFighter(real.id);
@@ -1442,12 +1466,12 @@ TEST_CASE("A contested zone scores nothing and a decision counts zone points fir
 	CHECK((judge.getState().endReason == EndReason::ADMIN));
 }
 
-TEST_CASE("Each fighter carries four spells chosen among the six of its class")
+TEST_CASE("Each fighter carries four spells chosen among the seven of its class")
 {
 	const ClassDef & guerrier = *gameData().findClass(GUERRIER);
 	CHECK(defaultSpells(guerrier) == std::vector<int>{ 0, 1, 2, 3 });
-	CHECK(validSpellChoice(guerrier, { 5, 4, 0, 1 }) == std::vector<int>{ 5, 4, 0, 1 });
-	for (const std::vector<int> & invalid : std::vector<std::vector<int>>{ { 0, 0, 1, 2 }, { 0, 1, 2 }, { 0, 1, 2, 6 }, { -1, 1, 2, 3 }, { 0, 1, 2, 3, 4 } })
+	CHECK(validSpellChoice(guerrier, { 5, 4, 0, 6 }) == std::vector<int>{ 5, 4, 0, 6 });
+	for (const std::vector<int> & invalid : std::vector<std::vector<int>>{ { 0, 0, 1, 2 }, { 0, 1, 2 }, { 0, 1, 2, 7 }, { -1, 1, 2, 3 }, { 0, 1, 2, 3, 4 } })
 		CHECK(validSpellChoice(guerrier, invalid) == defaultSpells(guerrier));
 
 	std::mt19937 rng(3);
@@ -1533,6 +1557,259 @@ TEST_CASE("Pluie de fleches hits an area and the trap immobilises and entangles"
 	CHECK(trap.fighter(1).hp < hp);
 	CHECK(trap.fighter(1).mp == 0);
 	CHECK(trap.fighter(1).hasState("entrave"));
+}
+
+TEST_CASE("Terrain spells raise walls of destructible blocks")
+{
+	// Mur de glace : 3 blocs en travers de la direction du lancer, qui bloquent le passage et la vue.
+	Arena arena({ { MAGE, { 2, 5 } } }, { { GUERRIER, { 9, 5 } } }, openMap(), 1, { { 6, 0, 1, 2 } });
+	arena.playUntilTurnOf(0);
+	REQUIRE(arena.engine->cast(0, arena.slotOf(0, "mur_de_glace"), { 5, 5 }, arena.now).ok);
+	const BattleState & state = arena.state();
+	REQUIRE(state.blocks.size() == 3);
+	for (const Cell & cell : std::vector<Cell>{ { 5, 4 }, { 5, 5 }, { 5, 6 } })
+	{
+		const Block * block = state.blockAt(cell);
+		REQUIRE(block != nullptr);
+		CHECK(block->hp == 30);
+		CHECK(block->maxHp == 30);
+		CHECK(block->team == 1);
+		CHECK(block->blocksMove);
+		CHECK(block->blocksSight);
+	}
+	CHECK_FALSE(hasLineOfSight(state, arena.map, { 2, 5 }, { 9, 5 }));
+	CHECK_FALSE(cellWalkable(state, arena.map, { 5, 5 }));
+	for (const Cell & step : findPath(state, arena.map, arena.fighter(1), { 3, 5 }))
+		CHECK(state.blockAt(step) == nullptr);
+
+	// Un sort de dégâts peut viser un bloc, même de son équipe ; l'aperçu le montre ; le bilan ne
+	// compte pas ces dégâts.
+	int eclair = arena.slotOf(0, "eclair");
+	int uid = state.blockAt({ 5, 5 })->uid;
+	std::vector<TargetPreview> previews = previewSpell(state, arena.map, gameData(), 0, eclair, { 5, 5 });
+	bool previewed = false;
+	for (const TargetPreview & preview : previews)
+		previewed = previewed || (preview.blockUid == uid && preview.minDamage > 0 && !preview.koPossible);
+	CHECK(previewed);
+	int dealt = arena.fighter(0).record.dealt;
+	REQUIRE(arena.engine->cast(0, eclair, { 5, 5 }, arena.now).ok);
+	CHECK(state.blockAt({ 5, 5 })->hp < 30);
+	CHECK(arena.fighter(0).record.dealt == dealt);
+	CHECK(arena.eventsOfType("blockhit").size() == 1);
+
+	// Le mur dure 2 tours du lanceur.
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	arena.playUntilTurnOf(0);
+	CHECK(state.blocks.size() == 3);
+	REQUIRE(arena.engine->endTurn(0, arena.now).ok);
+	arena.playUntilTurnOf(0);
+	CHECK(state.blocks.empty());
+}
+
+TEST_CASE("A wall block can be broken, and is removed with its caster")
+{
+	// Éboulis : un rocher de 40 PV ; on ne le pose pas sur une case occupée.
+	Arena duel({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 9, 5 } } }, openMap(), 1, { { 6, 0, 1, 2 } });
+	duel.playUntilTurnOf(0);
+	CHECK_FALSE(duel.engine->cast(0, duel.slotOf(0, "eboulis"), { 2, 5 }, duel.now).ok);
+	REQUIRE(duel.engine->cast(0, duel.slotOf(0, "eboulis"), { 3, 5 }, duel.now).ok);
+	REQUIRE(duel.state().blocks.size() == 1);
+	CHECK(duel.state().blockAt({ 3, 5 })->hp == 40);
+
+	// Les sorts de dégâts visent un bloc, pas les soins.
+	const SpellDef & soin = gameData().findClass(PROTECTEUR)->spells[1];
+	CHECK_FALSE(checkTarget(duel.state(), duel.map, gameData(), duel.fighter(0), soin, { 3, 5 }).empty());
+	int taillade = duel.slotOf(0, "taillade");
+	CHECK(checkTarget(duel.state(), duel.map, gameData(), duel.fighter(0), *spellOf(gameData(), duel.fighter(0), taillade), { 3, 5 }).empty());
+
+	// Trois coups de Taillade (16 à 19) cassent le rocher : le passage s'ouvre.
+	REQUIRE(duel.engine->cast(0, taillade, { 3, 5 }, duel.now).ok);
+	REQUIRE(duel.engine->endTurn(0, duel.now).ok);
+	duel.playUntilTurnOf(0);
+	REQUIRE(duel.engine->cast(0, taillade, { 3, 5 }, duel.now).ok);
+	duel.engine->flushEvents();
+	REQUIRE(duel.engine->cast(0, taillade, { 3, 5 }, duel.now).ok);
+	std::vector<nlohmann::json> removed = duel.eventsOfType("block-");
+	REQUIRE(removed.size() == 1);
+	CHECK(removed[0]["reason"] == "destroyed");
+	CHECK(duel.state().blocks.empty());
+	CHECK(cellWalkable(duel.state(), duel.map, { 3, 5 }));
+
+	// Les blocs d'un combattant hors combat disparaissent.
+	Arena fallen({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 9, 5 } } }, openMap(), 1, { { 6, 0, 1, 2 } });
+	fallen.playUntilTurnOf(0);
+	REQUIRE(fallen.engine->cast(0, fallen.slotOf(0, "eboulis"), { 2, 4 }, fallen.now).ok);
+	BattleState state = fallen.state();
+	state.findFighter(0)->hp = 1;
+	BattleEngine engine(gameData(), fallen.map, state, 1);
+	REQUIRE(engine.endTurn(0, 0).ok);
+	REQUIRE(engine.getState().activeFighterId() == 1);
+	REQUIRE(engine.cast(1, 0, { 2, 5 }, 0).ok);	// Tir précis
+	CHECK_FALSE(engine.getState().findFighter(0)->alive);
+	CHECK(engine.getState().blocks.empty());
+}
+
+TEST_CASE("Pushing a fighter into a wall damages the wall")
+{
+	Arena arena({ { ARCHER, { 2, 5 } } }, { { GUERRIER, { 4, 5 } } }, openMap(), 1, { { 2, 6, 0, 1 } });
+	arena.playUntilTurnOf(0);
+	BattleState state = arena.state();
+	Block rock;
+	rock.uid = 900;
+	rock.group = 899;
+	rock.casterId = 1;
+	rock.team = 2;
+	rock.spellId = "eboulis";
+	rock.name = "Éboulis";
+	rock.cell = { 6, 5 };
+	rock.hp = 40;
+	rock.maxHp = 40;
+	rock.remainingTurns = 3;
+	state.blocks.push_back(rock);
+	BattleEngine engine(gameData(), arena.map, state, 1);
+
+	// Flèche de recul : 3 cases, bloquée au bout d'une case par le rocher (2 cases non parcourues).
+	REQUIRE(engine.cast(0, arena.slotOf(0, "fleche_recul"), { 4, 5 }, 0).ok);
+	CHECK(engine.getState().findFighter(1)->position == Cell{ 5, 5 });
+	CHECK(engine.getState().findBlock(900)->hp == 40 - 2 * gameData().rules.collisionDamageToHit);
+}
+
+TEST_CASE("The sacred veil hides from view but lets fighters through")
+{
+	Arena veil({ { PROTECTEUR, { 2, 5 } } }, { { ARCHER, { 9, 5 } } }, openMap(), 1, { { 6, 0, 1, 2 } });
+	veil.playUntilTurnOf(0);
+	REQUIRE(veil.engine->cast(0, veil.slotOf(0, "voile_sacre"), { 4, 5 }, veil.now).ok);
+	const BattleState & state = veil.state();
+	REQUIRE(state.blocks.size() == 3);
+	CHECK(cellWalkable(state, veil.map, { 4, 5 }));
+	CHECK(cellBlocksSight(state, veil.map, { 4, 5 }));
+	CHECK_FALSE(hasLineOfSight(state, veil.map, { 2, 5 }, { 9, 5 }));
+
+	// On s'arrête dans le voile ; un tir sur le Protecteur abîme aussi le voile.
+	REQUIRE(veil.engine->move(0, { { 3, 5 }, { 4, 5 } }, veil.now).ok);
+	REQUIRE(veil.engine->endTurn(0, veil.now).ok);
+	veil.playUntilTurnOf(1);
+	int hp = veil.fighter(0).hp;
+	REQUIRE(veil.engine->cast(1, veil.slotOf(1, "tir_precis"), { 4, 5 }, veil.now).ok);
+	CHECK(veil.fighter(0).hp < hp);
+	CHECK(state.blockAt({ 4, 5 })->hp < 25);
+}
+
+TEST_CASE("Bonus orbs appear on symmetric central cells and are picked up on the way")
+{
+	// Sans le réglage : jamais d'orbe.
+	Arena plain({ { GUERRIER, { 0, 4 } } }, { { ARCHER, { 12, 8 } } }, openMap(13));
+	for (int turn = 0; turn < 12; turn++)
+		REQUIRE(plain.engine->endTurn(plain.active(), plain.now).ok);
+	CHECK(plain.state().orbs.empty());
+
+	// Avec : au tour 3, sur une paire de cases symétriques de la zone centrale.
+	Arena arena({ { GUERRIER, { 0, 4 } } }, { { ARCHER, { 12, 8 } } }, openMap(13), 1, {}, true);
+	CHECK(arena.state().bonuses);
+	while (arena.state().round < gameData().bonuses.firstRound)
+		REQUIRE(arena.engine->endTurn(arena.active(), arena.now).ok);
+	const std::vector<Orb> & orbs = arena.state().orbs;
+	REQUIRE(!orbs.empty());
+	CHECK(gameData().findOrb(orbs[0].kind) != nullptr);
+	std::vector<std::vector<Cell>> spots = orbSpots(arena.map);
+	bool known = false;
+	for (const std::vector<Cell> & spot : spots)
+	{
+		bool same = spot.size() == orbs.size();
+		for (const Orb & orb : orbs)
+			same = same && std::find(spot.begin(), spot.end(), orb.cell) != spot.end();
+		known = known || same;
+		if (spot.size() == 2)
+			CHECK(spot[0].x + spot[1].x == 12);	// Carte symétrique : (x, y) et (12 - x, 8 - y + 4)
+	}
+	CHECK(known);
+}
+
+TEST_CASE("Picking up an orb applies its effect")
+{
+	Arena arena({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 12, 5 } } }, openMap(), 1, {}, true);
+	arena.playUntilTurnOf(0);
+	BattleState state = arena.state();
+	Fighter & warrior = *state.findFighter(0);
+	warrior.hp -= 30;
+	int ap = warrior.ap;
+	state.orbs.push_back({ 900, "soin", { 3, 5 } });
+	state.orbs.push_back({ 901, "energie", { 4, 5 } });
+	state.orbs.push_back({ 902, "protection", { 8, 5 } });
+	BattleEngine engine(gameData(), arena.map, state, 1);
+
+	// Deux orbes ramassés au passage (soin, puis énergie).
+	REQUIRE(engine.move(0, { { 3, 5 }, { 4, 5 }, { 5, 5 } }, 0).ok);
+	const Fighter & after = *engine.getState().findFighter(0);
+	CHECK(after.hp == warrior.hp + gameData().findOrb("soin")->heal);
+	CHECK(after.ap == ap + gameData().findOrb("energie")->ap);
+	REQUIRE(engine.getState().orbs.size() == 1);
+	CHECK(after.record.healed == 0);	// Un soin d'orbe ne compte pas dans le bilan
+
+	// L'Archer s'arrête sur l'orbe de protection : il le ramasse.
+	BattleState next = engine.getState();
+	next.findFighter(1)->position = { 10, 5 };
+	BattleEngine archer(gameData(), arena.map, next, 1);
+	REQUIRE(archer.endTurn(0, 0).ok);
+	REQUIRE(archer.getState().activeFighterId() == 1);
+	REQUIRE(archer.move(1, { { 9, 5 }, { 8, 5 } }, 0).ok);
+	CHECK(archer.getState().orbs.empty());
+	CHECK(archer.getState().findFighter(1)->shield == gameData().findOrb("protection")->shield);
+
+	// Repoussé sur un orbe : ramassé à l'arrivée.
+	BattleState pushed = arena.state();
+	pushed.orbs.push_back({ 903, "soin", { 6, 5 } });
+	pushed.findFighter(1)->position = { 3, 5 };
+	pushed.findFighter(1)->hp -= 20;
+	BattleEngine push(gameData(), arena.map, pushed, 1);
+	REQUIRE(push.cast(0, 0, { 3, 5 }, 0).ok);	// Taillade, pas de poussée : rien
+	CHECK(push.getState().orbs.size() == 1);
+}
+
+TEST_CASE("The hard AI plans a move then an attack, is deterministic, and retreats when wounded")
+{
+	BotOptions hard;
+	hard.planner = true;
+
+	// Archer affaibli hors de portée : le Guerrier avance puis frappe (Taillade), KO dans le tour.
+	Arena arena({ { GUERRIER, { 2, 5 } } }, { { ARCHER, { 6, 5 } } }, openMap(), 1, { { 0, 2, 4, 5 } });
+	arena.playUntilTurnOf(0);
+	BattleState state = arena.state();
+	state.findFighter(1)->hp = 12;
+	BattleEngine engine(gameData(), arena.map, state, 1);
+
+	// Même décision quel que soit l'état du générateur : pas de tirage.
+	std::mt19937 first(1);
+	std::mt19937 second(99);
+	BotAction a = chooseBotAction(engine.getState(), arena.map, gameData(), 0, first, hard);
+	BotAction b = chooseBotAction(engine.getState(), arena.map, gameData(), 0, second, hard);
+	CHECK((a.kind == b.kind));
+	CHECK(a.path == b.path);
+	CHECK(a.slot == b.slot);
+	CHECK((a.kind == BotAction::Kind::MOVE));
+
+	std::mt19937 rng(1);
+	for (int step = 0; step < 6 && engine.getState().findFighter(1)->alive && engine.getState().activeFighterId() == 0; step++)
+	{
+		BotAction action = chooseBotAction(engine.getState(), arena.map, gameData(), 0, rng, hard);
+		if (action.kind == BotAction::Kind::MOVE)
+			REQUIRE(engine.move(0, action.path, 0).ok);
+		else if (action.kind == BotAction::Kind::CAST)
+			REQUIRE(engine.cast(0, action.slot, action.target, 0).ok);
+		else
+			break;
+	}
+	CHECK_FALSE(engine.getState().findFighter(1)->alive);
+
+	// Archer blessé sans PA, Guerrier tout proche : il s'éloigne hors d'atteinte.
+	Arena retreat({ { ARCHER, { 5, 5 } } }, { { GUERRIER, { 8, 5 } } }, openMap(), 1);
+	retreat.playUntilTurnOf(0);
+	BattleState hurt = retreat.state();
+	hurt.findFighter(0)->hp = 15;
+	hurt.findFighter(0)->ap = 0;
+	BotAction away = chooseBotAction(hurt, retreat.map, gameData(), 0, rng, hard);
+	REQUIRE((away.kind == BotAction::Kind::MOVE));
+	CHECK(manhattan(away.path.back(), { 8, 5 }) > manhattan({ 5, 5 }, { 8, 5 }));
 }
 
 TEST_CASE("Vague de flammes spares allies and Prison de glace freezes")
@@ -1671,4 +1948,234 @@ TEST_CASE("Tournament talents add their bonuses and their start-of-fight effects
 	BattleMap mirrorMap;
 	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(-1, 0));
 	CHECK(mirror.findFighter(0)->talents == warrior.talents);
+}
+
+TEST_CASE("Appearances unlock from account progress and keep the team hue")
+{
+	const GameData & data = gameData();
+	PlayerProgress progress;
+	std::vector<std::string> unlocked = unlockedAppearances(data, progress);
+	REQUIRE(unlocked.size() == 1);
+	CHECK(unlocked[0] == "classique");
+
+	// Énigmes, haut fait, victoires, MVP : chacun débloque sa propre apparence.
+	progress.puzzles = { "a", "b" };
+	CHECK(allowedAppearance(data, progress, "givre").empty());
+	progress.puzzles.insert("c");
+	CHECK(allowedAppearance(data, progress, "givre") == "givre");
+	CHECK(allowedAppearance(data, progress, "braise").empty());
+	progress.achievements.insert("first_blood");
+	CHECK(allowedAppearance(data, progress, "braise") == "braise");
+	progress.wins = 4;
+	CHECK(allowedAppearance(data, progress, "nuit").empty());
+	progress.wins = 5;
+	CHECK(allowedAppearance(data, progress, "nuit") == "nuit");
+	progress.mvp = 1;
+	CHECK(allowedAppearance(data, progress, "or") == "or");
+	CHECK(allowedAppearance(data, progress, "inconnue").empty());
+	unlocked = unlockedAppearances(data, progress);
+	CHECK(unlocked == std::vector<std::string>({ "classique", "givre", "braise", "nuit", "or" }));
+
+	// Chaque apparence verrouillée dit comment la débloquer.
+	for (const AppearanceDef & appearance : data.appearances)
+		CHECK_FALSE(unlockCondition(appearance).empty());
+	CHECK(unlockCondition(*data.findAppearance("givre")) == u8"3 énigmes réussies");
+
+	// La teinte reste celle de l'équipe : bleu reste bleu, rouge reste rouge.
+	const int blue[3] = { 0, 166, 214 };
+	const int red[3] = { 120, 17, 17 };
+	for (const AppearanceDef & appearance : data.appearances)
+	{
+		int out[3];
+		armorColor(&appearance, blue, out);
+		CHECK(out[2] >= out[0]);
+		CHECK(out[1] >= out[0]);
+		armorColor(&appearance, red, out);
+		CHECK(out[0] >= out[1]);
+		CHECK(out[0] >= out[2]);
+	}
+	int same[3];
+	armorColor(nullptr, blue, same);
+	CHECK(same[0] == 0);
+	CHECK(same[1] == 166);
+	CHECK(same[2] == 214);
+}
+
+TEST_CASE("A fighter's appearance travels through the snapshot to the mirror")
+{
+	BattleMap map = openMap();
+	map.startCells[1].push_back({ 2, 2 });
+	map.startCells[2].push_back({ 10, 10 });
+	BattleEngine engine(gameData(), map, 3);
+	int first = engine.addFighter(1, MAGE, "Givre", {}, {}, "givre");
+	int second = engine.addFighter(2, ARCHER, "Inconnue", {}, {}, "pas-une-apparence");
+	CHECK(engine.getState().findFighter(first)->appearance == "givre");
+	CHECK(engine.getState().findFighter(second)->appearance.empty());
+
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(0, 0));
+	CHECK(mirror.findFighter(first)->appearance == "givre");
+	CHECK(mirror.findFighter(second)->appearance.empty());
+}
+
+namespace
+{
+	// Premier chemin où deux documents JSON diffèrent (vide : identiques).
+	std::string firstDifference(const nlohmann::json & a, const nlohmann::json & b, const std::string & path = "")
+	{
+		if (a.type() != b.type())
+			return path + " (type)";
+		if (a.is_object())
+		{
+			for (auto it = a.begin(); it != a.end(); ++it)
+			{
+				if (!b.contains(it.key()))
+					return path + "/" + it.key() + " (absent)";
+				std::string inner = firstDifference(it.value(), b[it.key()], path + "/" + it.key());
+				if (!inner.empty())
+					return inner;
+			}
+			return a.size() == b.size() ? std::string() : path + " (clés en trop)";
+		}
+		if (a.is_array())
+		{
+			if (a.size() != b.size())
+				return path + " (taille)";
+			for (std::size_t i = 0; i < a.size(); i++)
+			{
+				std::string inner = firstDifference(a[i], b[i], path + "/" + std::to_string(i));
+				if (!inner.empty())
+					return inner;
+			}
+			return std::string();
+		}
+		return a == b ? std::string() : path + " : " + a.dump() + " / " + b.dump();
+	}
+}
+
+TEST_CASE("The state rebuilt by the mirror serializes exactly like the engine snapshot")
+{
+	std::mt19937 rng(77);
+	int classIds[] = { MAGE, ARCHER, PROTECTEUR, GUERRIER };
+	for (int battle = 0; battle < 40; battle++)
+	{
+		CAPTURE(battle);
+		BattleMap map = openMap(13);
+		for (int i = 0; i < 10; i++)
+			map.setCell({ (int)(rng() % 9) + 2, (int)(rng() % 13) }, false, rng() % 2 == 0);
+		std::vector<std::vector<int>> spells;
+		int picked[4];
+		for (int i = 0; i < 4; i++)
+		{
+			picked[i] = classIds[rng() % 4];
+			spells.push_back(randomSpellChoice(*gameData().findClass(picked[i]), rng));
+		}
+		Arena arena({ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } }, { { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
+			map, (std::uint32_t)(1000 + battle), spells, battle % 2 == 1);
+
+		// Comme une rediffusion : l'état de départ, puis les lots d'événements.
+		BattleState mirror;
+		BattleMap mirrorMap;
+		BattleMirror::applySnapshot(mirror, mirrorMap, nlohmann::json::parse(arena.engine->snapshot(-1, arena.now).dump()));
+		std::uint64_t seq = 0;
+		auto compare = [&]() {
+			nlohmann::json batch = nlohmann::json::parse(arena.engine->flushEvents().dump());
+			seq = batch.value("seq", seq);
+			for (const nlohmann::json & event : batch["ev"])
+				BattleMirror::applyEvent(mirror, event);
+			nlohmann::json expected = arena.engine->snapshot(-1, arena.now);
+			nlohmann::json rebuilt = statejson::snapshot(mirror, mirrorMap, seq, -1, expected.value("ms", (std::int64_t)0));
+			// Les bilans (dégâts, soins…) ne sont transmis qu'avec la fin du combat ("end"), et les
+			// ressources d'un combattant hors combat ne s'affichent plus.
+			for (nlohmann::json * fighters : { &expected["fighters"], &rebuilt["fighters"] })
+			{
+				for (nlohmann::json & fighter : *fighters)
+				{
+					if (!arena.engine->isOver())
+						fighter.erase("record");
+					if (!fighter.value("alive", true))
+					{
+						for (const char * key : { "ap", "mp", "casts", "cooldowns", "effects" })
+							fighter.erase(key);
+					}
+				}
+			}
+			std::string difference = firstDifference(expected, rebuilt);
+			INFO(batch.dump());
+			REQUIRE(difference == "");
+		};
+
+		for (int action = 0; action < 3000 && !arena.engine->isOver(); action++)
+		{
+			compare();
+			int id = arena.active();
+			const Fighter & fighter = arena.fighter(id);
+			int choice = rng() % 3;
+			if (choice == 0 && fighter.mp > 0)
+			{
+				std::vector<Cell> reachable = reachableCells(arena.state(), arena.engine->getMap(), fighter);
+				if (!reachable.empty())
+				{
+					arena.engine->move(id, findPath(arena.state(), arena.engine->getMap(), fighter, reachable[rng() % reachable.size()]), arena.now);
+					continue;
+				}
+			}
+			if (choice == 1)
+			{
+				int index = rng() % 4;
+				const SpellDef * spell = spellOf(gameData(), fighter, index);
+				if (checkSpellResources(fighter, *spell).empty())
+				{
+					std::vector<Cell> cells = castableCells(arena.state(), arena.engine->getMap(), gameData(), fighter, *spell);
+					if (!cells.empty())
+					{
+						arena.engine->cast(id, index, cells[rng() % cells.size()], arena.now);
+						continue;
+					}
+				}
+			}
+			arena.now += 1000;
+			arena.engine->endTurn(id, arena.now);
+		}
+		compare();
+	}
+}
+
+TEST_CASE("Highlights of a recorded battle: double KO, combo and big hit, with their windows")
+{
+	Arena arena({ { MAGE, { 1, 1 } }, { GUERRIER, { 1, 3 } } }, { { ARCHER, { 8, 1 } }, { PROTECTEUR, { 8, 3 } } });
+	nlohmann::json start = nlohmann::json::parse(arena.engine->snapshot(-1, arena.now).dump());
+	using nlohmann::json;
+	std::vector<std::pair<std::int64_t, json>> batches = {
+		{ 0, { { "seq", 1 }, { "ev", json::array({ { { "t", "turn" }, { "f", 0 }, { "round", 1 } } }) } } },
+		{ 1000, { { "seq", 2 }, { "ev", json::array({ { { "t", "damage" }, { "f", 2 }, { "src", 0 }, { "amount", 30 }, { "absorbed", 0 }, { "hp", 50 }, { "maxHp", 80 }, { "shield", 0 } } }) } } },
+		{ 6000, { { "seq", 3 }, { "ev", json::array({ { { "t", "combo" }, { "f", 3 }, { "src", 1 }, { "name", "Brise-glace" } } }) } } },
+		{ 12000, { { "seq", 4 }, { "ev", json::array({
+			{ { "t", "turn" }, { "f", 0 }, { "round", 2 } },
+			{ { "t", "damage" }, { "f", 2 }, { "src", 0 }, { "amount", 20 }, { "absorbed", 0 }, { "hp", 0 }, { "maxHp", 80 }, { "shield", 0 } },
+			{ { "t", "death" }, { "f", 2 } },
+			{ { "t", "damage" }, { "f", 3 }, { "src", 0 }, { "amount", 18 }, { "absorbed", 0 }, { "hp", 0 }, { "maxHp", 100 }, { "shield", 0 } },
+			{ { "t", "death" }, { "f", 3 } } }) } } },
+		{ 13000, { { "seq", 5 }, { "ev", json::array({ { { "t", "end" }, { "winner", 1 }, { "reason", "KO" }, { "round", 2 } } }) } } },
+	};
+	std::vector<Highlight> highlights = detectHighlights(start, batches, "Les Bleus", "Les Rouges");
+	REQUIRE(highlights.size() == 3);
+	CHECK(highlights[0].kind == "big_hit");
+	CHECK(highlights[0].from == 0);
+	CHECK(highlights[0].to == 1);
+	CHECK(highlights[1].kind == "combo");
+	CHECK(highlights[1].title.find("Brise-glace") != std::string::npos);
+	CHECK(highlights[1].from == 2);
+	CHECK(highlights[1].to == 2);
+	CHECK(highlights[2].kind == "double_ko");
+	CHECK(highlights[2].title.find(arena.fighter(0).name) != std::string::npos);
+	CHECK(highlights[2].from == 3);
+	CHECK(highlights[2].to == 4);
+	CHECK(highlights[2].score > highlights[1].score);
+
+	// Un seul temps fort demandé : le mieux noté.
+	std::vector<Highlight> best = detectHighlights(start, batches, "Les Bleus", "Les Rouges", 1);
+	REQUIRE(best.size() == 1);
+	CHECK(best[0].kind == "double_ko");
 }

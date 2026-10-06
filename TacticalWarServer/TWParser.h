@@ -6,12 +6,16 @@
 #include <map>
 #include <Match.h>
 #include "BattleSession.h"
+#include <ChallengeBoard.h>
 #include <Environment.h>
 #include <CredentialSheet.h>
 #include <ServerConfig.h>
 #include <TeamStore.h>
 #include <TournamentService.h>
 #include <ReplayStore.h>
+#include <ProfileStore.h>
+#include <Appearances.h>
+#include <Commentary.h>
 #include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -38,6 +42,15 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	tw::CredentialSheet credentials;
 	// true si teams.json n'a pas pu être lu : aucune modification n'est alors enregistrée.
 	bool teamStoreReadOnly;
+	// Progression des joueurs (data/profiles.json) : elle débloque les apparences.
+	tw::ProfileStore profiles;
+	tw::battle::PlayerProgress progressOf(const std::string & login) const;
+	// PA : apparences débloquées du joueur, et celles qui viennent de l'être ("fresh").
+	void sendAppearances(ClientState * client, const std::string & login, const std::vector<std::string> & fresh = std::vector<std::string>());
+	// PZ : énigmes réussies, signalées par le client.
+	void handlePuzzles(ClientState * client, tw::Player * player, const std::string & body);
+	// Fin de combat : hauts faits, victoire et MVP de chaque joueur dans son profil.
+	void recordProfiles(BattleSession * session);
 
 	// Tous les joueurs déjà créés (login -> joueur), y compris ceux d'équipes désactivées
 	// ou supprimées, encore référencés par des matchs.
@@ -64,6 +77,35 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 
 
 	int isTeamAvailableForMatchCreation(int teamId);
+
+	// Matchs amicaux (hors tournoi) : onglet Matchs de l'admin (FL, FC, FX) et ancien message CM.
+	struct FriendlyMatch
+	{
+		int id = 0;
+		std::string name;
+		int teamA = 0;
+		int teamB = 0;
+		int mapId = 0;
+		tw::Match * match = NULL;
+		bool cancelled = false;
+	};
+	std::vector<FriendlyMatch> friendlyMatches;
+	int nextFriendlyId = 1;
+	// Crée le match et sa session (choix des classes envoyé aux joueurs connectés). mapId 0 : au
+	// hasard. NULL avec un message d'erreur en français si c'est impossible.
+	tw::Match * createFriendlyMatch(const std::string & name, int teamA, int teamB, int mapId, std::string & error);
+	nlohmann::json friendlyListJson();
+	void handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void notifyFriendlyMatches(ClientState * only = NULL);
+
+	// Défis entre équipes (TWParserChallenges.cpp) : matchs amicaux libres, hors tournoi en cours.
+	tw::ChallengeBoard challenges;
+	bool tournamentRunning();
+	bool teamFree(int teamId);
+	void sendToTeam(int teamId, const std::string & message);
+	void handleChallengeMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
+	void sendChallengeList(ClientState * client, tw::Player * player);
+	void tickChallenges(std::int64_t now);
 
 
 
@@ -162,6 +204,10 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	{
 		std::unique_ptr<tw::store::ReplayWriter> writer;
 		std::int64_t startMs = 0;
+		// Gardés en mémoire pour les temps forts, calculés à la fin du combat.
+		nlohmann::json snapshot;
+		nlohmann::json teams;
+		std::vector<std::pair<std::int64_t, nlohmann::json>> batches;
 	};
 	struct ReplayPlayback
 	{
@@ -169,7 +215,9 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 		std::vector<std::int64_t> due;	// Moment d'envoi de chaque lot (ms après le début)
 		std::size_t next = 0;
 		std::int64_t startMs = 0;
+		bool extract = false;			// Extrait (temps fort) : RE à la fin
 	};
+	nlohmann::json highlightListJson();
 	tw::store::ReplayLibrary replays;
 	std::map<int, ReplayRecording> recordings;
 	std::map<tw::net::ConnId, ReplayPlayback> playbacks;
@@ -201,8 +249,19 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	std::int64_t lastPublicPublish;
 	std::string displayNameOf(tw::Player * player);
 	nlohmann::json publicStateJson();
+public:
+	// Cartes vues de dessus pour la mosaïque : {id, name, width, height, cells} où cells donne un
+	// caractère par case, ligne par ligne : '.' sol, '#' obstacle, '~' eau ou vide (on voit à travers),
+	// 'h' hautes herbes (on s'y cache), 'e' braises, 's' source.
+	std::map<int, std::string> compactMaps();
+private:
 	// Derniers combats terminés (bilan et MVP), du plus récent au plus ancien.
 	std::deque<nlohmann::json> recentBattles;
+	// Commentateur de chaque combat en cours, et fil des 30 dernières phrases (tous combats, le plus
+	// récent d'abord) pour la vue projetée.
+	std::map<int, std::unique_ptr<tw::battle::Commentary>> commentaries;
+	std::deque<nlohmann::json> comments;
+	void addComment(BattleSession * session, const std::string & text);
 	void publishPublicState(bool force = false);
 
 	// Mode spectateur (TWParserSpectator.cpp) :

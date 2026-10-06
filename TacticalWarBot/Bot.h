@@ -24,6 +24,7 @@ public:
 		int classId = 0;			// 0 : au hasard
 		int actionDelayMs = 400;	// Pause entre deux actions (pour pouvoir suivre le combat)
 		bool verbose = false;
+		bool hard = false;			// Difficulté « Difficile » (--level hard)
 	};
 
 	explicit Bot(const Options & options);

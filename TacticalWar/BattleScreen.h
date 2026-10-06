@@ -105,7 +105,22 @@ namespace tw
 		void drawPingMarkers(sf::RenderWindow * window);
 		void drawBubbles(sf::RenderWindow * window);
 		void addFloatingText(int fighterId, const sf::String & text, const sf::Color & color);
+		void addFloatingTextAt(const battle::Cell & cell, const sf::String & text, const sf::Color & color);
+		// Image d'un bloc de mur du sort (visual.block), chargée à la demande.
+		const sf::Texture * blockTexture(const std::string & spellId);
+		std::map<std::string, sf::Texture> blockTextures;
+		// Haut de la partie visible de chaque image de bloc (barre de vie juste au-dessus).
+		std::map<std::string, float> blockTops;
+		// Image d'un orbe bonus (icône de l'orbe dans les données de jeu).
+		const sf::Texture * orbTexture(const std::string & kind);
+		std::map<std::string, sf::Texture> orbTextures;
+		// Orbe bonus : nom et effet, pour le journal et l'aide au survol.
+		sf::String orbLabel(const std::string & kind) const;
 		void playSound(const std::string & path);
+	// Options changées : couleurs des personnages (palette, apparence) et taille du bandeau.
+	void applyOptions();
+	// Dernière seconde annoncée par l'alerte de fin de tour (un tic par seconde).
+	int lastAlertSecond = 0;
 		sf::String fighterName(int fighterId) const;
 		void showEnd();
 		// Quitte l'écran de combat (l'objet est détruit).

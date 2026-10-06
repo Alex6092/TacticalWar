@@ -13,6 +13,8 @@ public:
 	virtual sf::Color getColorForCell(tw::CellData * cell);
 	// Visée d'un sort (portée, cases ciblables, zone d'impact, case survolée) : par-dessus les cases.
 	virtual sf::Color getOverlayForCell(tw::CellData * cell);
+	// Mode daltonien : cases d'impact hachurées.
+	virtual bool isHatched(tw::CellData * cell);
 
 	void clearPreview();
 	void setStartCells(const std::vector<tw::battle::Cell> & team1, const std::vector<tw::battle::Cell> & team2);

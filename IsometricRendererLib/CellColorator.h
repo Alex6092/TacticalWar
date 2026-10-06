@@ -14,5 +14,7 @@ namespace tw
 		// tuiles (visée d'un sort…). Transparente par défaut.
 		// (sf::Color::Transparent n'est pas résolu par l'éditeur en C++/CLI : couleur construite ici.)
 		virtual sf::Color getOverlayForCell(CellData * cell) { return sf::Color(0, 0, 0, 0); }
+		// Hachures par-dessus la surbrillance (cases d'impact en mode daltonien : la forme double la couleur).
+		virtual bool isHatched(CellData * cell) { return false; }
 	};
 }

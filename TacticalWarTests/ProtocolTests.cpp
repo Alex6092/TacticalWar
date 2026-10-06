@@ -125,3 +125,30 @@ TEST_CASE("Opcode table has unique opcodes")
 	CHECK(findOpcode("CL")->requiredRole == Role::PLAYER);
 	CHECK(findOpcode("??") == nullptr);
 }
+
+TEST_CASE("The login message carries the client version, old clients and spectators still log in")
+{
+	std::string payload = loginPayload("lea", "secret");
+	CHECK(payload == "lea;secret;v" + std::to_string(PROTOCOL_VERSION));
+	CHECK(takeLoginVersion(payload) == PROTOCOL_VERSION);
+	CHECK(payload == "lea;secret");
+
+	// Ancien client : pas de version, rien n'est retiré (même un mot de passe qui ressemble à une version).
+	std::string old = "lea;v6";
+	CHECK(takeLoginVersion(old) == 0);
+	CHECK(old == "lea;v6");
+
+	// Spectateur (identifiants vides), avec et sans version.
+	std::string spectator = loginPayload("", "");
+	CHECK(takeLoginVersion(spectator) == PROTOCOL_VERSION);
+	CHECK(spectator == ";");
+	std::string oldSpectator = ";";
+	CHECK(takeLoginVersion(oldSpectator) == 0);
+
+	// Autre version, et champ final qui n'est pas une version.
+	std::string other = "lea;secret;v6";
+	CHECK(takeLoginVersion(other) == 6);
+	std::string notVersion = "lea;secret;vx";
+	CHECK(takeLoginVersion(notVersion) == 0);
+	CHECK(notVersion == "lea;secret;vx");
+}

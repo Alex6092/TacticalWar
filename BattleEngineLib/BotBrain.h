@@ -30,6 +30,10 @@ namespace tw
 			// déplacements possibles au lieu du meilleur choix : 0 pour le bot réseau et la simulation,
 			// plus pour la difficulté « Facile » de l'entraînement.
 			int mistakePercent = 0;
+			// Difficulté « Difficile » : l'IA essaie ses actions sur une copie du combat (se déplacer puis
+			// lancer un sort, KO, combinaisons préparées pour un coéquipier qui joue avant la cible) et
+			// finit son tour hors de portée quand elle le peut. Sans tirage au hasard.
+			bool planner = false;
 		};
 
 		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng,

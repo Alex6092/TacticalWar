@@ -7,7 +7,7 @@
 
 namespace tw
 {
-	// Choix des sorts emportés : 4 parmi les 6 de la classe, un clic sur un sort l'ajoute ou le retire.
+	// Choix des sorts emportés : 4 parmi ceux de la classe (7), un clic sur un sort l'ajoute ou le retire.
 	// LIST : une ligne par sort avec sa description (écran de choix de classe) ;
 	// ROW : les icônes sur une ligne, description au survol (réglages de l'entraînement).
 	class SpellPicker
@@ -30,6 +30,8 @@ namespace tw
 		// LIST : largeur et hauteur d'une ligne ; ROW : largeur seulement.
 		void setGeometry(float width, float rowHeight);
 		float getHeight() const;
+		// Nombre de sorts de la classe montrée (lignes de la liste).
+		int rows() const;
 
 		// Le choix a changé (clic du joueur).
 		std::function<void()> onChange;

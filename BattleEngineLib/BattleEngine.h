@@ -47,11 +47,14 @@ namespace tw
 			// (voir validSpellChoice) donne les premiers sorts de la classe.
 			// talents : talents de tournoi (identifiants connus et distincts gardés) ; leurs bonus sont
 			// ajoutés aux caractéristiques, leurs effets appliqués au début du combat.
+			// appearance : apparence du personnage (inconnue : classique).
 			int addFighter(int team, int classId, const std::string & name, const std::vector<int> & spells = std::vector<int>(),
-				const std::vector<std::string> & talents = std::vector<std::string>());
+				const std::vector<std::string> & talents = std::vector<std::string>(), const std::string & appearance = std::string());
 
 			// Mode "zone à tenir" (avant le placement) : zone de la carte, score à atteindre.
 			void enableZone(int pointsToWin);
+			// Bonus sur la carte (avant le placement) : des orbes apparaissent au centre pendant le combat.
+			void enableMapBonuses();
 
 			void startPlacement(std::int64_t nowMs);
 
@@ -103,11 +106,22 @@ namespace tw
 			void endBattle(int winnerTeam, EndReason reason);
 			// Fin d'un tour complet : point de la zone à tenir.
 			void scoreZone();
+			// Début d'un tour complet : apparition des orbes (bonus sur la carte).
+			void spawnOrbs();
+			// Le combattant arrive (ou passe) sur la case : il ramasse l'orbe qui s'y trouve.
+			void pickUpOrb(Fighter & fighter, const Cell & cell);
 			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.
 			int decideWinner() const;
 
-			// Effets (BattleEffects.cpp)
-			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds);
+			// Effets (BattleEffects.cpp). targetIds / blockIds : combattants et blocs de la zone d'impact.
+			void applySpellEffect(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target, const std::vector<int> & targetIds,
+				const std::vector<int> & blockIds);
+			// Pose les blocs d'un mur sur les cases libres de la zone.
+			void placeWall(Fighter & caster, const SpellDef & spell, const EffectDef & effect, const Cell & target);
+			// Dégâts sur un bloc de mur (fixes : ni combinaison, ni passif, ni résistance) ; détruit à 0 PV.
+			void damageBlock(int blockUid, int amount, int sourceId, const std::string & kind);
+			// Retire les blocs qui répondent au critère ("expired", "destroyed" ou "caster").
+			void removeBlocks(const std::function<bool(const Block &)> & predicate, const std::string & reason);
 			void applyEffectToTarget(Fighter & caster, const std::string & spellId, const EffectDef & effect, Fighter & target, const Cell & targetCell);
 			int computeDamage(const Fighter & caster, const Fighter & target, int roll, int comboPercent = 0) const;
 			// Combinaison de l'effet sur la cible : bonus de dégâts en %, 0 sans combinaison.
@@ -125,11 +139,6 @@ namespace tw
 			void applyOnCastPassive(Fighter & caster);
 			int roll(int min, int max);
 
-			nlohmann::json fighterJson(const Fighter & fighter) const;
-			nlohmann::json effectJson(const ActiveEffect & effect) const;
-			nlohmann::json glyphJson(const Glyph & glyph) const;
-			static nlohmann::json recordJson(const FighterRecord & record);
-			static nlohmann::json zoneJson(const ZoneState & zone);
 			// "Sort" des effets posés par les talents au début du combat.
 			static constexpr const char * TALENT_SPELL_ID = "__talent";
 			void emit(const nlohmann::json & event);

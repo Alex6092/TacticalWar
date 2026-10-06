@@ -18,6 +18,7 @@ TWParser::TWParser(const tw::ServerConfig & config)
 	teamStore(tw::store::joinPath(config.dataDir, "teams.json")),
 	credentials(tw::store::joinPath(config.dataDir, "exports/credentials.json"), tw::store::joinPath(config.dataDir, "exports/fiches-equipes.html")),
 	teamStoreReadOnly(false),
+	profiles(tw::store::joinPath(config.dataDir, "profiles.json")),
 	tournaments(config.dataDir),
 	replays(tw::store::joinPath(config.dataDir, "replays"))
 {
@@ -32,6 +33,9 @@ TWParser::TWParser(const tw::ServerConfig & config)
 
 	loadEnvironments();
 	loadTeams();
+	std::string profileError;
+	if (!profiles.load(&profileError))
+		std::cout << "Profils des joueurs illisibles (data/profiles.json) : " << profileError << std::endl;
 
 	std::string error;
 	if (!gameData.loadFromFile("./assets/data/gamedata.json", error))
@@ -104,7 +108,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 	}
 
 	// Mode spectateur (contenu JSON) :
-	if (op == "SL" || op == "SW" || op == "SU" || op == "RL" || op == "RP" || (op == "BR" && getPlayerFromClientState(client) == NULL))
+	if (op == "SL" || op == "SW" || op == "SU" || op == "RL" || op == "RP" || op == "HL" || (op == "BR" && getPlayerFromClientState(client) == NULL))
 	{
 		tw::protocol::Message message;
 		nlohmann::json body = nlohmann::json::object();
@@ -135,6 +139,28 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			handlePing(client, body);
 		else
 			handleBattleAction(client, op, body);
+		return;
+	}
+
+	// Défis entre équipes (contenu JSON) :
+	if (op == "DL" || op == "DD" || op == "DA")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleChallengeMessage(client, op, body);
+		return;
+	}
+
+	// Matchs amicaux de l'admin (contenu JSON) :
+	if (op == "FL" || op == "FC" || op == "FX")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleFriendlyAdminMessage(client, op, body);
 		return;
 	}
 
@@ -169,6 +195,16 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		{
 			std::string payload = toParse.substr(2);
 
+			// Client d'une autre version : il doit être mis à jour (page de téléchargement du serveur).
+			int clientVersion = tw::protocol::takeLoginVersion(payload);
+			if (clientVersion != 0 && clientVersion != tw::protocol::PROTOCOL_VERSION)
+			{
+				std::cout << "Client en version " << clientVersion << " refuse (serveur en version " << tw::protocol::PROTOCOL_VERSION << ")" << std::endl;
+				send(client, tw::protocol::Message::encode("HV", { { "server", tw::protocol::PROTOCOL_VERSION }, { "client", clientVersion },
+					{ "httpPort", config.httpPort }, { "page", "/telecharger.html" } }));
+				return;
+			}
+
 			bool wrongIds = false;
 
 			// Connexion joueur :
@@ -200,6 +236,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 							notifyPlanifiedAndPlayingMatch(admin);
 							notifyFinishedMatch(admin);
 							notifyTeamList(admin);
+							notifyFriendlyMatches(admin);
 						}
 					}
 					else if (teamStore.authenticate(pseudo, password, &pseudo) && playersMap.find(pseudo) != playersMap.end())
@@ -221,6 +258,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 							connectedPlayerMap[p] = client;
 
 							sendGameData(client);
+							sendAppearances(client, pseudo);
 
 							tw::Match * match = tw::PlayerManager::getCurrentOrNextMatchForPlayer(p);
 							// Un match existe pour ce joueur :
@@ -305,46 +343,19 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			// Seul un administrateur est autorisé à réaliser cette opération :
 			if (client->isAdmin())
 			{
-				std::string payload = toParse.substr(2);
-
-				std::vector<std::string> matchData = StringUtils::explode(payload, ';');
-
-				std::string name = matchData[0];
-				int team1 = std::atoi(matchData[1].c_str());
-				int team2 = std::atoi(matchData[2].c_str());
-
-				if (team1 != team2)
+				// Ancien format CM<nom>;<équipe A>;<équipe B> (carte au hasard).
+				std::vector<std::string> matchData = StringUtils::explode(toParse.substr(2), ';');
+				if (matchData.size() >= 3)
 				{
-					tw::Match * m = new tw::Match(name);
-
-					int team1Status = isTeamAvailableForMatchCreation(team1);
-					int team2Status = isTeamAvailableForMatchCreation(team2);
-
-					// Les 2 equipes sont libres pour un match à venir :
-					if (team1Status == 0 && team2Status == 0)
-					{
-						std::vector<tw::Player*> teamA = teamIdToPlayerList[team1];
-						std::vector<tw::Player*> teamB = teamIdToPlayerList[team2];
-
-						m->setTeam1Players(teamA[0], teamA[1]);
-						m->setTeam2Players(teamB[0], teamB[1]);
-
-						m->setEnvironment(environments[rand() % environments.size()]);
-
-						m->addEventListener(this);
-						tw::PlayerManager::addMatch(m);
-						createSession(m);
-						notifyMatchCreated(m);
+					int team1 = std::atoi(matchData[1].c_str());
+					int team2 = std::atoi(matchData[2].c_str());
+					std::string error;
+					if (team1 == team2)
+						send(client, "CF\n");
+					else if (createFriendlyMatch(matchData[0], team1, team2, 0, error) != NULL)
 						send(client, "CO\n");
-					}
 					else
-					{
 						send(client, "CN\n");
-					}
-				}
-				else
-				{
-					send(client, "CF\n");
 				}
 			}
 		}
@@ -354,6 +365,13 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			tw::Player * p = getPlayerFromClientState(client);
 			if (p != NULL)
 				handlePickClass(client, p, toParse.substr(2));
+		}
+		// Énigmes réussies sur le poste du joueur (apparences) :
+		else if (StringUtils::startsWith(toParse, "PZ"))
+		{
+			tw::Player * p = getPlayerFromClientState(client);
+			if (p != NULL)
+				handlePuzzles(client, p, toParse.substr(2));
 		}
 		// Classe regardée sur l'écran de choix (montrée au coéquipier) :
 		else if (StringUtils::startsWith(toParse, "PV"))
@@ -591,6 +609,7 @@ void TWParser::onTick(tw::net::Clock::time_point now)
 {
 	tickBattles();
 	tickReplays(nowMs());
+	tickChallenges(nowMs());
 }
 
 void TWParser::onDisconnected(tw::net::ConnId id)
@@ -646,6 +665,180 @@ void TWParser::onMatchStatusChanged(tw::Match * match, tw::MatchStatus oldStatus
 	// Notify admin
 	notifyPlanifiedAndPlayingMatch(admin);
 	notifyFinishedMatch(admin);
+	for (const FriendlyMatch & friendly : friendlyMatches)
+	{
+		if (friendly.match == match)
+		{
+			notifyFriendlyMatches();
+			break;
+		}
+	}
+}
+
+tw::Match * TWParser::createFriendlyMatch(const std::string & rawName, int teamA, int teamB, int mapId, std::string & error)
+{
+	std::string name = rawName;
+	name.erase(0, name.find_first_not_of(" \t"));
+	name.erase(name.find_last_not_of(" \t") + 1);
+	if (name.empty())
+		name = teamName(teamA) + " - " + teamName(teamB);
+	if (name.size() > 60)
+		name.resize(60);
+	if (teamA == teamB)
+	{
+		error = u8"Choisissez deux équipes différentes.";
+		return NULL;
+	}
+	for (int team : { teamA, teamB })
+	{
+		auto players = teamIdToPlayerList.find(team);
+		if (players == teamIdToPlayerList.end() || players->second.size() < 2)
+		{
+			error = u8"Équipe inconnue ou incomplète : " + std::to_string(team) + ".";
+			return NULL;
+		}
+		if (isTeamAvailableForMatchCreation(team) != 0)
+		{
+			error = teamName(team) + u8" a déjà un match prévu ou en cours.";
+			return NULL;
+		}
+	}
+	tw::Environment * environment = NULL;
+	for (tw::Environment * candidate : environments)
+	{
+		if (candidate->getId() == mapId)
+			environment = candidate;
+	}
+	if (mapId != 0 && environment == NULL)
+	{
+		error = u8"Carte inconnue : " + std::to_string(mapId) + ".";
+		return NULL;
+	}
+	if (environment == NULL)
+	{
+		if (environments.empty())
+		{
+			error = u8"Aucune carte chargée.";
+			return NULL;
+		}
+		environment = environments[rand() % environments.size()];
+	}
+
+	tw::Match * match = new tw::Match(name);
+	std::vector<tw::Player*> & first = teamIdToPlayerList[teamA];
+	std::vector<tw::Player*> & second = teamIdToPlayerList[teamB];
+	match->setTeam1Players(first[0], first[1]);
+	match->setTeam2Players(second[0], second[1]);
+	match->setEnvironment(environment);
+	match->addEventListener(this);
+	tw::PlayerManager::addMatch(match);
+
+	FriendlyMatch friendly;
+	friendly.id = nextFriendlyId++;
+	friendly.name = name;
+	friendly.teamA = teamA;
+	friendly.teamB = teamB;
+	friendly.mapId = environment->getId();
+	friendly.match = match;
+	friendlyMatches.push_back(friendly);
+
+	createSession(match);
+	notifyMatchCreated(match);
+	notifyFriendlyMatches();
+	return match;
+}
+
+nlohmann::json TWParser::friendlyListJson()
+{
+	nlohmann::json matches = nlohmann::json::array();
+	// Les plus récents d'abord.
+	for (auto it = friendlyMatches.rbegin(); it != friendlyMatches.rend(); ++it)
+	{
+		const FriendlyMatch & friendly = *it;
+		std::string status = "planned";
+		if (friendly.cancelled)
+			status = "cancelled";
+		else if (friendly.match->getStatus() == tw::MatchStatus::FINISHED)
+			status = "finished";
+		else if (friendly.match->getStatus() == tw::MatchStatus::STARTED)
+			status = "playing";
+		BattleSession * session = friendly.cancelled ? NULL : sessionOfMatch(friendly.match);
+		int winner = status == "finished" ? friendly.match->getWinnerTeamId() : 0;
+		std::string mapName;
+		for (tw::Environment * environment : environments)
+		{
+			if (environment->getId() == friendly.mapId)
+				mapName = environment->getName();
+		}
+		matches.push_back({
+			{ "id", friendly.id },
+			{ "name", friendly.name },
+			{ "teamA", { { "id", friendly.teamA }, { "name", teamName(friendly.teamA) } } },
+			{ "teamB", { { "id", friendly.teamB }, { "name", teamName(friendly.teamB) } } },
+			{ "map", { { "id", friendly.mapId }, { "name", mapName } } },
+			{ "status", status },
+			{ "winner", winner == 1 ? friendly.teamA : winner == 2 ? friendly.teamB : 0 },
+			{ "session", session != NULL && status != "finished" ? session->getId() : 0 }
+		});
+	}
+	nlohmann::json maps = nlohmann::json::array();
+	for (tw::Environment * environment : environments)
+		maps.push_back({ { "id", environment->getId() }, { "name", environment->getName() } });
+	return { { "matches", matches }, { "maps", maps } };
+}
+
+void TWParser::notifyFriendlyMatches(ClientState * only)
+{
+	ClientState * target = only != NULL ? only : admin;
+	if (target != NULL)
+		send(target, tw::protocol::Message::encode("FL", friendlyListJson()));
+}
+
+void TWParser::handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body)
+{
+	if (!client->isAdmin())
+		return;
+	if (op == "FL")
+	{
+		notifyFriendlyMatches(client);
+		return;
+	}
+
+	std::string error;
+	std::string success;
+	if (op == "FC")
+	{
+		tw::Match * match = createFriendlyMatch(body.value("name", std::string()), body.value("teamA", 0), body.value("teamB", 0),
+			body.value("map", 0), error);
+		if (match != NULL)
+			success = u8"Match créé : " + match->getMatchName() + u8". Les joueurs connectés passent au choix des classes.";
+	}
+	else if (op == "FX")
+	{
+		int id = body.value("id", 0);
+		FriendlyMatch * found = NULL;
+		for (FriendlyMatch & friendly : friendlyMatches)
+		{
+			if (friendly.id == id)
+				found = &friendly;
+		}
+		if (found == NULL)
+			error = u8"Match amical inconnu.";
+		else if (found->cancelled || found->match->getStatus() == tw::MatchStatus::FINISHED)
+			error = u8"Ce match est déjà terminé.";
+		else
+		{
+			BattleSession * session = sessionOfMatch(found->match);
+			found->cancelled = true;
+			if (session != NULL)
+				cancelSession(session);
+			else
+				found->match->setWinnerTeam(0);
+			success = u8"Match annulé : " + found->name + ".";
+		}
+	}
+	send(client, tw::protocol::Message::encode("FR", { { "ok", error.empty() }, { "message", error.empty() ? success : error } }));
+	notifyFriendlyMatches(client);
 }
 
 void TWParser::sendToMatch(tw::Match * match, std::string str)

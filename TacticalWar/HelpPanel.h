@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <functional>
+
 #include <TGUI/TGUI.hpp>
 
 namespace tw
@@ -16,9 +18,16 @@ namespace tw
 		bool isVisible() const;
 		// Centré dans la fenêtre.
 		void layout(const sf::Vector2u & windowSize);
+		// Après un changement d'options (taille du texte, couleurs nommées) : contenu refait.
+		void rebuild();
+
+		// Bouton « Options » du panneau.
+		std::function<void()> onOptions;
 
 	private:
 		tgui::Panel::Ptr panel;
 		sf::Font textFont;
+		const sf::Font & titleFont;
+		sf::Vector2u windowSize;
 	};
 }

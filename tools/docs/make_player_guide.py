@@ -253,6 +253,16 @@ def build():
     aura_class, aura = protector_aura(classes)
     aura_tip = ('<b>Restez groupés</b> près du %s (aura : +%d %% de résistance à %d cases), mais hors de la croix '
                 'd\'une Boule de feu !' % (esc(aura_class), aura['bonus'], aura['distance'])) if aura else ''
+    # Orbes bonus (réglage du tournoi) : leurs effets viennent des données de jeu.
+    bonuses = data.get('bonuses', {})
+    orb_effects = []
+    for orb in bonuses.get('orbs', []):
+        if orb.get('heal'):
+            orb_effects.append('+%d PV' % orb['heal'])
+        if orb.get('ap'):
+            orb_effects.append('+%d PA' % orb['ap'])
+        if orb.get('shield'):
+            orb_effects.append('bouclier de %d' % orb['shield'])
     values = {
         'hash': gamedata_hash(),
         'turn': rules['turnSeconds'], 'bank': rules['timeBankSeconds'], 'placement': rules['placementSeconds'],
@@ -263,6 +273,7 @@ def build():
         'tiles': special_tiles(), 'talents': talents_table(data),
         'classes': ''.join(class_card(cls, classes) for cls in classes),
         'combos': combo_section(classes), 'aura_tip': aura_tip,
+        'orb_round': bonuses.get('firstRound', 3), 'orb_effects': ', '.join(orb_effects),
     }
     return PAGE % values
 
@@ -320,9 +331,9 @@ PAGE = """<!doctype html>
     .class-card .role { font-size: 8.4pt; font-weight: 400; font-style: italic; color: var(--ink); }
     .class-card .passive { margin: 0.6mm 0 0.8mm; font-size: 8.1pt; line-height: 1.22; }
     .spells { list-style: none; padding: 0; margin: 0; }
-    .spells li { display: flex; gap: 1.6mm; align-items: flex-start; margin-bottom: 0.6mm; font-size: 7.7pt; line-height: 1.17; }
-    .spells img { width: 6mm; height: 6mm; border-radius: 1mm; flex: none; margin-top: 0.3mm; }
-    .chips { color: #555; font-size: 7.1pt; }
+    .spells li { display: flex; gap: 1.4mm; align-items: flex-start; margin-bottom: 0.35mm; font-size: 7.3pt; line-height: 1.12; }
+    .spells img { width: 5.4mm; height: 5.4mm; border-radius: 1mm; flex: none; margin-top: 0.2mm; }
+    .chips { color: #555; font-size: 6.8pt; }
     .tag { display: inline-block; font-size: 7.2pt; border-radius: 1mm; padding: 0 1mm; margin-left: 0.6mm; }
     .tag.mark { border: 1px solid var(--gold); color: #7a5a00; }
     .tag.combo { background: var(--gold); color: #fff; }
@@ -397,6 +408,10 @@ PAGE = """<!doctype html>
           <li><b>Ligne de vue</b> : rochers, arbres, hautes herbes et personnages bloquent la plupart des sorts à distance.</li>
           <li><b>Collision</b> : un personnage poussé contre un obstacle subit %(collision)s dégâts par case non
             parcourue ; s'il heurte un personnage, celui-ci en subit %(collision_hit)s.</li>
+          <li><b>Murs</b> (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre
+            propre mur pour passer ; ils disparaissent après quelques tours.</li>
+          <li><b>Orbes</b> (si l'organisateur les active) : au centre dès le tour %(orb_round)s ; passez dessus :
+            %(orb_effects)s.</li>
         </ul>
       </section>
     </div>
@@ -426,7 +441,10 @@ PAGE = """<!doctype html>
             aussi la classe du second). Un coéquipier qui revient reprend la main.</li>
           <li><b>Déconnecté ?</b> Reconnectez-vous avec les mêmes identifiants : vous retrouvez votre combat.</li>
           <li><b>Après le combat</b> : le bilan désigne le <b>MVP</b> et décerne des <b>hauts faits</b> (Premier
-            sang, Coup double, Maître des combos…). Ils figurent sur votre diplôme !</li>
+            sang, Coup double, Maître des combos…). Ils figurent sur votre diplôme et débloquent des
+            <b>apparences</b>, à choisir sur l'écran de classe.</li>
+          <li><b>Options</b> (connexion, ou aide en combat) : mode daltonien, taille du texte, alerte de fin de tour.
+            Jeu à mettre à jour ? Page « Télécharger le jeu » de la vue projetée.</li>
         </ul>
       </section>
       <section class="box"><h2>Les talents</h2>

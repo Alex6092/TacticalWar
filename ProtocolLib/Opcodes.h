@@ -7,7 +7,7 @@ namespace tw
 	namespace protocol
 	{
 		// Version du protocole : le client et le serveur doivent être mis à jour ensemble.
-		const int PROTOCOL_VERSION = 6;
+		const int PROTOCOL_VERSION = 7;
 
 		const int DEFAULT_GAME_PORT = 12345;
 		const int DEFAULT_HTTP_PORT = 8080;
@@ -49,8 +49,9 @@ namespace tw
 			{ "ZQ", Direction::CLIENT_TO_SERVER, Role::ANY, "Keepalive (pong)" },
 
 			// Connexion / changement d'écran
-			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password (vide = spectateur). S->C : entrer en combat sur la carte <id>" },
-			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours)}" },
+			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password;v<version du protocole> (identifiants vides = spectateur ; sans version : ancien client, accepté). S->C : entrer en combat sur la carte <id>" },
+			{ "HV", Direction::SERVER_TO_CLIENT, Role::ANY, "Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client}" },
+			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)}" },
 			{ "HS", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller au mode spectateur" },
 			{ "HW", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à l'attente de match" },
 			{ "HK", Direction::SERVER_TO_CLIENT, Role::ANY, "Identifiants refusés" },
@@ -90,20 +91,33 @@ namespace tw
 			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
 			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder (combat ou rediffusion)" },
 			{ "RL", Direction::BOTH, Role::SPECTATOR, "Rediffusions des combats terminés (S->C : {replays})" },
-			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat)" },
+			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE" },
+			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} : RE{}" },
+			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts des dernières rediffusions. C->S : HL{} ; S->C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },
 			{ "CO", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Match créé" },
 			{ "CN", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Une équipe est déjà occupée" },
+			{ "FL", Direction::BOTH, Role::ADMIN, "Matchs amicaux (hors tournoi). C->S : FL{} ; S->C : FL{matches:[{id, name, teamA:{id, name}, teamB, map, status: planned|playing|finished|cancelled, winner, session}], maps:[{id, name}]}" },
+			{ "FC", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match amical : FC{name, teamA, teamB, map (0 : au hasard)}" },
+			{ "FX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Annuler un match amical prévu ou en cours : FX{id}" },
+			{ "FR", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Réponse à FC ou FX : FR{ok, message}" },
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC<classId> : sorts par défaut)" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC<classId> : sorts par défaut)" },
 			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
 			{ "PV", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class}" },
-			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, present, standIn : second personnage d'un joueur seul dans son équipe}" },
+			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe}" },
 			{ "PB", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte)" },
+			{ "DL", Direction::BOTH, Role::PLAYER, "Équipes à défier (match amical hors tournoi). C->S : DL{} ; S->C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible}" },
+			{ "DD", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Défier une équipe : DD{team}" },
+			{ "DI", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Défi reçu par l'équipe du joueur : DI{from, name, seconds}" },
+			{ "DA", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Réponse à un défi : DA{from, accept} (le premier joueur de l'équipe qui répond décide)" },
+			{ "DR", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Résultat d'un défi : DR{ok, message, from, to}" },
+			{ "PZ", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]}" },
+			{ "PA", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}}" },
 			{ "BB", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)}" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
 			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },

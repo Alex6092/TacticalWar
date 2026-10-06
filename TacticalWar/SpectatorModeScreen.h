@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include <nlohmann/json.hpp>
+
 #include "Screen.h"
 #include "ServerMessageListener.h"
 #include "LiveSessionsPanel.h"
@@ -32,8 +34,15 @@ private:
 	float watchPending;		// Délai d'attente de la réponse à SW (secondes), 0 si aucune demande
 
 	static bool directorMode;
+	// Temps forts des dernières rediffusions (HL), rejoués par le réalisateur quand aucun combat
+	// n'est en cours ; conservés d'un retour à l'autre sur cet écran.
+	static nlohmann::json highlights;
+	static float highlightsAge;
+	static std::size_t nextHighlight;
+	float highlightRequest = 0;
 
 	void watch(int session);
+	void playNextHighlight();
 
 public:
 	SpectatorModeScreen(tgui::Gui * gui);

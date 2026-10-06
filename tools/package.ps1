@@ -3,7 +3,9 @@
     Prépare les paquets à copier sur les PC de l'événement : client, serveur et éditeur de cartes.
 
 .DESCRIPTION
-    Compile la solution (Release x64), puis crée dans dist\ trois dossiers et leurs archives zip :
+    Compile la solution (Release x64), puis crée dans dist\ trois dossiers et leurs archives zip.
+    Le zip du client est aussi déposé dans la page web du serveur (assets\web\telecharger\) : les
+    joueurs le téléchargent depuis http://<serveur>:8080/telecharger.html.
       TacticalWar-client   jeu (joueurs, spectateur, administration)
       TacticalWar-serveur  serveur de jeu + vue projetée web + bot de test
       TacticalWar-editeur  éditeur de cartes
@@ -112,6 +114,17 @@ l'identifiant et le mot de passe vides sur l'écran de connexion.
 Pas de son sur ce PC : ajouter --no-sound à la ligne de commande.
 "@
 
+function Compress-Package([string]$package) {
+    $zip = "$package.zip"
+    Compress-Archive -Path (Join-Path $package "*") -DestinationPath $zip -Force
+    $size = [math]::Round((Get-Item $zip).Length / 1MB, 1)
+    Write-Host ("{0} ({1} Mo)" -f (Split-Path $zip -Leaf), $size)
+    return $zip
+}
+
+# Zip du client d'abord : le serveur le propose au téléchargement (clients d'une autre version).
+$clientZip = Compress-Package $client
+
 # --- Serveur ------------------------------------------------------------------
 $server = Join-Path $dist "TacticalWar-serveur"
 Copy-Files $release @("TacticalWarServer.exe", "TacticalWarBot.exe") $server
@@ -119,6 +132,8 @@ Copy-Files $crtDir $crt $server
 foreach ($folder in @("data", "map", "web")) {
     Copy-Tree (Join-Path $assets $folder) (Join-Path $server "assets\$folder")
 }
+New-Item -ItemType Directory -Force (Join-Path $server "assets\web\telecharger") | Out-Null
+Copy-Item $clientZip (Join-Path $server "assets\web\telecharger\TacticalWar-client.zip") -Force
 New-Item -ItemType Directory -Force (Join-Path $server "assets\tiles") | Out-Null
 Copy-Item (Join-Path $assets "tiles\tileset.json") (Join-Path $server "assets\tiles") -Force
 Write-Utf8 (Join-Path $server "Ouvrir-pare-feu.bat") @"
@@ -135,7 +150,8 @@ Tactical War - serveur
    et affiché : le noter (TacticalWarServer.exe --set-admin-password pour le changer).
 2. Le serveur affiche ses adresses sur le réseau local : les donner aux joueurs.
 3. Vue projetée : ouvrir http://<adresse>:8080/ dans un navigateur (?rotate=20 pour faire
-   défiler les vues).
+   défiler les vues). Le jeu se télécharge sur http://<adresse>:8080/telecharger.html (un client
+   d'une autre version y est renvoyé à la connexion).
 4. Pare-feu : lancer Ouvrir-pare-feu.bat en tant qu'administrateur.
 
 Les équipes, tournois et résultats sont enregistrés dans le dossier data\ (à sauvegarder).
@@ -166,10 +182,7 @@ le bouton « Valider la carte » le vérifie.
 "@
 
 # --- Archives -------------------------------------------------------------------
-foreach ($package in @($client, $server, $editor)) {
-    $zip = "$package.zip"
-    Compress-Archive -Path (Join-Path $package "*") -DestinationPath $zip -Force
-    $size = [math]::Round((Get-Item $zip).Length / 1MB, 1)
-    Write-Host ("{0} ({1} Mo)" -f (Split-Path $zip -Leaf), $size)
+foreach ($package in @($server, $editor)) {
+    Compress-Package $package | Out-Null
 }
 Write-Host "Paquets prêts dans $dist"

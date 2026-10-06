@@ -397,8 +397,10 @@ l'entraînement :
 - **recto** : but du jeu (KO, zone, mort subite), déroulement d'un tour (placement, PA, PM, relance,
   réserve de temps), commandes, règles à savoir (aperçu, bouclier, résistance, tacle, ligne de vue,
   collision), cases spéciales, signaux et émotes, déroulement du tournoi, talents, entraînement ;
-- **verso** : les 4 classes (caractéristiques, passif, 6 sorts avec coût, portée, relance, dégâts et
+- **verso** : les 4 classes (caractéristiques, passif, 7 sorts avec coût, portée, relance, dégâts et
   marques), les combinaisons avec leur mise en pratique, et 5 astuces.
+
+Le recto rappelle aussi les murs, les orbes, les apparences, les Options et la page de téléchargement.
 
 La page est servie par le serveur : `http://<serveur>:8080/guide.html` (lien « Guide du joueur » en haut
 de la page projetée, bouton « Guide » de l'onglet Tournoi). Bouton « Imprimer », en recto-verso.
@@ -417,6 +419,8 @@ identifiants : idéal pour découvrir les classes avant le jour J, ou pour patie
   hasard), la carte (au hasard parmi celles du tournoi), le mode (KO ou zone à tenir) et la difficulté.
   - **Facile** : l'ordinateur choisit parfois un sort ou un déplacement au hasard au lieu du meilleur.
   - **Normal** : l'ordinateur joue comme les bots de test du tournoi.
+  - **Difficile** : l'ordinateur prépare ses coups (voir « Ordinateur Difficile »).
+- **Bonus sur la carte** : case à cocher, comme le réglage du tournoi (voir « Orbes »).
 - **Mêmes règles qu'en tournoi** : placement puis « Prêt », minuteur de tour, aides à la visée, bilan de fin.
 - En fin de combat : **« Rejouer »** (mêmes réglages, nouveau tirage) ou **« Retour »** aux réglages.
   « Quitter », en bas à droite, abandonne le combat en cours.
@@ -427,3 +431,147 @@ En ligne de commande :
   `--training-map <id>`, `--training-1v1` ou `--training-zone` ;
 - `--training-autoplay` fait jouer aussi le personnage du joueur par l'ordinateur, et enchaîne les combats :
   une démonstration pour un écran d'accueil.
+
+## Sorts de terrain : les murs
+
+Chaque classe a un 7e sort, un **sort de terrain** qui dresse un mur. Un mur est une invocation
+statique : chaque case est un **bloc** avec sa propre barre de vie. Casser un bloc ouvre une brèche ;
+les autres restent debout.
+
+| Classe | Sort | Mur |
+|---|---|---|
+| Guerrier | Éboulis | 1 rocher : bloque le passage et la vue |
+| Archer | Palissade | 3 pieux en travers : bloquent le passage (on tire par-dessus) |
+| Mage | Mur de glace | 3 blocs en travers : bloquent le passage et la vue |
+| Protecteur | Voile sacré | 3 cases en travers : bloquent la vue (on traverse, on s'y cache) |
+
+- **Viser un bloc** : tout le monde peut viser n'importe quel bloc avec un sort de dégâts, y compris son
+  propre mur pour passer. Les soins, boucliers et états ne visent pas les blocs.
+- **Ce qui abîme un bloc** : les dégâts directs (ciblés ou de zone, jet et puissance du lanceur compris)
+  et les collisions (un personnage poussé contre un bloc l'abîme). Rien d'autre : ni poison, ni brûlure,
+  ni combinaison, ni passif, ni résistance.
+- **Bilan** : les dégâts faits aux blocs ne comptent ni pour le MVP ni pour les hauts faits.
+- **Durée** : un bloc non détruit disparaît après quelques tours de son lanceur, ou à sa mort.
+- **À l'écran** : barre de vie au-dessus du bloc, dégâts flottants, aperçu « Détruit ! » à la visée, et au
+  survol : « Mur de glace : 22/30 PV, encore 2 tours ».
+- L'ordinateur pose un mur quand il protège un allié, et casse un bloc quand il lui barre la route.
+
+## Orbes : bonus sur la carte
+
+Réglage du tournoi **« Bonus sur la carte »** (onglet Tournoi), désactivé par défaut. Il existe aussi
+pour l'entraînement, les matchs amicaux (`server.json`, `"mapBonuses": true`) et le simulateur
+(`--bonuses`).
+
+- **Apparition** : au tour 3, puis tous les 3 tours s'il n'y en a plus, sur une paire de cases
+  symétriques au centre de la carte (le même orbe des deux côtés : c'est équitable).
+- **Ramassage** : en passant dessus (déplacement) ou en y étant envoyé (bond, téléportation, poussée…).
+- **Effets** (`gamedata.json`, `"bonuses"`) : soin (+15 PV), énergie (+1 PA tout de suite), protection
+  (bouclier de 15 pendant 2 tours).
+- Le journal l'annonce (« Nouveaux orbes au centre », « Léa ramasse l'orbe de soin ») ; l'ordinateur
+  les recherche selon ses besoins.
+
+## Ordinateur Difficile
+
+Troisième niveau de l'entraînement (`--training-difficulty hard`), et des bots de test
+(`TacticalWarBot.exe --level hard`). Sans hasard supplémentaire : la même graine donne les mêmes choix.
+
+- Il **prépare son tour** sur une copie du combat : « se déplacer puis lancer un sort » contre
+  « lancer tout de suite », en regardant aussi le sort suivant (Provocation puis Taillade…).
+- Il **concentre ses coups** sur l'ennemi le plus blessé et pose les marques qu'un coéquipier exploitera
+  avant le tour de la cible.
+- **Blessé**, il finit son tour hors d'atteinte quand il le peut.
+- Il gagne environ **deux combats sur trois** contre le niveau Normal (voir `equilibrage.md`).
+
+## Apparences
+
+Huit apparences : une variante de la couleur d'équipe (plus claire, plus sombre, plus vive… la teinte
+reste celle de l'équipe, pour que les équipes restent reconnaissables) et une couleur de cheveux.
+
+| Apparence | Se débloque avec |
+|---|---|
+| Classique | dès le départ |
+| Givre | 3 énigmes réussies |
+| Braise | haut fait « Premier sang » |
+| Éclat | haut fait « Maître des combos » |
+| Nuit | 5 victoires |
+| Or | un titre de MVP |
+| Ombre | haut fait « Intouchable » |
+| Argent | 6 énigmes réussies |
+
+- **Sur le compte** : le serveur garde la progression de chaque joueur dans `data/profiles.json`
+  (hauts faits obtenus, victoires, MVP, énigmes signalées par son poste) ; elle sert d'un événement à
+  l'autre si le fichier est conservé.
+- **Choix** : rangée de pastilles à droite du personnage sur l'écran de classe. Les pastilles grisées
+  donnent leur condition au survol. Le choix est vérifié par le serveur et retenu dans `client.json`.
+- Le coéquipier voit l'apparence choisie ; une nouvelle apparence est annoncée en fin de combat.
+- Hors ligne (entraînement), les apparences de la dernière connexion et celles des énigmes du poste
+  restent disponibles.
+
+## Accessibilité : écran Options
+
+Bouton **Options** de l'écran de connexion, et bouton « Options » de l'aide en combat (touche H).
+Les réglages s'appliquent tout de suite et sont enregistrés dans `client.json`.
+
+- **Sons et musique**.
+- **Mode daltonien** : couleurs d'Okabe et Ito, distinctes pour toutes les formes de daltonisme
+  (équipes bleue et orange, déplacement en vert bleuté face à la menace orange, impact vermillon face au
+  bleu ciblable). Les cases d'impact sont **hachurées**, et chaque personnage porte un **symbole
+  d'équipe** (rond ou triangle) devant son nom et dans l'ordre du tour. Les phrases qui citent une
+  couleur prennent les noms du mode choisi.
+- **Taille du texte** : 100, 115 ou 130 % pour le journal, la ligne d'aide, les détails du combattant,
+  l'aide, les descriptions des sorts, l'ordre du tour et le nom des personnages.
+- **Alerte de fin de tour** : pendant les 5 dernières secondes de son tour (temps normal, puis
+  réserve), le minuteur clignote et un tic sonne chaque seconde.
+
+## Onglet Matchs de l'administration
+
+L'onglet **Matchs** crée des matchs amicaux, hors tournoi : nom (facultatif), équipe A, équipe B,
+carte (au hasard ou choisie), puis « Créer le match » ; les joueurs connectés passent au choix des
+classes. La liste montre les matchs amicaux avec leur carte, leur état et leur vainqueur, et les
+boutons **Regarder** (match en cours), **Annuler le match** (prévu ou en cours) et **Actualiser**.
+
+## Matchs amicaux libres : les défis
+
+Tant qu'**aucun tournoi n'est en cours**, une équipe qui attend peut défier une autre équipe depuis
+l'écran d'attente (panneau « Défier une équipe », actualisé toutes les 5 s).
+
+- La liste montre chaque équipe, ses joueurs connectés, et si elle peut être défiée (sinon pourquoi :
+  aucun joueur connecté, en match, défi en attente).
+- L'équipe défiée reçoit une fenêtre avec compte à rebours : **Accepter** ou **Refuser** ; le premier
+  joueur qui répond décide. Sans réponse, le défi expire au bout de 30 s.
+- Une équipe n'a qu'un défi à la fois. Défi accepté : match amical, choix des classes habituel.
+- Les défis en attente sont annulés quand un match ou un tournoi commence. Les bots refusent les défis.
+
+## Mise à jour des clients
+
+À la connexion, le client envoie la version du protocole. Un client d'une autre version que le
+serveur est refusé avec un message clair (« Ce jeu (version 6) ne correspond pas au serveur
+(version 7) ») et l'adresse de la page de téléchargement, avec un bouton **Ouvrir la page**.
+
+La page `http://<serveur>:8080/telecharger.html` (lien « Télécharger le jeu » de la vue projetée)
+donne la version et le zip du client, avec les étapes : télécharger, dézipper, lancer. Le zip est
+déposé par `tools/package.ps1` dans le paquet du serveur. Un ancien client sans numéro de version
+reste accepté.
+
+## Commentateur automatique
+
+La vue projetée affiche un panneau **Commentaire** : des phrases générées à partir des combats en cours
+(combinaison, KO et double KO, gros coup, équipe en danger, retournement, orbe, mur posé ou détruit,
+point de zone, fin du combat). Une phrase au plus toutes les 3 secondes par combat, la plus
+importante d'abord ; les nouvelles lignes sont mises en surbrillance.
+
+## Mosaïque des combats
+
+Onglet **Combats** de la vue projetée, en premier dès qu'un combat est en cours (et dans la rotation
+`?rotate=`) : une mini-carte vue de dessus par combat, avec les pions aux couleurs des équipes (initiale
+de la classe, anneau de PV, combattant actif cerclé d'or), les murs, les orbes, la zone, le tour, le
+score de zone et les PV de chaque équipe.
+
+## Temps forts automatiques
+
+À la fin de chaque combat, le serveur note ses meilleurs moments (combinaison, KO et double KO, gros
+coup, retournement, dernier debout) et garde jusqu'à trois extraits d'environ 7 secondes dans la
+rediffusion.
+
+Le **mode réalisateur** du spectateur les rejoue quand aucun combat n'est en cours, l'un après l'autre,
+avec le bandeau « Temps fort : Double KO de Léa », et repasse en direct dès qu'un combat commence.

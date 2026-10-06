@@ -5,6 +5,7 @@
 #include <BattleMirror.h>
 #include <BattleRules.h>
 #include <Emotes.h>
+#include <Palette.h>
 
 #include "BattleScreen.h"
 #include "ClientGameData.h"
@@ -13,6 +14,15 @@
 
 using namespace tw;
 using nlohmann::json;
+
+namespace
+{
+	sf::Color paletteColor(palette::Role role)
+	{
+		palette::Rgba color = palette::color(role);
+		return sf::Color(color.r, color.g, color.b, color.a);
+	}
+}
 
 namespace
 {
@@ -53,6 +63,11 @@ BattleEventView::BattleEventView(BattleScreen & screen)
 		{ "glyph+", &BattleEventView::onGlyphAdded },
 		{ "glyph-", &BattleEventView::onGlyphRemoved },
 		{ "glyph", &BattleEventView::onGlyphTriggered },
+		{ "block+", &BattleEventView::onBlockAdded },
+		{ "blockhit", &BattleEventView::onBlockHit },
+		{ "block-", &BattleEventView::onBlockRemoved },
+		{ "orb+", &BattleEventView::onOrbAdded },
+		{ "orb-", &BattleEventView::onOrbTaken },
 		{ "death", &BattleEventView::onDeath },
 		{ "emote", &BattleEventView::onEmote },
 		{ "timeout", &BattleEventView::onTimeout },
@@ -295,7 +310,7 @@ float BattleEventView::onDamage(const Context & c)
 	}
 	if (lost > 0)
 	{
-		screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"-" + num(lost), sf::Color(255, 80, 70));
+		screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"-" + num(lost), paletteColor(palette::Role::DAMAGE_TEXT));
 		screen.hud->log(screen.fighterName(c.fighterId) + L" perd " + num(lost) + L" PV" + source, sf::Color(255, 130, 120));
 	}
 	MusicManager::getInstance()->playTakeDamageSound();
@@ -318,7 +333,7 @@ float BattleEventView::onHeal(const Context & c)
 		screen.fx.playEvent("lifesteal", c.fighterId);
 	// Case à effet (source) : son nom accompagne les soins.
 	sf::String terrain = kind == "terrain" ? screen.terrainName(c.fighter->position) : sf::String();
-	screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"+" + num(amount), sf::Color(110, 255, 110));
+	screen.addFloatingText(c.fighterId, (terrain.isEmpty() ? sf::String() : terrain + L" ") + L"+" + num(amount), paletteColor(palette::Role::HEAL_TEXT));
 	screen.hud->log(screen.fighterName(c.fighterId) + L" récupère " + num(amount) + L" PV" + (terrain.isEmpty() ? sf::String() : L" (" + terrain + L")"),
 		sf::Color(130, 255, 130));
 	return c.fast ? 0 : 0.3f;
@@ -430,6 +445,87 @@ float BattleEventView::onGlyphTriggered(const Context & c)
 	if (!c.fast)
 		screen.fx.glyphTriggered(c.event.value("uid", -1), c.fighterId);
 	screen.hud->log(screen.fighterName(c.fighterId) + L" déclenche un glyphe", sf::Color(200, 150, 255));
+	return c.fast ? 0 : 0.2f;
+}
+
+//----------------------------------------------------------
+// Murs des sorts de terrain (blocs destructibles)
+//----------------------------------------------------------
+
+float BattleEventView::onBlockAdded(const Context & c)
+{
+	const json & blocks = c.event.value("blocks", json::array());
+	if (blocks.empty())
+		return 0;
+	const json & first = blocks[0];
+	sf::String name = fromServerText(first.value("name", std::string()));
+	int hp = first.value("maxHp", 0);
+	screen.hud->log(screen.fighterName(c.fighterId) + L" pose " + name + L" (" + num((int)blocks.size()) + (blocks.size() > 1 ? L" blocs de " : L" bloc de ")
+		+ num(hp) + L" PV)", sf::Color(190, 200, 215));
+	return c.fast ? 0 : 0.2f;
+}
+
+float BattleEventView::onBlockHit(const Context & c)
+{
+	battle::Cell cell = { c.event.value("x", 0), c.event.value("y", 0) };
+	int amount = c.event.value("amount", 0);
+	if (amount <= 0)
+		return 0;
+	if (!c.fast && c.event.value("kind", std::string()) == "collision")
+		screen.fx.playEffect("collision", sf::Vector2f((float)cell.x, (float)cell.y));
+	screen.addFloatingTextAt(cell, L"-" + num(amount), sf::Color(230, 230, 235));
+	const battle::Block * block = screen.shown.findBlock(c.event.value("uid", -1));
+	if (block != NULL)
+		screen.hud->log(fromServerText(block->name) + L" : -" + num(amount) + L" PV (reste " + num(block->hp) + L")", sf::Color(190, 200, 215));
+	return c.fast ? 0 : 0.15f;
+}
+
+float BattleEventView::onBlockRemoved(const Context & c)
+{
+	battle::Cell cell = { c.event.value("x", 0), c.event.value("y", 0) };
+	std::string reason = c.event.value("reason", std::string());
+	sf::String name = fromServerText(c.event.value("name", std::string()));
+	if (reason == "destroyed")
+	{
+		const battle::SpellDef * spell = ClientGameData::get().data().findSpell(c.event.value("spell", std::string()));
+		if (!c.fast && spell != NULL && !spell->visual.blockBreak.empty())
+			screen.fx.playEffect(spell->visual.blockBreak, sf::Vector2f((float)cell.x, (float)cell.y));
+		screen.addFloatingTextAt(cell, L"Détruit !", sf::Color(255, 215, 120));
+		screen.hud->log(name + L" est détruit : le passage s'ouvre.", sf::Color(255, 215, 120));
+		return c.fast ? 0 : 0.25f;
+	}
+	screen.hud->log(name + L" disparaît.", sf::Color(190, 200, 215));
+	return 0;
+}
+
+//----------------------------------------------------------
+// Orbes bonus (bonus sur la carte)
+//----------------------------------------------------------
+
+float BattleEventView::onOrbAdded(const Context & c)
+{
+	const json & orbs = c.event.value("orbs", json::array());
+	if (orbs.empty())
+		return 0;
+	std::string kind = orbs[0].value("kind", std::string());
+	for (const json & orb : orbs)
+	{
+		if (!c.fast)
+			screen.fx.playEffect("sparkles", sf::Vector2f((float)orb.value("x", 0), (float)orb.value("y", 0)));
+	}
+	sf::String label = screen.orbLabel(kind);
+	sf::String text = (orbs.size() > 1 ? L"Nouveaux orbes au centre : " : L"Nouvel orbe au centre : ") + label;
+	screen.hud->showMessage(text, sf::Color(150, 230, 255), 1.6f);
+	screen.hud->log(text, sf::Color(150, 230, 255));
+	return c.fast ? 0 : 0.5f;
+}
+
+float BattleEventView::onOrbTaken(const Context & c)
+{
+	sf::String label = screen.orbLabel(c.event.value("kind", std::string()));
+	if (!c.fast)
+		screen.fx.playEffect("sparkles", sf::Vector2f((float)c.event.value("x", 0), (float)c.event.value("y", 0)));
+	screen.hud->log(screen.fighterName(c.fighterId) + L" ramasse " + label, sf::Color(150, 230, 255));
 	return c.fast ? 0 : 0.2f;
 }
 

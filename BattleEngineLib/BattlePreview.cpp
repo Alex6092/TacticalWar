@@ -25,6 +25,9 @@ namespace
 		// Dégâts et soins par tour des effets périodiques posés : nom de l'effet -> valeur.
 		std::map<int, std::map<std::string, int>> dots;
 		std::map<int, std::map<std::string, int>> hots;
+		// Blocs de mur : dégâts subis, blocs détruits.
+		std::map<int, int> blockDamage;
+		std::set<int> blockDestroyed;
 	};
 
 	bool isPercent(Stat stat)
@@ -78,6 +81,10 @@ namespace
 		}
 		for (const Glyph & glyph : copy.glyphs)
 			firstUid = std::max(firstUid, glyph.uid + 1);
+		for (const Block & block : copy.blocks)
+			firstUid = std::max(firstUid, std::max(block.uid, block.group) + 1);
+		for (const Orb & orb : copy.orbs)
+			firstUid = std::max(firstUid, orb.uid + 1);
 		copy.nextUid = firstUid;
 
 		BattleEngine engine(data, map, copy, 1);
@@ -119,6 +126,14 @@ namespace
 			{
 				addNote(outcome, fighterId, "Échange de place");
 				addNote(outcome, event.value("other", -1), "Échange de place");
+			}
+			else if (type == "blockhit")
+			{
+				outcome.blockDamage[event.value("uid", 0)] += event.value("amount", 0);
+			}
+			else if (type == "block-" && event.value("reason", std::string()) == "destroyed")
+			{
+				outcome.blockDestroyed.insert(event.value("uid", 0));
 			}
 		}
 
@@ -245,6 +260,26 @@ std::vector<TargetPreview> tw::battle::previewSpell(const BattleState & state, c
 		addPeriodicNotes(preview.notes, low.dots, high.dots, id, "");
 		addPeriodicNotes(preview.notes, low.hots, high.hots, id, "+");
 
+		previews.push_back(preview);
+	}
+
+	// Blocs de mur touchés.
+	std::set<int> blocks;
+	for (const Outcome * outcome : { &low, &high })
+	{
+		for (const auto & entry : outcome->blockDamage)
+			blocks.insert(entry.first);
+	}
+	for (int uid : blocks)
+	{
+		if (state.findBlock(uid) == nullptr)
+			continue;
+		TargetPreview preview;
+		preview.blockUid = uid;
+		preview.minDamage = std::min(valueOf(low.blockDamage, uid), valueOf(high.blockDamage, uid));
+		preview.maxDamage = std::max(valueOf(low.blockDamage, uid), valueOf(high.blockDamage, uid));
+		preview.koCertain = low.blockDestroyed.count(uid) > 0 && high.blockDestroyed.count(uid) > 0;
+		preview.koPossible = low.blockDestroyed.count(uid) > 0 || high.blockDestroyed.count(uid) > 0;
 		previews.push_back(preview);
 	}
 	return previews;

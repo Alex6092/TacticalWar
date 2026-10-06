@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "IsometricRenderer.h"
+
+#include <Palette.h>
 #include <CharacterView.h>
 #include <SpellView.h>
 #include <TileRegistry.h>
@@ -256,6 +258,27 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 		diamond.setOutlineThickness(-1.5f);
 		window->draw(diamond);
 	}
+	if (colorator != NULL && colorator->isHatched(cell))
+	{
+		// Rayures parallèles au bord haut-gauche du losange, d'un bord à l'autre.
+		sf::Vector2f left(centerX - 60.f, centerY);
+		sf::Vector2f top(centerX, centerY - 30.f);
+		sf::Vector2f right(centerX + 60.f, centerY);
+		sf::Vector2f bottom(centerX, centerY + 30.f);
+		sf::VertexArray stripes(sf::Quads);
+		const sf::Color stripe(25, 20, 20, 170);
+		for (int i = 1; i <= 7; i++)
+		{
+			float t = i / 8.f;
+			sf::Vector2f from = left + (bottom - left) * t;
+			sf::Vector2f to = top + (right - top) * t;
+			stripes.append(sf::Vertex(from, stripe));
+			stripes.append(sf::Vertex(to, stripe));
+			stripes.append(sf::Vertex(to + sf::Vector2f(0.f, 2.5f), stripe));
+			stripes.append(sf::Vertex(from + sf::Vector2f(0.f, 2.5f), stripe));
+		}
+		window->draw(stripes);
+	}
 }
 
 void IsometricRenderer::render(Environment* environment, std::vector<BaseCharacterModel*> & characters, std::vector<AbstractSpellView<sf::Sprite*> *> spells, float deltatime)
@@ -312,6 +335,14 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		}
 	}
 
+	// Objets posés sur les cases (blocs de mur) : avec le décor de leur diagonale.
+	std::vector<std::vector<const Prop*>> propsByDepth(diagonals);
+	for (const Prop & prop : props)
+	{
+		int depth = (int)std::lround(prop.x) + (int)std::lround(prop.y);
+		propsByDepth[std::max(0, std::min(diagonals - 1, depth))].push_back(&prop);
+	}
+
 	for (int d = 0; d < diagonals; d++)
 	{
 		for (int x = std::max(0, d - (height - 1)); x <= std::min(width - 1, d); x++)
@@ -319,6 +350,9 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 
 		for (AbstractSpellView<sf::Sprite*> * spell : groundByDepth[d])
 			drawSpell(spell);
+
+		for (const Prop * prop : propsByDepth[d])
+			drawProp(*prop);
 
 		std::sort(byDepth[d].begin(), byDepth[d].end(), [](BaseCharacterModel * a, BaseCharacterModel * b) {
 			return a->getInterpolatedX() < b->getInterpolatedX();
@@ -330,12 +364,46 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 	for (AbstractSpellView<sf::Sprite*> * spell : onTop)
 		drawSpell(spell);
 
-	// Noms, PV, PA et PM par-dessus le décor.
+	// Noms, PV, PA et PM par-dessus le décor, et barres de vie des objets posés.
 	for (int d = 0; d < diagonals; d++)
 	{
+		for (const Prop * prop : propsByDepth[d])
+			drawPropBar(*prop);
 		for (BaseCharacterModel * model : byDepth[d])
 			drawCharacterOverlay(model);
 	}
+}
+
+void IsometricRenderer::drawProp(const Prop & prop)
+{
+	if (prop.texture == NULL)
+		return;
+	float centerX = (prop.x - prop.y) * 60.f + 60.f;
+	float centerY = (prop.x + prop.y) * 30.f + 30.f;
+	sf::Sprite sprite(*prop.texture);
+	sprite.setPosition(std::floor(centerX - prop.anchorX), std::floor(centerY - prop.anchorY));
+	sprite.setColor(sf::Color(255, 255, 255, prop.alpha));
+	window->draw(sprite);
+}
+
+void IsometricRenderer::drawPropBar(const Prop & prop)
+{
+	if (prop.maxHp <= 0)
+		return;
+	float centerX = (prop.x - prop.y) * 60.f + 60.f;
+	float centerY = (prop.x + prop.y) * 30.f + 30.f;
+	const float width = 54.f;
+	const float barHeight = 7.f;
+	float top = centerY - prop.barAbove;
+	sf::RectangleShape back(sf::Vector2f(width + 2, barHeight + 2));
+	back.setPosition(std::floor(centerX - width / 2 - 1), std::floor(top - 1));
+	back.setFillColor(sf::Color(20, 20, 25, 210));
+	window->draw(back);
+	float ratio = std::max(0.f, std::min(1.f, (float)prop.hp / prop.maxHp));
+	sf::RectangleShape fill(sf::Vector2f(width * ratio, barHeight));
+	fill.setPosition(std::floor(centerX - width / 2), std::floor(top));
+	fill.setFillColor(ratio > 0.5f ? sf::Color(200, 200, 210) : ratio > 0.25f ? sf::Color(240, 180, 70) : sf::Color(230, 80, 60));
+	window->draw(fill);
 }
 
 bool IsometricRenderer::isLiquid(Environment * environment, int x, int y)
@@ -450,10 +518,23 @@ void IsometricRenderer::drawCharacterSprite(BaseCharacterModel * m, sf::RenderTa
 	float scaleY = 0.4;
 	s->setScale(flipped ? -scaleX : scaleX, mirrored ? -scaleY : scaleY);
 
-	sf::Color toApplyarmure1 = sf::Color(0, 166, 214);
-	sf::Color toApplyarmure2 = sf::Color(120, 17, 17);
+	int team1[3];
+	int team2[3];
+	palette::teamArmor(1, team1);
+	palette::teamArmor(2, team2);
+	sf::Color toApplyarmure1 = sf::Color(team1[0], team1[1], team1[2]);
+	sf::Color toApplyarmure2 = sf::Color(team2[0], team2[1], team2[2]);
 	sf::Color toApplycheveux = sf::Color(108, 70, 35);
 	sf::Color toApplypeau = sf::Color(202, 165, 150);
+
+	// Apparence choisie : variante de la couleur d'équipe et couleur des cheveux.
+	if (m->hasAppearanceColors())
+	{
+		const int * armor = m->getArmorColor();
+		const int * hair = m->getHairColor();
+		toApplyarmure1 = toApplyarmure2 = sf::Color(armor[0], armor[1], armor[2]);
+		toApplycheveux = sf::Color(hair[0], hair[1], hair[2]);
+	}
 
 	shader.setUniform("mask", *mask);
 	shader.setUniform("color1", sf::Glsl::Vec4(((m->getColorNumber() == 1) ? toApplyarmure1 : toApplyarmure2)));
@@ -479,7 +560,7 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	sf::Sprite * paBg = v.getPaBackground();
 	sf::Sprite * pmBg = v.getPmBackground();
 
-	pseudoTxt->setCharacterSize(16);
+	pseudoTxt->setCharacterSize((unsigned int)std::lround(16 * textScale));
 	paTxt->setCharacterSize(12);
 	pmTxt->setCharacterSize(12);
 	lifeTxt->setCharacterSize(12);
@@ -531,6 +612,20 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	}
 
 	window->draw(*pseudoTxt);
+
+	// Mode daltonien : symbole d'équipe devant le nom (rond pour l'équipe 1, triangle pour l'équipe 2).
+	if (palette::colorblind() && (m->getColorNumber() == 1 || m->getColorNumber() == 2))
+	{
+		palette::Rgba color = palette::color(palette::teamRole(m->getColorNumber(), palette::Role::TEAM1_ARMOR));
+		sf::CircleShape symbol(6.f, m->getColorNumber() == 1 ? 24 : 3);
+		symbol.setOrigin(6.f, 6.f);
+		symbol.setFillColor(sf::Color(color.r, color.g, color.b));
+		symbol.setOutlineColor(sf::Color::Black);
+		symbol.setOutlineThickness(1.5f);
+		sf::FloatRect name = pseudoTxt->getGlobalBounds();
+		symbol.setPosition(name.left - 11.f, name.top + name.height / 2.f);
+		window->draw(symbol);
+	}
 }
 
 

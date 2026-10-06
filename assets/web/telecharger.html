@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tactical War - Télécharger le jeu</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(22, 31, 60, 0.92);
+      --line: #2a3768;
+      --text: #e9edf7;
+      --muted: #8b97bd;
+      --gold: #ffd34d;
+      --green: #4fd18b;
+      --red: #ff5d55;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse at top, #1b2650 0%, var(--bg) 60%) fixed;
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+    h1 { margin: 0 0 4px; font-size: 2rem; letter-spacing: 0.04em; }
+    .brand { color: var(--gold); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; margin-top: 20px; }
+    .version { color: var(--muted); }
+    .version strong { color: var(--text); }
+    .download {
+      display: inline-block; margin-top: 12px; padding: 14px 26px; border-radius: 8px;
+      background: var(--gold); color: #000; font-weight: 700; font-size: 1.15rem; text-decoration: none;
+    }
+    .download:hover { filter: brightness(1.08); }
+    .download.missing { background: #555; color: #ccc; pointer-events: none; }
+    #status { margin-top: 10px; color: var(--muted); }
+    #status.error { color: var(--red); }
+    ol { padding-left: 1.4em; margin: 0; }
+    li { margin: 8px 0; }
+    kbd { background: #1d2850; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-family: inherit; }
+    a { color: var(--gold); }
+    .note { color: var(--muted); font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">Tactical War</div>
+    <h1>Télécharger le jeu</h1>
+    <p class="version">Version du jeu sur ce serveur : <strong id="version">…</strong></p>
+
+    <section class="panel">
+      <a id="download" class="download" href="telecharger/TacticalWar-client.zip" download>Télécharger TacticalWar-client.zip</a>
+      <p id="status"></p>
+    </section>
+
+    <section class="panel">
+      <ol>
+        <li><strong>Télécharger</strong> le fichier zip ci-dessus.</li>
+        <li><strong>Dézipper</strong> : clic droit sur le fichier, <kbd>Extraire tout…</kbd>, puis choisir un dossier
+          (par exemple <em>Documents</em>). Ne pas lancer le jeu depuis l'intérieur du zip.</li>
+        <li><strong>Lancer</strong> <kbd>TacticalWar.exe</kbd> dans le dossier extrait. L'adresse du serveur est déjà
+          remplie : il reste à saisir l'identifiant et le mot de passe de la fiche de l'équipe.</li>
+      </ol>
+      <p class="note">Le message « ne correspond pas au serveur » revient ? Fermer l'ancien jeu, supprimer son
+        dossier, puis recommencer avec le nouveau zip.</p>
+    </section>
+
+    <p class="note">Les règles et les classes sont expliquées dans le <a href="guide.html">guide du joueur</a>.</p>
+  </main>
+
+  <script>
+    fetch('api/health', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((health) => { document.getElementById('version').textContent = health.protocol || '?'; })
+      .catch(() => { document.getElementById('version').textContent = '?'; });
+
+    // Le zip est déposé par tools/package.ps1 dans le paquet du serveur.
+    fetch('telecharger/TacticalWar-client.zip', { method: 'HEAD', cache: 'no-store' })
+      .then((response) => {
+        const status = document.getElementById('status');
+        if (response.ok) {
+          const size = Number(response.headers.get('Content-Length') || 0);
+          status.textContent = size ? 'Taille : ' + (size / 1048576).toFixed(1).replace('.', ',') + ' Mo.' : '';
+        } else {
+          document.getElementById('download').classList.add('missing');
+          status.textContent = "Le jeu n'est pas encore déposé sur ce serveur : demandez-le à l'organisateur (clé USB).";
+          status.classList.add('error');
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

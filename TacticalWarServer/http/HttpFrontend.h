@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -12,6 +13,10 @@ class HttpFrontend
 public:
 	HttpFrontend(int port, const std::string & webRoot);
 	~HttpFrontend();
+
+	// Cartes compactes (JSON par identifiant), servies par /api/map/<id>. Avant start() : elles ne
+	// changent plus ensuite (lues par les threads HTTP sans verrou).
+	void setMaps(const std::map<int, std::string> & maps);
 
 	bool start(std::string & error);
 	void stop();

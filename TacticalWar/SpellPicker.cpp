@@ -1,4 +1,5 @@
 ﻿#include "SpellPicker.h"
+#include "UiScale.h"
 
 #include <algorithm>
 #include <string>
@@ -11,7 +12,8 @@ using namespace tw;
 
 namespace
 {
-	const int MAX_SPELLS = 6;
+	// Sorts au plus par classe (7 aujourd'hui : 6 sorts et un sort de terrain).
+	const int MAX_SPELLS = 8;
 	const float ROW_ICON = 48;
 
 	sf::String num(int value)
@@ -78,12 +80,12 @@ void SpellPicker::setClass(const battle::ClassDef * newClass, const std::vector<
 			icons[i]->getRenderer()->setTexture(texture);
 		labels[i]->setText(spellText(spell));
 
-		// Rangée d'icônes : la description s'affiche au survol.
-		if (layout == Layout::ROW)
+		// Rangée d'icônes : la description s'affiche au survol (en liste aussi, avec un texte agrandi).
+		if (layout == Layout::ROW || ui::scale() > 1.f)
 		{
 			tgui::Label::Ptr tip = tgui::Label::create(spellText(spell));
 			tip->setInheritedFont(font);
-			tip->setTextSize(13);
+			tip->setTextSize(ui::text(13));
 			tip->setMaximumTextWidth(360);
 			tip->getRenderer()->setBackgroundColor(sf::Color(20, 20, 30, 235));
 			tip->getRenderer()->setTextColor(sf::Color::White);
@@ -119,7 +121,12 @@ float SpellPicker::getHeight() const
 {
 	if (layout == Layout::ROW)
 		return ROW_ICON;
-	return MAX_SPELLS * rowHeight + 30;
+	return rows() * rowHeight + 30;
+}
+
+int SpellPicker::rows() const
+{
+	return classDef != nullptr ? std::min(MAX_SPELLS, (int)classDef->spells.size()) : 6;
 }
 
 void SpellPicker::toggle(int index)
@@ -149,9 +156,9 @@ void SpellPicker::arrange()
 			icons[i]->setPosition(0, i * rowHeight);
 			labels[i]->setPosition(icon + 12, i * rowHeight);
 			labels[i]->setSize(std::max(100.f, width - icon - 12), rowHeight - 4);
-			labels[i]->setTextSize(rowHeight < 70 ? 12 : 14);
+			labels[i]->setTextSize(ui::text(rowHeight < 70 ? 12 : 14));
 		}
-		counter->setPosition(0, MAX_SPELLS * rowHeight + 2);
+		counter->setPosition(0, rows() * rowHeight + 2);
 		counter->setSize(width, 26);
 		group->setSize(width, getHeight());
 	}
@@ -162,7 +169,7 @@ void SpellPicker::arrange()
 			icons[i]->setSize(ROW_ICON, ROW_ICON);
 			icons[i]->setPosition(i * (ROW_ICON + 8), 0);
 		}
-		float left = MAX_SPELLS * (ROW_ICON + 8) + 10;
+		float left = rows() * (ROW_ICON + 8) + 10;
 		counter->setPosition(left, 4);
 		counter->setSize(std::max(100.f, width - left), ROW_ICON);
 		group->setSize(width, ROW_ICON);

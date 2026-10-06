@@ -47,7 +47,7 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses, int hardTeam)
 {
 	GameData data;
 	std::string error;
@@ -127,6 +127,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::int64_t now = 0;
 		if (zonePoints > 0)
 			engine.enableZone(zonePoints);
+		if (bonuses)
+			engine.enableMapBonuses();
 		engine.startPlacement(now);
 		for (int team = 1; team <= 2; team++)
 		{
@@ -164,8 +166,10 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			}
 
 			BotAction action;
+			BotOptions brain;
+			brain.planner = hardTeam != 0 && engine.getState().findFighter(active)->team == hardTeam;
 			if (actionsThisTurn++ < 12)
-				action = chooseBotAction(engine.getState(), engine.getMap(), data, active, rng);
+				action = chooseBotAction(engine.getState(), engine.getMap(), data, active, rng, brain);
 
 			ActionResult result;
 			if (action.kind == BotAction::Kind::CAST)
@@ -246,6 +250,10 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 	std::cout << ", " << maps.size() << " carte(s)";
 	if (zonePoints > 0)
 		std::cout << ", zone à tenir (" << zonePoints << " points)";
+	if (bonuses)
+		std::cout << ", bonus sur la carte";
+	if (hardTeam != 0)
+		std::cout << ", équipe " << hardTeam << " en difficulté « Difficile »";
 	std::cout << " ===\n";
 	std::cout << "IA simple (BotBrain) : les écarts importants signalent un déséquilibre,\n"
 		<< "les petits écarts ne disent rien du jeu entre humains.\n";
@@ -257,7 +265,7 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			<< std::setw(8) << percent(entry.second.rate()) << "   (" << entry.second.games << " participations)\n";
 	}
 
-	std::cout << "\nSorts emportés (choix au hasard, 4 sur 6) : taux de victoire quand le sort est emporté :\n";
+	std::cout << "\nSorts emportés (choix au hasard, 4 par classe) : taux de victoire quand le sort est emporté :\n";
 	for (const auto & entry : bySpell)
 	{
 		std::cout << "  " << padded(entry.first, 34)

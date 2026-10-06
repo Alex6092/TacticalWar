@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <Palette.h>
 
 namespace
 {
@@ -44,6 +45,12 @@ void ClientConfig::load()
 	serverPort = json.value("serverPort", serverPort);
 	soundInFile = json.value("sound", soundInFile);
 	soundEnabled = soundInFile;
+	colorblind = json.value("colorblind", colorblind);
+	textScale = json.value("textScale", textScale);
+	if (textScale != 115 && textScale != 130)
+		textScale = 100;
+	turnAlert = json.value("turnAlert", turnAlert);
+	tw::palette::setColorblind(colorblind);
 
 	for (const nlohmann::json & talent : json.value("talents", nlohmann::json::array()))
 	{
@@ -55,6 +62,12 @@ void ClientConfig::load()
 		if (puzzleId.is_string())
 			solvedPuzzles.insert(puzzleId.get<std::string>());
 	}
+	for (const nlohmann::json & id : json.value("appearances", nlohmann::json::array()))
+	{
+		if (id.is_string())
+			knownAppearances.push_back(id.get<std::string>());
+	}
+	appearance = json.value("appearance", std::string());
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -78,12 +91,19 @@ void ClientConfig::save() const
 	nlohmann::json json = {
 		{ "serverHost", serverHost },
 		{ "serverPort", serverPort },
-		{ "sound", soundInFile }
+		{ "sound", soundInFile },
+		{ "colorblind", colorblind },
+		{ "textScale", textScale },
+		{ "turnAlert", turnAlert }
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;
 	if (!solvedPuzzles.empty())
 		json["puzzles"] = solvedPuzzles;
+	if (!knownAppearances.empty())
+		json["appearances"] = knownAppearances;
+	if (!appearance.empty())
+		json["appearance"] = appearance;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -233,9 +253,23 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenMate = std::atoi(argv[++i]);
 		}
+		else if (arg == "--class-screen-team" && hasValue)
+		{
+			classScreenTeam = std::atoi(argv[++i]);
+		}
 		else if (arg == "--class-screen-forbidden" && hasValue)
 		{
 			classScreenForbidden = std::atoi(argv[++i]);
+		}
+		else if (arg == "--training-difficulty" && hasValue)
+		{
+			training = true;
+			trainingDifficulty = argv[++i];
+		}
+		else if (arg == "--training-bonuses")
+		{
+			training = true;
+			trainingBonuses = true;
 		}
 		else if (arg == "--training-zone")
 		{
@@ -246,6 +280,14 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			training = trainingStart = true;
 			trainingAutoplay = true;
+		}
+		else if (arg == "--options")
+		{
+			openOptions = true;
+		}
+		else if (arg == "--help-panel")
+		{
+			openHelp = true;
 		}
 		else if (arg == "--spectator")
 		{

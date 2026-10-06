@@ -174,6 +174,8 @@ namespace tw
 
 			BanMode bans = BanMode::NONE;
 			MapPool maps = MapPool::CLASSIC;
+			// Bonus sur la carte : des orbes (soin, énergie, protection) apparaissent au centre.
+			bool mapBonuses = false;
 		};
 
 		struct Stage
