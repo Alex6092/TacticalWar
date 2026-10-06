@@ -50,6 +50,7 @@ void ClientConfig::load()
 	if (textScale != 115 && textScale != 130)
 		textScale = 100;
 	turnAlert = json.value("turnAlert", turnAlert);
+	seeThrough = json.value("seeThrough", seeThrough);
 	tw::palette::setColorblind(colorblind);
 
 	for (const nlohmann::json & talent : json.value("talents", nlohmann::json::array()))
@@ -94,7 +95,8 @@ void ClientConfig::save() const
 		{ "sound", soundInFile },
 		{ "colorblind", colorblind },
 		{ "textScale", textScale },
-		{ "turnAlert", turnAlert }
+		{ "turnAlert", turnAlert },
+		{ "seeThrough", seeThrough }
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;

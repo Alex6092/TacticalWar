@@ -68,6 +68,22 @@ namespace tw
 		void drawCharacterOverlay(BaseCharacterModel * model);
 		void drawSpell(AbstractSpellView<sf::Sprite*> * spell);
 
+		// Voir à travers le décor : une ellipse transparente autour de chaque personnage vivant, dans
+		// les tuiles hautes (arbres, rochers, buissons, hautes herbes) et les blocs posés devant lui.
+		// Sans shader, l'élément entier devient translucide.
+		struct Hole
+		{
+			sf::Vector2f center;
+			sf::Vector2f radius;
+			int depth;			// Diagonale du personnage (les éléments des diagonales suivantes sont devant)
+		};
+		std::vector<Hole> holes;
+		sf::Shader seeThroughShader;
+		bool seeThroughReady;
+		bool seeThrough = true;
+		// Dessine le sprite troué (true) s'il cache un personnage d'une diagonale antérieure.
+		bool drawSeeThrough(const sf::Sprite & sprite, int depth);
+
 		// Liquides (eau, lave) : shader animé ; reflets des personnages et du décor voisin dans l'eau,
 		// dessinés à l'envers dans une texture de la taille de la fenêtre.
 		bool isLiquid(Environment * environment, int x, int y);
@@ -102,6 +118,8 @@ namespace tw
 		void setProps(const std::vector<Prop> & props) { this->props = props; }
 		// Taille du texte du bandeau des personnages (options d'accessibilité), 1 : normale.
 		void setTextScale(float scale) { textScale = scale; }
+		// Personnages visibles à travers les arbres, rochers et murs placés devant eux (option).
+		void setSeeThrough(bool enabled) { seeThrough = enabled; }
 
 		// Centre (repère du monde) et facteur de zoom de la vue (> 1 : vue plus large).
 		void setCamera(const sf::Vector2f & center, float zoom)

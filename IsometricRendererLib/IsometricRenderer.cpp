@@ -17,6 +17,7 @@ IsometricRenderer::IsometricRenderer(sf::RenderWindow * window)
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/fragment.frag");
 	liquidShaderReady = sf::Shader::isAvailable() && liquidShader.loadFromFile("./assets/shaders/liquid.vert", "./assets/shaders/liquid.frag");
 	reflectionsAvailable = liquidShaderReady;
+	seeThroughReady = sf::Shader::isAvailable() && seeThroughShader.loadFromFile("./assets/shaders/liquid.vert", "./assets/shaders/seethrough.frag");
 	reflectionsDrawn = false;
 	reflections = NULL;
 
@@ -57,6 +58,47 @@ namespace
 	// Les reflets sont symétriques par rapport à une ligne un peu sous le pied des personnages.
 	const float REFLECTION_AXIS = 20.f;
 	const float REFLECTION_STRENGTH = 0.45f;
+	// Tuiles qui s'élèvent au-dessus du sol (point d'ancrage plus haut que celui d'un sol, 45) : elles
+	// peuvent cacher un personnage placé derrière.
+	const float TALL_TILE_ANCHOR = 55.f;
+	const int MAX_HOLES = 8;
+}
+
+bool IsometricRenderer::drawSeeThrough(const sf::Sprite & sprite, int depth)
+{
+	sf::FloatRect bounds = sprite.getGlobalBounds();
+	sf::Glsl::Vec2 centers[MAX_HOLES];
+	sf::Glsl::Vec2 radii[MAX_HOLES];
+	int count = 0;
+	for (const Hole & hole : holes)
+	{
+		sf::FloatRect area(hole.center - hole.radius, hole.radius * 2.f);
+		if (hole.depth >= depth || !bounds.intersects(area) || count >= MAX_HOLES)
+			continue;
+		centers[count] = hole.center;
+		radii[count] = hole.radius;
+		count++;
+	}
+	if (count == 0)
+		return false;
+
+	if (seeThroughReady)
+	{
+		seeThroughShader.setUniform("texture", sf::Shader::CurrentTexture);
+		seeThroughShader.setUniformArray("u_holes", centers, MAX_HOLES);
+		seeThroughShader.setUniformArray("u_radii", radii, MAX_HOLES);
+		seeThroughShader.setUniform("u_count", count);
+		window->draw(sprite, &seeThroughShader);
+	}
+	else
+	{
+		sf::Sprite faded(sprite);
+		sf::Color color = sprite.getColor();
+		color.a = (sf::Uint8)(color.a * 110 / 255);
+		faded.setColor(color);
+		window->draw(faded);
+	}
+	return true;
 }
 
 void IsometricRenderer::manageEvents(Environment * environment, std::vector<BaseCharacterModel*> & characters)
@@ -239,7 +281,7 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 			liquidShader.setUniform("u_reflection", reflections->getTexture());
 		window->draw(tileSprite, &liquidShader);
 	}
-	else
+	else if (!(anchorY >= TALL_TILE_ANCHOR && drawSeeThrough(tileSprite, x + y)))
 	{
 		window->draw(tileSprite);
 	}
@@ -335,6 +377,22 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		}
 	}
 
+	// Personnages à garder visibles derrière le décor : ellipse sur le corps (des pieds, au centre de
+	// la case, jusqu'au haut du sprite).
+	holes.clear();
+	if (seeThrough)
+	{
+		for (int d = 0; d < diagonals; d++)
+		{
+			for (BaseCharacterModel * model : byDepth[d])
+			{
+				float height = std::max(60.f, getCharacterView(model).getHeight());
+				sf::Vector2f feet = Camera::cellToWorld(model->getInterpolatedX(), model->getInterpolatedY());
+				holes.push_back({ sf::Vector2f(feet.x, feet.y - height * 0.5f), sf::Vector2f(40.f, std::max(50.f, height * 0.6f)), d });
+			}
+		}
+	}
+
 	// Objets posés sur les cases (blocs de mur) : avec le décor de leur diagonale.
 	std::vector<std::vector<const Prop*>> propsByDepth(diagonals);
 	for (const Prop & prop : props)
@@ -383,7 +441,8 @@ void IsometricRenderer::drawProp(const Prop & prop)
 	sf::Sprite sprite(*prop.texture);
 	sprite.setPosition(std::floor(centerX - prop.anchorX), std::floor(centerY - prop.anchorY));
 	sprite.setColor(sf::Color(255, 255, 255, prop.alpha));
-	window->draw(sprite);
+	if (!drawSeeThrough(sprite, (int)std::lround(prop.x) + (int)std::lround(prop.y)))
+		window->draw(sprite);
 }
 
 void IsometricRenderer::drawPropBar(const Prop & prop)

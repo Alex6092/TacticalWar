@@ -134,6 +134,7 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	hud->onClose = [this]() { closeRequested = true; };
 	hud->onOptionsChanged = [this]() { applyOptions(); };
 	renderer->setTextScale(ui::scale());
+	renderer->setSeeThrough(ClientConfig::get().seeThrough);
 	if (ClientConfig::get().openHelp)
 		hud->toggleHelp();
 
@@ -1362,6 +1363,7 @@ void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String
 void BattleScreen::applyOptions()
 {
 	renderer->setTextScale(ui::scale());
+	renderer->setSeeThrough(ClientConfig::get().seeThrough);
 	for (const battle::Fighter & fighter : shown.fighters)
 	{
 		BaseCharacterModel * view = viewOf(fighter.id);

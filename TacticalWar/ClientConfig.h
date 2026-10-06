@@ -18,6 +18,8 @@ public:
 	bool colorblind = false;
 	int textScale = 100;
 	bool turnAlert = true;
+	// Personnages visibles à travers les arbres, rochers et murs placés devant eux.
+	bool seeThrough = true;
 	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
 	// proposés à nouveau au choix suivant et à l'entraînement.
 	std::map<int, std::vector<int>> spellChoices;
