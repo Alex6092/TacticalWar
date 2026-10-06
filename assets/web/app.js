@@ -1,16 +1,86 @@
-// Vue projetée du tournoi. Paramètres d'URL :
-//   ?t=<id>            tournoi à afficher (par défaut : le plus récent en cours, sinon le plus récent)
-//   ?rotate=<secondes> fait défiler les onglets du tableau (arbre, poules...) automatiquement
+// Vue projetée du tournoi : à gauche le tableau (combats, poules ou arbre, meilleurs joueurs,
+// cérémonie), à droite les onglets En direct, Commentaire, Derniers combats, À venir, Classement.
+// Paramètres d'URL :
+//   ?t=<id>                 tournoi à afficher (par défaut : le plus récent en cours, sinon le plus récent)
+//   ?rotate=<secondes>      fait défiler les onglets de gauche automatiquement
+//   ?rotate-side=<secondes> fait défiler les onglets de droite automatiquement
+//   ?carousel=1             les deux défilent (20 s à gauche, 12 s à droite)
+// Le bouton « Défilement » de chaque zone l'active ou l'arrête (retenu par le navigateur) ; un clic sur
+// un onglet suspend le défilement de sa zone pendant une minute.
 "use strict";
 
 const params = new URLSearchParams(location.search);
-const rotateSeconds = parseInt(params.get("rotate") || "0", 10);
+const carousel = params.get("carousel") === "1";
 
 let state = null;
 let version = 0;
 let activeTab = null;
 let userPickedTab = false;
 let lastBoardHtml = null;
+let sideTab = null;
+let sidePicked = false;
+let visibleSideTabs = [];
+
+// ---------------------------------------------------------------- défilement automatique
+
+const PAUSE_AFTER_CLICK_MS = 60000;
+
+function storedFlag(key) {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value === null ? null : value === "1";
+  } catch (e) {
+    return null;
+  }
+}
+
+function storeFlag(key, value) {
+  try {
+    window.localStorage.setItem(key, value ? "1" : "0");
+  } catch (e) {
+    // Stockage indisponible (navigation privée...) : l'état n'est pas retenu.
+  }
+}
+
+// Une zone qui défile : durée par onglet, état du bouton, pause après un clic.
+function rotation(name, param, fallbackSeconds) {
+  const seconds = parseInt(params.get(param) || "0", 10);
+  const stored = storedFlag("tw.rotate." + name);
+  return {
+    name,
+    seconds: seconds > 0 ? seconds : fallbackSeconds,
+    enabled: stored !== null ? stored : seconds > 0 || carousel,
+    pausedUntil: 0,
+    switchedAt: Date.now(),
+  };
+}
+
+const boardRotation = rotation("board", "rotate", 20);
+const sideRotation = rotation("side", "rotate-side", 12);
+
+function refreshRotateButtons() {
+  for (const [id, zone] of [["board-rotate", boardRotation], ["side-rotate", sideRotation]]) {
+    const button = el(id);
+    const paused = zone.enabled && Date.now() < zone.pausedUntil;
+    button.classList.toggle("on", zone.enabled);
+    button.textContent = zone.enabled ? (paused ? "Défilement (pause)" : "Défilement ▶") : "Défilement";
+  }
+}
+
+function toggleRotation(zone) {
+  zone.enabled = !zone.enabled;
+  zone.pausedUntil = 0;
+  zone.switchedAt = Date.now();
+  storeFlag("tw.rotate." + zone.name, zone.enabled);
+  refreshRotateButtons();
+}
+
+// Onglet choisi à la main : la zone ne défile plus pendant une minute.
+function pauseRotation(zone) {
+  zone.pausedUntil = Date.now() + PAUSE_AFTER_CLICK_MS;
+  zone.switchedAt = Date.now();
+  refreshRotateButtons();
+}
 
 // ---------------------------------------------------------------- utilitaires
 
@@ -103,6 +173,7 @@ function renderBoard(tournament) {
     button.onclick = () => {
       activeTab = button.dataset.tab;
       userPickedTab = true;
+      pauseRotation(boardRotation);
       render();
     };
   });
@@ -390,14 +461,53 @@ function matchBox(tournament, match, x, y, w, h) {
   </g>`;
 }
 
-// ---------------------------------------------------------------- colonne de droite
+// ---------------------------------------------------------------- colonne de droite (onglets)
 
+const SIDE_TABS = [
+  { id: "live", label: "En direct" },
+  { id: "comments", label: "Commentaire" },
+  { id: "recent", label: "Derniers combats" },
+  { id: "upcoming", label: "À venir" },
+  { id: "ranking", label: "Classement" },
+];
+
+// Un onglet à la fois, sur toute la hauteur ; les onglets sans contenu sont masqués (En direct reste
+// quand rien d'autre n'est à montrer).
+function renderSide(tournament) {
+  const counts = {
+    live: renderLive(tournament),
+    comments: renderComments(tournament),
+    recent: renderRecent(tournament),
+    upcoming: renderUpcoming(tournament),
+    ranking: renderRanking(tournament),
+  };
+  let tabs = SIDE_TABS.filter((t) => counts[t.id] > 0);
+  if (!tabs.length) tabs = [SIDE_TABS[0]];
+  if (!sideTab || !tabs.some((t) => t.id === sideTab) || !sidePicked) {
+    sideTab = tabs[0].id;
+    sidePicked = false;
+  }
+  const box = el("side-tabs");
+  box.innerHTML = tabs.map((t) => `<button data-tab="${t.id}" class="${t.id === sideTab ? "active" : ""}">${esc(t.label)}${
+    t.id === "live" && counts.live > 0 ? ` <span class="tab-count">${counts.live}</span>` : ""}</button>`).join("");
+  box.querySelectorAll("button").forEach((button) => {
+    button.onclick = () => {
+      sideTab = button.dataset.tab;
+      sidePicked = true;
+      pauseRotation(sideRotation);
+      render();
+    };
+  });
+  for (const t of SIDE_TABS) el("side-" + t.id).hidden = t.id !== sideTab;
+  visibleSideTabs = tabs;
+}
+
+// Retourne le nombre de combats (0 : aucun).
 function renderLive(tournament) {
   const battles = (state ? state.live : []).filter((b) => !tournament || !b.tournament || b.tournament === tournament.id);
-  el("live-count").textContent = battles.length ? `${battles.length} combat${battles.length > 1 ? "s" : ""}` : "";
   if (!battles.length) {
     el("live").innerHTML = '<p class="empty">Aucun combat en cours.</p>';
-    return;
+    return 0;
   }
 
   el("live").innerHTML = battles.map((battle) => {
@@ -431,21 +541,21 @@ function renderLive(tournament) {
       : "";
     return `<div class="battle"><div class="battle-head"><span>${esc(label || "")}</span><span>${esc(phase)}</span></div>${body}${forbidden}</div>`;
   }).join("");
+  return battles.length;
 }
 
-// Commentaire automatique des combats : les dernières phrases, les nouvelles en surbrillance.
+// Commentaire automatique des combats : les dernières phrases, les nouvelles en surbrillance (un
+// nouveau commentaire ne change pas d'onglet).
 const seenComments = new Set();
 let commentsPrimed = false;
 function renderComments(tournament) {
-  const panel = el("comments-panel");
   const lines = (state && state.comments ? state.comments : [])
     .filter((c) => !tournament || !c.tournament || c.tournament === tournament.id)
-    .slice(0, 4);
+    .slice(0, 12);
   if (!lines.length) {
-    panel.hidden = true;
-    return;
+    el("comments").innerHTML = "";
+    return 0;
   }
-  panel.hidden = false;
   el("comments").innerHTML = lines.map((c) => {
     const key = `${c.session}:${c.at}:${c.text}`;
     // Au premier affichage de la page, rien n'est mis en surbrillance.
@@ -454,19 +564,18 @@ function renderComments(tournament) {
     return `<li class="${fresh ? "fresh" : ""}"><span class="comment-match">${esc(c.match || "")}</span>${esc(c.text)}</li>`;
   }).join("");
   commentsPrimed = true;
+  return lines.length;
 }
 
 // Derniers combats terminés : vainqueur et MVP (meilleur bilan du combat).
 function renderRecent(tournament) {
-  const panel = el("recent-panel");
   const battles = (state && state.recent ? state.recent : [])
     .filter((b) => !tournament || !b.tournament || b.tournament === tournament.id)
-    .slice(0, 3);
+    .slice(0, 6);
   if (!battles.length) {
-    panel.hidden = true;
-    return;
+    el("recent").innerHTML = "";
+    return 0;
   }
-  panel.hidden = false;
   el("recent").innerHTML = battles.map((b) => {
     const label = tournament && b.match ? tournament.labels[String(b.match)] : b.name;
     const winner = b.teams[b.winner - 1] || "";
@@ -480,13 +589,14 @@ function renderRecent(tournament) {
       <div class="winner">Victoire : <strong>${esc(winner)}</strong></div>${mvp}
     </div>`;
   }).join("");
+  return battles.length;
 }
 
 function renderUpcoming(tournament) {
   const list = el("upcoming");
   if (!tournament) {
     list.innerHTML = "";
-    return;
+    return 0;
   }
   const next = tournament.matches
     .filter((m) => m.status === "READY" || (m.status === "PENDING" && (m.teamA > 0 || m.teamB > 0)))
@@ -494,16 +604,15 @@ function renderUpcoming(tournament) {
     .slice(0, 6);
   list.innerHTML = next.length
     ? next.map((m) => `<li><span class="label">${esc(tournament.labels[String(m.id)] || "")}</span>${esc(teamName(tournament, m.teamA))} — ${esc(teamName(tournament, m.teamB))}</li>`).join("")
-    : '<p class="empty">Aucun match en attente.</p>';
+    : "";
+  return next.length;
 }
 
 function renderRanking(tournament) {
-  const panel = el("ranking-panel");
   if (!tournament || !tournament.ranking.length) {
-    panel.hidden = true;
-    return;
+    el("ranking").innerHTML = "";
+    return 0;
   }
-  panel.hidden = false;
   const byRank = (rank) => tournament.ranking.filter((r) => r.rank === rank).map((r) => teamName(tournament, r.team)).join(" / ");
   const rest = tournament.ranking.filter((r) => r.rank > 3);
   el("ranking").innerHTML = `
@@ -513,17 +622,15 @@ function renderRanking(tournament) {
       <div class="p3"><span class="rank">3</span>${esc(byRank(3))}</div>
     </div>
     <ol class="ranking-rest">${rest.map((r) => `<li value="${r.rank}">${esc(teamName(tournament, r.team))}</li>`).join("")}</ol>`;
+  return tournament.ranking.length;
 }
 
 function render() {
   const tournament = currentTournament();
   renderHeader(tournament);
   renderBoard(tournament);
-  renderLive(tournament);
-  renderComments(tournament);
-  renderRecent(tournament);
-  renderUpcoming(tournament);
-  renderRanking(tournament);
+  renderSide(tournament);
+  refreshRotateButtons();
 }
 
 // ---------------------------------------------------------------- mises à jour en direct
@@ -570,17 +677,46 @@ function tickClock() {
   el("clock").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-if (rotateSeconds > 0) {
-  setInterval(() => {
-    const tournament = currentTournament();
-    const tabs = allTabs(tournament);
-    if (tabs.length < 2) return;
-    const index = tabs.findIndex((t) => t.id === activeTab);
-    activeTab = tabs[(index + 1) % tabs.length].id;
-    userPickedTab = true;
-    render();
-  }, rotateSeconds * 1000);
+// Défilement : chaque seconde, une zone active et non suspendue passe à l'onglet suivant quand sa
+// durée est écoulée. À la fin du tournoi, la cérémonie reste affichée à gauche.
+function nextTab(tabs, current) {
+  const index = tabs.findIndex((t) => t.id === current);
+  return tabs[(index + 1) % tabs.length].id;
 }
+
+function rotationDue(zone, now) {
+  return zone.enabled && now >= zone.pausedUntil && now - zone.switchedAt >= zone.seconds * 1000;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  const tournament = currentTournament();
+  let changed = false;
+  if (rotationDue(boardRotation, now)) {
+    boardRotation.switchedAt = now;
+    const tabs = allTabs(tournament);
+    const ceremony = tournament && tournament.status === "FINISHED" && tabs.some((t) => t.id === "ceremony");
+    if (tabs.length > 1 && !ceremony) {
+      activeTab = nextTab(tabs, activeTab);
+      userPickedTab = true;
+      changed = true;
+    }
+  }
+  if (rotationDue(sideRotation, now)) {
+    sideRotation.switchedAt = now;
+    if (visibleSideTabs.length > 1) {
+      sideTab = nextTab(visibleSideTabs, sideTab);
+      sidePicked = true;
+      changed = true;
+    }
+  }
+  if (changed) render();
+  else refreshRotateButtons();
+}, 1000);
+
+el("board-rotate").onclick = () => toggleRotation(boardRotation);
+el("side-rotate").onclick = () => toggleRotation(sideRotation);
+refreshRotateButtons();
 
 tickClock();
 setInterval(tickClock, 10000);

@@ -26,30 +26,24 @@
       <div class="panel-head">
         <h2 id="board-title">Tableau</h2>
         <div id="board-tabs" class="tabs"></div>
+        <button id="board-rotate" class="rotate-toggle" title="Faire défiler les onglets automatiquement">Défilement</button>
       </div>
       <div id="board" class="board-content"></div>
     </section>
 
     <aside class="side">
-      <section class="panel">
-        <div class="panel-head"><h2>En direct</h2><span id="live-count" class="count"></span></div>
-        <div id="live" class="live"></div>
-      </section>
-      <section class="panel" id="comments-panel" hidden>
-        <div class="panel-head"><h2>Commentaire</h2></div>
-        <ul id="comments" class="comments"></ul>
-      </section>
-      <section class="panel" id="recent-panel" hidden>
-        <div class="panel-head"><h2>Derniers combats</h2></div>
-        <div id="recent" class="recent"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>À venir</h2></div>
-        <ol id="upcoming" class="upcoming"></ol>
-      </section>
-      <section class="panel" id="ranking-panel" hidden>
-        <div class="panel-head"><h2>Classement final</h2></div>
-        <div id="ranking"></div>
+      <section class="panel side-panel">
+        <div class="panel-head">
+          <div id="side-tabs" class="tabs side-tabs"></div>
+          <button id="side-rotate" class="rotate-toggle" title="Faire défiler les onglets automatiquement">Défilement</button>
+        </div>
+        <div class="side-content">
+          <div id="side-live" class="side-tab"><div id="live" class="live"></div></div>
+          <div id="side-comments" class="side-tab" hidden><ul id="comments" class="comments"></ul></div>
+          <div id="side-recent" class="side-tab" hidden><div id="recent" class="recent"></div></div>
+          <div id="side-upcoming" class="side-tab" hidden><ol id="upcoming" class="upcoming"></ol></div>
+          <div id="side-ranking" class="side-tab" hidden><div id="ranking"></div></div>
+        </div>
       </section>
     </aside>
   </main>
