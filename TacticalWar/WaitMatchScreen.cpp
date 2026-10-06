@@ -12,6 +12,7 @@ namespace
 {
 	const float PANEL_WIDTH = 760;
 	const float PANEL_HEIGHT = 420;
+	const float PREFERENCES_WIDTH = 600;
 	// Liste des équipes redemandée toutes les 5 secondes.
 	const float LIST_PERIOD = 5;
 
@@ -49,6 +50,8 @@ WaitMatchScreen::WaitMatchScreen(tgui::Gui * gui)
 	subtitle.setOutlineThickness(1.5);
 
 	createChallengePanel();
+	preferences.reset(new tw::PreferencesPanel(gui, font, textFont));
+	gui->add(preferences->getPanel());
 
 	LinkToServer::getInstance()->addListener(this);
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
@@ -144,10 +147,16 @@ void WaitMatchScreen::layout(const sf::Vector2u & size)
 {
 	bool compact = size.y < 900;
 	float top = compact ? 140.f : 220.f;
-	float width = std::min(PANEL_WIDTH, (float)size.x - 40.f);
+	// Défis à gauche, préférences à droite.
+	float available = (float)size.x - 60.f;
+	float width = std::min(PANEL_WIDTH, available * 0.52f);
+	float preferencesWidth = std::min(PREFERENCES_WIDTH, available - width);
+	float left = (size.x - (width + 20.f + preferencesWidth)) / 2.f;
 	float height = std::min(PANEL_HEIGHT, (float)size.y - top - 30.f);
 	challengePanel->setSize(width, height);
-	challengePanel->setPosition((size.x - width) / 2.f, top);
+	challengePanel->setPosition(left, top);
+	preferences->getPanel()->setPosition(left + width + 20.f, top);
+	preferences->layout(preferencesWidth, height);
 	teamList->setPosition(20, 84);
 	teamList->setSize(width - 40, height - 84 - 70);
 	// Colonnes à la largeur de la liste (sans barre de défilement horizontale).
@@ -299,6 +308,11 @@ void WaitMatchScreen::onMessageReceived(std::string msg)
 {
 	sf::String m = msg;
 
+	if (m.substring(0, 2) == "PA")
+	{
+		preferences->refreshAppearances();
+		return;
+	}
 	if (m.substring(0, 2) == "HC")
 	{
 		gui->removeAllWidgets();

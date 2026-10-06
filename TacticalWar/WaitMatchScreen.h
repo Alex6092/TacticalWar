@@ -1,12 +1,15 @@
 ﻿#pragma once
 
+#include <memory>
 #include <nlohmann/json.hpp>
 
 #include "Screen.h"
 #include "ServerMessageListener.h"
+#include "PreferencesPanel.h"
 
 // Attente d'un match. Hors tournoi en cours, l'équipe peut défier une équipe libre (match amical) :
 // liste des équipes (DL), défi (DD), défi reçu avec compte à rebours (DI), réponse (DA), résultat (DR).
+// À droite, « Mes préférences » (PreferencesPanel) prépare le prochain choix de classe.
 class WaitMatchScreen : public tw::Screen, ServerMessageListener
 {
 private:
@@ -18,6 +21,8 @@ private:
 	sf::Shader shader;
 
 	tgui::Gui * gui;
+
+	std::unique_ptr<tw::PreferencesPanel> preferences;
 
 	// Panneau « Défier une équipe ».
 	tgui::Panel::Ptr challengePanel;

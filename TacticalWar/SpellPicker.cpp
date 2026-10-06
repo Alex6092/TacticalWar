@@ -112,9 +112,13 @@ void SpellPicker::setLocked(bool value)
 
 void SpellPicker::setGeometry(float newWidth, float newRowHeight)
 {
+	bool widthChanged = newWidth != width;
 	width = newWidth;
 	rowHeight = newRowHeight;
 	arrange();
+	// Le texte du compteur dépend de la place à droite des icônes (rangée).
+	if (widthChanged)
+		refresh();
 }
 
 float SpellPicker::getHeight() const
@@ -194,8 +198,11 @@ void SpellPicker::refresh()
 
 	bool complete = (int)chosen.size() == needed;
 	sf::String text = L"Sorts emportés : " + num((int)chosen.size()) + L"/" + num(needed);
+	// Rangée étroite (préférences de l'écran d'attente) : deux lignes courtes, à la hauteur des icônes.
+	bool narrow = layout == Layout::ROW && width - (rows() * (ROW_ICON + 8) + 10) < 220;
 	if (!locked)
 		text += layout == Layout::LIST ? (complete ? L" - cliquez sur un sort pour le retirer" : L" - cliquez sur un sort pour l'ajouter")
+			: narrow ? (complete ? L"\nClic : retirer un sort." : L"\nClic : ajouter un sort.")
 			: (complete ? L"\nClic : retirer un sort. Survol : description." : L"\nCliquez sur un sort pour l'ajouter.");
 	counter->setText(text);
 	counter->getRenderer()->setTextColor(complete ? sf::Color(255, 215, 0) : sf::Color(255, 120, 100));

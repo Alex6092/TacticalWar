@@ -57,6 +57,8 @@ private:
 	void refreshTimer();
 	sf::String classLabel(int classId) const;
 	int currentClassId() const;
+	// Classe préférée (écran d'attente) dans la liste ; la première sans préférence.
+	int preferredIndex() const;
 
 	tgui::Gui * gui;
 	sf::Font font;

@@ -69,6 +69,7 @@ void ClientConfig::load()
 			knownAppearances.push_back(id.get<std::string>());
 	}
 	appearance = json.value("appearance", std::string());
+	preferredClass = json.value("preferredClass", 0);
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -106,6 +107,8 @@ void ClientConfig::save() const
 		json["appearances"] = knownAppearances;
 	if (!appearance.empty())
 		json["appearance"] = appearance;
+	if (preferredClass != 0)
+		json["preferredClass"] = preferredClass;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();

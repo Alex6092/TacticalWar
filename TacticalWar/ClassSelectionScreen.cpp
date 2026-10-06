@@ -261,8 +261,20 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	matePanel->setVisible(false);
 	gui->add(matePanel);
 
-	showClass(0);
+	// Préférences de l'écran d'attente : la classe préférée, ses sorts et les talents rangés par
+	// préférence (rien n'est verrouillé). Pendant un bannissement, la liste part de la première.
+	showClass(banMode ? 0 : preferredIndex());
 	refreshAppearances();
+}
+
+int ClassSelectionScreen::preferredIndex() const
+{
+	for (int i = 0; i < (int)classesInstances.size(); i++)
+	{
+		if (classesInstances[i]->getClassId() == ClientConfig::get().preferredClass)
+			return i;
+	}
+	return 0;
 }
 
 void ClassSelectionScreen::refreshAppearances()
@@ -858,6 +870,9 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		if (ban.is_object())
 		{
 			bannedClass = ban.value("banned", 0);
+			// Fin du bannissement : retour à la classe préférée.
+			if (banMode && ban.value("done", false) && !locked)
+				showClass(preferredIndex());
 			if (ban.value("done", false))
 			{
 				banMode = false;
@@ -866,9 +881,16 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 				if (ban.contains("seconds"))
 					selectionRemaining = (float)ban.value("seconds", 0);
 			}
-			// La classe affichée est interdite : on montre la suivante.
+			// La classe affichée est interdite : on montre la suivante (la préférence ne passe pas outre).
 			if (banDone && !locked && forbiddenClass != 0 && currentClassId() == forbiddenClass)
+			{
+				if (forbiddenClass == ClientConfig::get().preferredClass)
+				{
+					notice = L"Votre classe préférée est interdite pour ce match.";
+					noticeTime = 6;
+				}
 				showClass(indexClass + 1);
+			}
 			refreshBan();
 			refreshLock();
 			if (windowSize.x > 0)

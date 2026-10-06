@@ -31,6 +31,8 @@ public:
 	// apparence choisie.
 	std::vector<std::string> knownAppearances;
 	std::string appearance;
+	// Classe préférée (écran d'attente, 0 : aucune) : le choix des classes s'ouvre sur elle.
+	int preferredClass = 0;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
