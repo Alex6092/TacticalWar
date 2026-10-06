@@ -138,9 +138,11 @@
     <ClInclude Include="FxGalleryScreen.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AsyncBotDecision.cpp" />
     <ClCompile Include="LocalBattleScreen.cpp" />
     <ClCompile Include="TrainingScreen.cpp" />
     <ClCompile Include="TrainingSetupScreen.cpp" />
+    <ClInclude Include="AsyncBotDecision.h" />
     <ClInclude Include="LocalBattleScreen.h" />
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />

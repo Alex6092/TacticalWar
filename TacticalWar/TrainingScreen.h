@@ -72,5 +72,6 @@ namespace tw
 		int autoTurn = -1;
 		int autoActions = 0;
 		std::mt19937 autoRng;
+		AsyncBotDecision autoDecision;
 	};
 }

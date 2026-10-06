@@ -50,6 +50,9 @@ public:
 	unsigned int windowWidth = 0;
 	unsigned int windowHeight = 0;
 	std::string screenshotPath;
+	// Outil de développement (--frame-stats) : le client écrit toutes les 5 s la pire durée d'image et
+	// le pire temps de calcul d'une image (mise à jour et dessin), pour repérer les à-coups.
+	bool frameStats = false;
 	float screenshotDelaySeconds = 3;
 	bool screenshotAtEnd = false;
 	// Galerie des effets de sorts, sans serveur : --fx-gallery [--fx-spell <id>] [--fx-map <id>].

@@ -12,6 +12,7 @@
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
 #include <algorithm>
+#include <iostream>
 
 int main(int argc, char** argv)
 {
@@ -106,14 +107,31 @@ int main(int argc, char** argv)
 	sf::Clock deltaClock;
 	sf::Clock runningClock;
 	bool firstFrame = true;
+	// --frame-stats : pires durées sur les 5 dernières secondes.
+	sf::Clock statsClock;
+	float worstFrame = 0;
+	float worstWork = 0;
 
 	while (window.isOpen())
 	{
+		float frame = deltaClock.restart().asSeconds();
+		sf::Clock workClock;
 		tw::ScreenManager::getInstance()->getCurrentScreen()->handleEvents(&window, &gui);
-		tw::ScreenManager::getInstance()->getCurrentScreen()->update(deltaClock.restart().asSeconds());
+		tw::ScreenManager::getInstance()->getCurrentScreen()->update(frame);
 		window.clear();
 		tw::ScreenManager::getInstance()->getCurrentScreen()->render(&window);
 		gui.draw();
+		if (config.frameStats && !firstFrame)
+		{
+			worstFrame = std::max(worstFrame, frame);
+			worstWork = std::max(worstWork, workClock.getElapsedTime().asSeconds());
+			if (statsClock.getElapsedTime().asSeconds() >= 5)
+			{
+				std::cout << "Images (5 s) : pire " << (int)(worstFrame * 1000) << " ms, calcul le plus long " << (int)(worstWork * 1000) << " ms" << std::endl;
+				worstFrame = worstWork = 0;
+				statsClock.restart();
+			}
+		}
 
 		// Capture d'écran demandée en ligne de commande (outil de développement) :
 		if (!config.screenshotPath.empty() && !firstFrame && runningClock.getElapsedTime().asSeconds() >= config.screenshotDelaySeconds)

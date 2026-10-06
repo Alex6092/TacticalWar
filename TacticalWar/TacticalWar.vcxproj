@@ -169,6 +169,7 @@ exit /b 0</Command>
     <ClCompile Include="SpellPicker.cpp" />
     <ClCompile Include="TalentPicker.cpp" />
     <ClCompile Include="BattleEventView.cpp" />
+    <ClCompile Include="AsyncBotDecision.cpp" />
     <ClCompile Include="LocalBattleScreen.cpp" />
     <ClCompile Include="TrainingScreen.cpp" />
     <ClCompile Include="TrainingSetupScreen.cpp" />
@@ -249,6 +250,7 @@ exit /b 0</Command>
     <ClInclude Include="SpellPicker.h" />
     <ClInclude Include="TalentPicker.h" />
     <ClInclude Include="BattleEventView.h" />
+    <ClInclude Include="AsyncBotDecision.h" />
     <ClInclude Include="LocalBattleScreen.h" />
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />

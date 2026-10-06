@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <atomic>
 #include <random>
 #include <vector>
 
@@ -34,6 +35,9 @@ namespace tw
 			// lancer un sort, KO, combinaisons préparées pour un coéquipier qui joue avant la cible) et
 			// finit son tour hors de portée quand elle le peut. Sans tirage au hasard.
 			bool planner = false;
+			// Calcul dans un fil à part : quand ce drapeau passe à vrai, les recherches de la difficulté
+			// « Difficile » s'arrêtent au plus tôt et la décision rendue est à ignorer.
+			const std::atomic<bool> * cancel = nullptr;
 		};
 
 		BotAction chooseBotAction(const BattleState & state, const BattleMap & map, const GameData & data, int fighterId, std::mt19937 & rng,

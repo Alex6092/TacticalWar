@@ -683,6 +683,15 @@ namespace tw
 				BotAction action;
 			};
 
+			// Interruption demandée par le fil qui attend la décision (BotOptions::cancel), pour le calcul
+			// en cours dans ce fil.
+			thread_local const std::atomic<bool> * cancelFlag = nullptr;
+
+			bool cancelled()
+			{
+				return cancelFlag != nullptr && cancelFlag->load(std::memory_order_relaxed);
+			}
+
 			// Meilleur sort à lancer maintenant. Avec "lookahead", les lancers les plus prometteurs sont
 			// aussi jugés sur le meilleur sort qui pourra les suivre (Provocation puis Taillade, bond puis
 			// coup…).
@@ -702,6 +711,8 @@ namespace tw
 						continue;
 					for (const Cell & cell : castableCells(state, map, data, me, *spell))
 					{
+						if (cancelled())
+							return Candidate();
 						if (!worthTrying(state, *spell, cell))
 							continue;
 						Option option;
@@ -722,7 +733,7 @@ namespace tw
 				{
 					int value = options[i].value;
 					// Suite : les 8 premiers lancers seulement (temps de calcul).
-					if (lookahead && i < 8)
+					if (lookahead && i < 8 && !cancelled())
 					{
 						const Fighter * after = options[i].after.findFighter(me.id);
 						if (after != nullptr && after->alive && options[i].after.activeFighterId() == me.id)
@@ -771,6 +782,8 @@ namespace tw
 				std::vector<Option> options;
 				for (const auto & entry : ranked)
 				{
+					if (cancelled())
+						return best;
 					std::vector<Cell> path = findPath(state, map, me, entry.second);
 					if (path.empty())
 						continue;
@@ -798,7 +811,7 @@ namespace tw
 				for (std::size_t i = 0; i < options.size(); i++)
 				{
 					int value = options[i].value;
-					if (i < 4)
+					if (i < 4 && !cancelled())
 					{
 						const Fighter * after = options[i].moved.findFighter(me.id);
 						Candidate cast = bestCast(options[i].moved, map, data, *after, true);
@@ -842,7 +855,12 @@ namespace tw
 				return action;
 
 			if (options.planner)
-				return choosePlannedAction(state, map, data, *me, rng);
+			{
+				cancelFlag = options.cancel;
+				action = choosePlannedAction(state, map, data, *me, rng);
+				cancelFlag = nullptr;
+				return action;
+			}
 
 			// Pas de tirage sans erreurs prévues : le bot réseau et la simulation restent identiques.
 			bool mistake = options.mistakePercent > 0 && (int)(rng() % 100) < options.mistakePercent;

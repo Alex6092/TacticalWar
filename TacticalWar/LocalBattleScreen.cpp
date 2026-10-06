@@ -127,9 +127,11 @@ void LocalBattleScreen::update(float deltatime)
 
 void LocalBattleScreen::playBots(float deltatime)
 {
-	// L'IA joue une action à la fois, une fois les animations précédentes terminées.
+	// L'IA joue une action à la fois, une fois les animations précédentes terminées. Sa décision est
+	// calculée en tâche de fond dès que possible : pendant les animations et le délai entre deux
+	// actions, qui masquent le calcul ; l'image n'attend jamais.
 	const battle::BattleState & state = engine->getState();
-	if (state.phase != battle::BattlePhase::FIGHT || !idle())
+	if (state.phase != battle::BattlePhase::FIGHT)
 		return;
 	int active = state.activeFighterId();
 	if (bots.count(active) == 0)
@@ -142,15 +144,21 @@ void LocalBattleScreen::playBots(float deltatime)
 		botActions = 0;
 		botWait = botDelay;
 	}
+	// Au plus 12 actions par tour (sécurité contre une IA qui tournerait en rond), puis fin du tour.
+	AsyncBotDecision::Key key = { active, turn, botActions };
+	if (botActions < 12 && !botDecision.requested(key))
+		botDecision.request(key, state, engine->getMap(), engine->getData(), botRng(), botOptions);
+
+	if (!idle())
+		return;
 	botWait -= deltatime;
 	if (botWait > 0)
 		return;
-	botWait = botDelay;
-
-	// Au plus 12 actions par tour (sécurité contre une IA qui tournerait en rond).
 	battle::BotAction action;
-	if (botActions++ < 12)
-		action = battle::chooseBotAction(state, engine->getMap(), engine->getData(), active, botRng, botOptions);
+	if (botActions < 12 && !botDecision.take(key, action))
+		return;
+	botActions++;
+	botWait = botDelay;
 
 	battle::ActionResult result = battle::ActionResult::failure("");
 	if (action.kind == battle::BotAction::Kind::CAST)

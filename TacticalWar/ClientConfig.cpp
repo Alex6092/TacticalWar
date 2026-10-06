@@ -163,6 +163,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			soundEnabled = false;
 		}
+		else if (arg == "--frame-stats")
+		{
+			frameStats = true;
+		}
 		else if (arg == "--fx-gallery")
 		{
 			fxGallery = true;
