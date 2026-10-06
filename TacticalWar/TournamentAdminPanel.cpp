@@ -156,7 +156,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	talentsLabel = createLabel(L"Talents (max, 0 = aucun)");
 	maxTalents = createNumberBox("3");
 	// Carte qui rétrécit : un anneau de cases se ferme à chaque tour à partir de ce tour (0 : jamais).
-	shrinkLabel = createLabel(L"Rétrécissement au tour (0 = jamais)");
+	shrinkLabel = createLabel(L"Rétrécir au tour (0 = jamais)");
 	shrinkRound = createNumberBox("12");
 	// Bannissement : chaque équipe interdit une classe à l'autre avant le match.
 	bansLabel = createLabel(L"Bannissement");

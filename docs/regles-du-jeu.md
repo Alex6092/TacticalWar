@@ -562,7 +562,7 @@ chaque tour complet**, depuis le bord de la carte :
 - le journal et le commentateur l'annoncent (« La carte rétrécit ! ») ; la mosaïque de la page
   projetée montre les cases fermées en noir.
 
-Réglages : tournoi, champ « Rétrécissement au tour » (12 par défaut, 0 : jamais) ; matchs amicaux,
+Réglages : tournoi, champ « Rétrécir au tour » (12 par défaut, 0 : jamais) ; matchs amicaux,
 `"shrinkRound"` dans `server.json` (12 par défaut) ; entraînement, liste « Rétrécissement ». L'admin peut
 aussi faire rétrécir la carte d'un combat qui dure trop : bouton « Rétrécir la carte » de l'onglet
 Combats, ou « Rétrécir » de l'onglet Tournoi (un anneau tout de suite, puis un par tour ; message `SK`).

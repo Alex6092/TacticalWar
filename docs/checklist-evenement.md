@@ -63,7 +63,7 @@
    Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
    Réglage « Bonus sur la carte » : des orbes (soin, énergie, protection) apparaissent au centre à partir
    du tour 3 ; désactivé par défaut.
-   Réglage « Rétrécissement au tour » : à partir de ce tour, un anneau de cases se ferme au bord à chaque
+   Réglage « Rétrécir au tour » : à partir de ce tour, un anneau de cases se ferme au bord à chaque
    tour (12 par défaut, 0 : jamais). Les tours durent 25 s.
    **Démarrer le tournoi annule les matchs amicaux** prévus ou en cours (les joueurs sont prévenus) et
    lance aussitôt les premiers matchs.
