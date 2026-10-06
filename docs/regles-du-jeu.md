@@ -229,6 +229,10 @@ Certaines cartes ont des cases qui changent le combat :
 | Source | Praticable ; +6 PV au début du tour de qui s'y trouve |
 | Hautes herbes | Praticable, mais bloque la ligne de vue : on s'y cache des tirs |
 
+Les obstacles bloquent le passage ; rochers et arbres bloquent aussi la vue, mais pas le **buisson**
+(un petit arbre rond) ni l'eau : on tire par-dessus. Au survol d'un obstacle, la ligne d'aide le dit
+(« Buisson : bloque le passage, pas la vue (on tire par-dessus) »).
+
 - L'effet s'applique au début du tour, après les poisons et les glyphes ; la mort subite reste en
   dernier. Traverser une case pendant un déplacement ne déclenche rien.
 - Au survol, la ligne d'aide donne la règle de la case, y compris pendant un déplacement.

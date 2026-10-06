@@ -1127,8 +1127,13 @@ sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
 		return fromServerText(block->name) + L" : " + num(block->hp) + L"/" + num(block->maxHp) + L" PV, encore " + num(block->remainingTurns)
 			+ (block->remainingTurns > 1 ? L" tours, " : L" tour, ") + blocks + L" (un sort de dégâts peut le casser)";
 	}
-	if (!map.contains(cell) || !map.isWalkable(cell))
+	if (!map.contains(cell))
 		return sf::String();
+	// Obstacle (arbre, rocher, buisson, eau) : ce qu'il bloque, d'après les règles de sa tuile. Le
+	// buisson, aussi gros qu'un petit arbre, laisse passer les tirs.
+	if (!map.isWalkable(cell))
+		return terrainName(cell) + (map.blocksSight(cell) ? sf::String(L" : bloque le passage et la vue")
+			: sf::String(L" : bloque le passage, pas la vue (on tire par-dessus)"));
 	int damage = map.turnDamage(cell);
 	int heal = map.turnHeal(cell);
 	if (damage > 0)

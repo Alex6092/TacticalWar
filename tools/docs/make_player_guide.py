@@ -405,7 +405,8 @@ PAGE = """<!doctype html>
           <li><b>Résistance</b> : réduit les dégâts reçus, de %(max_res)s %% au plus.</li>
           <li><b>Tacle</b> : quitter le contact d'un ennemi peut coûter des PM et des PA ; plus son tacle dépasse
             votre fuite, plus vous perdez.</li>
-          <li><b>Ligne de vue</b> : rochers, arbres, hautes herbes et personnages bloquent la plupart des sorts à distance.</li>
+          <li><b>Ligne de vue</b> : rochers, arbres, hautes herbes et personnages bloquent la plupart des sorts à distance ;
+            les buissons et l'eau bloquent seulement le passage.</li>
           <li><b>Collision</b> : un personnage poussé contre un obstacle subit %(collision)s dégâts par case non
             parcourue ; s'il heurte un personnage, celui-ci en subit %(collision_hit)s.</li>
           <li><b>Murs</b> (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre
