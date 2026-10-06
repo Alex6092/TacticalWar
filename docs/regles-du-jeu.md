@@ -82,12 +82,13 @@ possibles du joueur sont en vert.
 
 ## Réserve de temps
 
-Un tour dure 40 secondes. Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout
-le combat :
-- au-delà des 40 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
+Un tour dure 25 secondes (`"turnSeconds"` dans les règles de `assets/data/gamedata.json` ; 40 avant la
+séance de test d'octobre 2026, trop long pour finir les poules d'un tournoi de 16 équipes en une heure).
+Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout le combat :
+- au-delà des 25 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
 - le temps utilisé est perdu pour les tours suivants ; la réserve restante figure dans les détails du
   combattant (« Réserve 18 s ») ;
-- réserve épuisée : le tour s'arrête à la fin des 40 secondes, comme avant ;
+- réserve épuisée : le tour s'arrête à la fin des 25 secondes, comme avant ;
 - un joueur absent (5 secondes par tour) n'utilise pas sa réserve, sauf si son coéquipier le pilote.
 
 Réglage : `"timeBankSeconds"` dans les règles de `assets/data/gamedata.json` (0 : pas de réserve).

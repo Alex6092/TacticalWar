@@ -2,6 +2,7 @@
 
 #include <Palette.h>
 
+#include "ClientGameData.h"
 #include "LinkToServer.h"
 #include "UiScale.h"
 
@@ -54,6 +55,7 @@ void HelpPanel::rebuild()
 	const float COLUMN = column();
 	const sf::String reachable = fromServerText(palette::name(palette::Role::REACHABLE));
 	const sf::String castable = fromServerText(palette::name(palette::Role::CASTABLE));
+	const battle::BattleRules & gameRules = ClientGameData::get().data().rules;
 
 	const sf::Color gold(255, 215, 0);
 	const sf::Color white(235, 235, 235);
@@ -88,7 +90,8 @@ void HelpPanel::rebuild()
 		L"- Murs (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre mur "
 		L"pour passer. Survol : PV et tours restants.\n"
 		L"- Orbes (si activés) : au centre ; passez dessus pour un soin, un PA ou un bouclier.\n"
-		L"- Un tour dure 40 s, puis la réserve de temps (30 s pour tout le combat) s'entame.", ui::text(15), white);
+		L"- Un tour dure " + std::to_wstring(gameRules.turnSeconds) + L" s, puis la réserve de temps ("
+		+ std::to_wstring(gameRules.timeBankSeconds) + L" s pour tout le combat) s'entame.", ui::text(15), white);
 	rules->setPosition(40 + COLUMN, 52);
 	panel->add(rules);
 

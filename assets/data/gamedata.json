@@ -1,7 +1,7 @@
 {
   "version": 1,
   "rules": {
-    "turnSeconds": 40,
+    "turnSeconds": 25,
     "placementSeconds": 30,
     "disconnectedTurnSeconds": 5,
     "timeBankSeconds": 30,
