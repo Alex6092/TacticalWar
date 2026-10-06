@@ -57,6 +57,7 @@ namespace
 		if (reason == "ROUND_LIMIT") return L"décision PV";
 		if (reason == "OBJECTIVE") return L"zone";
 		if (reason == "FORFEIT") return L"forfait";
+		if (reason == "SURRENDER") return L"abandon";
 		if (reason == "ADMIN") return L"arbitrage";
 		if (reason == "BYE") return L"exempt";
 		return fromServerText(reason);

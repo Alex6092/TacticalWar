@@ -568,6 +568,14 @@ void BattleEngine::forfeit(int team, std::int64_t nowMs)
 	endBattle(team == 1 ? 2 : 1, EndReason::FORFEIT);
 }
 
+void BattleEngine::surrender(int team, std::int64_t nowMs)
+{
+	if (state.phase == BattlePhase::ENDED || (team != 1 && team != 2))
+		return;
+	emit({ { "t", "surrender" }, { "team", team } });
+	endBattle(team == 1 ? 2 : 1, EndReason::SURRENDER);
+}
+
 void BattleEngine::stopByDecision(std::int64_t nowMs)
 {
 	if (state.phase == BattlePhase::ENDED)

@@ -190,7 +190,8 @@ namespace tw
 			ROUND_LIMIT,
 			FORFEIT,
 			ADMIN,
-			OBJECTIVE		// Zone à tenir : l'équipe a atteint le score demandé
+			OBJECTIVE,		// Zone à tenir : l'équipe a atteint le score demandé
+			SURRENDER		// L'équipe perdante a abandonné (vote de ses joueurs)
 		};
 
 		// Mode "zone à tenir" : à la fin de chaque tour complet, une équipe marque un point si elle a

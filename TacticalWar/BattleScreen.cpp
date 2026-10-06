@@ -76,6 +76,7 @@ namespace
 		case battle::EndReason::FORFEIT: return L"Victoire par forfait.";
 		case battle::EndReason::ADMIN: return L"Combat arrêté par l'organisateur : décision aux points de vie.";
 		case battle::EndReason::OBJECTIVE: return L"L'équipe a tenu la zone jusqu'au score demandé.";
+		case battle::EndReason::SURRENDER: return L"Abandon de l'équipe adverse.";
 		default: return L"";
 		}
 	}
@@ -133,6 +134,9 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
 	hud->onOptionsChanged = [this]() { applyOptions(); };
+	// Abandon : seulement pour un joueur d'un combat en ligne (les combats locaux le retirent).
+	hud->onSurrender = [this]() { sendToServer("CQ", { { "vote", true } }); };
+	hud->allowSurrender(mode == Mode::PLAYER);
 	renderer->setTextScale(ui::scale());
 	renderer->setSeeThrough(ClientConfig::get().seeThrough);
 	if (ClientConfig::get().openHelp)
@@ -174,10 +178,29 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	}
 }
 
+void BattleScreen::refreshSurrenderVote()
+{
+	if (surrenderRemaining <= 0 || shown.phase == battle::BattlePhase::ENDED)
+	{
+		hud->showSurrenderVote(sf::String());
+		return;
+	}
+	sf::String seconds = L" (" + num((int)std::ceil(surrenderRemaining)) + L" s)";
+	hud->showSurrenderVote(surrenderVoted ? L"Abandon demandé" + seconds + L"\nVotre coéquipier doit cliquer « Abandonner »"
+		: surrenderFrom + L" veut abandonner" + seconds + L"\nCliquez « Abandonner » pour confirmer");
+}
+
 void BattleScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
 	hud->update(deltatime);
+	if (surrenderRemaining > 0)
+	{
+		int before = (int)std::ceil(surrenderRemaining);
+		surrenderRemaining = std::max(0.f, surrenderRemaining - deltatime);
+		if ((int)std::ceil(surrenderRemaining) != before)
+			refreshSurrenderVote();
+	}
 
 	for (auto & entry : views)
 		entry.second->update(deltatime);
@@ -539,6 +562,21 @@ void BattleScreen::onMessageReceived(std::string msg)
 			hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
 		}
 	}
+	else if (message.op == "BQ")
+	{
+		// Vote d'abandon de l'équipe : bandeau avec le temps restant (votes 0 : vote fini ou annulé).
+		json vote;
+		if (message.parseJson(vote))
+		{
+			int votes = vote.value("votes", 0);
+			surrenderFrom = fromServerText(vote.value("from", std::string()));
+			surrenderVoted = vote.value("voted", false);
+			surrenderRemaining = votes > 0 ? (float)std::max(1, vote.value("expiresIn", 30)) : 0.f;
+			if (votes == 0 && vote.value("expired", false))
+				hud->showMessage(L"Abandon annulé : pas de confirmation à temps.", sf::Color(255, 200, 120), 2.5f);
+			refreshSurrenderVote();
+		}
+	}
 	else if (message.op == "BG")
 	{
 		json ping;
@@ -740,6 +778,9 @@ void BattleScreen::showEnd()
 	}
 
 	sf::String reason = reasonLabel(shown.endReason);
+	if (shown.endReason == battle::EndReason::SURRENDER)
+		reason = me != NULL && me->team != shown.winnerTeam ? sf::String(L"Votre équipe a abandonné.")
+			: me != NULL ? sf::String(L"L'équipe adverse a abandonné.") : teamLabel(3 - shown.winnerTeam) + L" a abandonné.";
 	if (shown.zone.enabled && (shown.endReason == battle::EndReason::ROUND_LIMIT || shown.endReason == battle::EndReason::ADMIN))
 		reason = L"Décision aux points de la zone, puis aux points de vie.";
 	if (shown.zone.enabled && me != NULL)

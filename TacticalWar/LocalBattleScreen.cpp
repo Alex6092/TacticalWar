@@ -7,6 +7,8 @@ LocalBattleScreen::LocalBattleScreen(tgui::Gui * gui, int environmentId)
 	: BattleScreen(gui, environmentId, Mode::PLAYER), nowMs(0), hideEnd(false), timers(false), botDelay(0.7f),
 	botRng(std::random_device()()), botWait(0), botTurn(-1), botActions(0)
 {
+	// Entraînement, tutoriel, énigmes, galerie : on quitte, on n'abandonne pas.
+	hud->allowSurrender(false);
 }
 
 void LocalBattleScreen::startLocal(std::unique_ptr<battle::BattleEngine> newEngine, int viewer)

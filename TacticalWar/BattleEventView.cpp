@@ -72,6 +72,7 @@ BattleEventView::BattleEventView(BattleScreen & screen)
 		{ "emote", &BattleEventView::onEmote },
 		{ "timeout", &BattleEventView::onTimeout },
 		{ "connection", &BattleEventView::onConnection },
+		{ "surrender", &BattleEventView::onSurrender },
 		{ "end", &BattleEventView::onEnd },
 	};
 }
@@ -142,6 +143,15 @@ float BattleEventView::onConnection(const Context & c)
 	bool piloted = c.event.value("piloted", false);
 	screen.hud->log(screen.fighterName(c.fighterId) + (connected ? L" est revenu."
 		: piloted ? L" est absent : son coéquipier le joue." : L" s'est déconnecté."), sf::Color(200, 200, 200));
+	return 0;
+}
+
+float BattleEventView::onSurrender(const Context & c)
+{
+	int team = c.event.value("team", 0);
+	const battle::Fighter * me = screen.shown.findFighter(screen.you);
+	screen.hud->log(me != NULL && me->team == team ? sf::String(L"Votre équipe abandonne.")
+		: me != NULL ? sf::String(L"L'équipe adverse abandonne !") : screen.teamLabel(team) + L" abandonne.", sf::Color(255, 200, 120));
 	return 0;
 }
 

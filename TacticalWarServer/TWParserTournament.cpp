@@ -28,6 +28,7 @@ namespace
 		case tw::battle::EndReason::FORFEIT: return ResultReason::FORFEIT;
 		case tw::battle::EndReason::ADMIN: return ResultReason::ADMIN;
 		case tw::battle::EndReason::OBJECTIVE: return ResultReason::OBJECTIVE;
+		case tw::battle::EndReason::SURRENDER: return ResultReason::SURRENDER;
 		default: return ResultReason::KO;
 		}
 	}

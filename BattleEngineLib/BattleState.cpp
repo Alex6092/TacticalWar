@@ -163,6 +163,7 @@ const char * tw::battle::toString(EndReason reason)
 	case EndReason::FORFEIT: return "FORFEIT";
 	case EndReason::ADMIN: return "ADMIN";
 	case EndReason::OBJECTIVE: return "OBJECTIVE";
+	case EndReason::SURRENDER: return "SURRENDER";
 	}
 	return "";
 }

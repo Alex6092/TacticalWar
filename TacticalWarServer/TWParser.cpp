@@ -129,7 +129,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 	}
 
 	// Actions de combat (contenu JSON) :
-	if (op == "CP" || op == "Cs" || op == "Cm" || op == "CL" || op == "Ct" || op == "CE" || op == "CG" || op == "BR")
+	if (op == "CP" || op == "Cs" || op == "Cm" || op == "CL" || op == "Ct" || op == "CE" || op == "CG" || op == "CQ" || op == "BR")
 	{
 		tw::protocol::Message message;
 		nlohmann::json body = nlohmann::json::object();
@@ -137,6 +137,8 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			message.parseJson(body);
 		if (op == "CG")
 			handlePing(client, body);
+		else if (op == "CQ")
+			handleSurrender(client, body);
 		else
 			handleBattleAction(client, op, body);
 		return;

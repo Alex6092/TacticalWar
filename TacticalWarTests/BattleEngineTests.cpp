@@ -462,6 +462,50 @@ TEST_CASE("The battle ends when a team is dead, and a forfeit ends it immediatel
 	CHECK_FALSE(arena.engine->endTurn(arena.active(), arena.now).ok);
 }
 
+TEST_CASE("A team can surrender during the fight or the placement")
+{
+	Arena arena({ { ARCHER, { 2, 7 } }, { GUERRIER, { 2, 9 } } }, { { MAGE, { 6, 7 } }, { PROTECTEUR, { 6, 9 } } });
+	arena.engine->surrender(1, arena.now);
+	CHECK(arena.engine->isOver());
+	CHECK(arena.state().winnerTeam == 2);
+	CHECK((arena.state().endReason == EndReason::SURRENDER));
+	nlohmann::json events = arena.engine->flushEvents()["ev"];
+	REQUIRE(events.size() == 2);
+	CHECK(events[0]["t"] == "surrender");
+	CHECK(events[0]["team"] == 1);
+	CHECK(events[1]["t"] == "end");
+	CHECK(events[1]["reason"] == "SURRENDER");
+	// Combat non joué jusqu'au bout : ni « Intouchable » ni « Victoire éclair » pour les gagnants.
+	for (const Fighter & fighter : arena.state().fighters)
+	{
+		CHECK(std::find(fighter.record.badges.begin(), fighter.record.badges.end(), "untouchable") == fighter.record.badges.end());
+		CHECK(std::find(fighter.record.badges.begin(), fighter.record.badges.end(), "lightning") == fighter.record.badges.end());
+	}
+	// Plus rien ne se passe ensuite.
+	arena.engine->surrender(2, arena.now);
+	CHECK(arena.state().winnerTeam == 2);
+	CHECK_FALSE(arena.engine->hasPendingEvents());
+
+	// Pendant le placement.
+	BattleMap map = openMap();
+	map.startCells[1].push_back({ 2, 7 });
+	map.startCells[2].push_back({ 6, 7 });
+	BattleEngine engine(gameData(), map, 1);
+	engine.addFighter(1, MAGE, "A");
+	engine.addFighter(2, ARCHER, "B");
+	engine.startPlacement(0);
+	engine.surrender(2, 10);
+	CHECK(engine.isOver());
+	CHECK(engine.getState().winnerTeam == 1);
+	CHECK((engine.getState().endReason == EndReason::SURRENDER));
+
+	// Les clients retrouvent la raison dans l'état complet.
+	BattleState mirror;
+	BattleMap mirrorMap;
+	BattleMirror::applySnapshot(mirror, mirrorMap, engine.snapshot(-1, 10));
+	CHECK((mirror.endReason == EndReason::SURRENDER));
+}
+
 TEST_CASE("Random battles always end and every event serializes")
 {
 	std::mt19937 rng(2024);

@@ -69,7 +69,8 @@ namespace tw
 			FORFEIT,		// Équipe absente ou déconnectée
 			ADMIN,			// Résultat saisi par l'admin
 			BYE,			// Exempt : victoire automatique
-			OBJECTIVE		// Zone à tenir : score atteint
+			OBJECTIVE,		// Zone à tenir : score atteint
+			SURRENDER		// L'équipe perdante a abandonné
 		};
 
 		// Origine d'une équipe dans un match.

@@ -116,6 +116,10 @@ public:
 	// Depuis quand toute une équipe (1 ou 2) est absente (0 : présente).
 	std::int64_t absentSince[3] = { 0, 0, 0 };
 
+	// Abandon : joueurs de chaque équipe (1 ou 2) qui l'ont voté, et heure du premier vote (0 : aucun).
+	std::set<tw::Player*> surrenderVotes[3];
+	std::int64_t surrenderSince[3] = { 0, 0, 0 };
+
 	// Connexions des spectateurs de ce combat.
 	std::set<tw::net::ConnId> spectators;
 

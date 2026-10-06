@@ -14,6 +14,8 @@ namespace
 {
 	// Après le délai de choix des classes, s'il manque une équipe entière, on attend encore.
 	const std::int64_t CLASS_SELECTION_RETRY_MS = 15 * 1000;
+	// Vote d'abandon : les autres joueurs présents de l'équipe ont ce délai pour le confirmer.
+	const std::int64_t SURRENDER_VOTE_MS = 30 * 1000;
 
 	std::string encode(const std::string & op, const nlohmann::json & body)
 	{
@@ -439,6 +441,94 @@ void TWParser::handlePing(ClientState * client, const nlohmann::json & body)
 	}
 }
 
+std::vector<tw::Player*> TWParser::surrenderVoters(BattleSession * session, int team)
+{
+	// Les joueurs présents de l'équipe (le second personnage d'un joueur seul n'est jamais présent).
+	std::vector<tw::Player*> voters;
+	for (tw::Player * player : session->getParticipants())
+	{
+		if (session->teamOf(player) == team && isPresent(player))
+			voters.push_back(player);
+	}
+	return voters;
+}
+
+void TWParser::handleSurrender(ClientState * client, const nlohmann::json & body)
+{
+	// CQ{"vote": true} : le joueur propose (ou confirme) l'abandon de son équipe ; false : il retire son vote.
+	tw::Player * player = getPlayerFromClientState(client);
+	BattleSession * session = player != NULL ? sessionOfPlayer(player) : NULL;
+	if (session == NULL || session->getPhase() != BattleSession::Phase::BATTLE || session->getEngine()->isOver())
+	{
+		send(client, encode("ER", { { "op", "CQ" }, { "message", "Aucun combat en cours." } }));
+		return;
+	}
+	int team = session->teamOf(player);
+	if (team == 0)
+		return;
+
+	std::int64_t now = nowMs();
+	std::set<tw::Player*> & votes = session->surrenderVotes[team];
+	if (body.value("vote", true))
+	{
+		if (votes.empty())
+			session->surrenderSince[team] = now;
+		votes.insert(player);
+	}
+	else
+	{
+		votes.erase(player);
+	}
+
+	// Seul joueur présent, ou tous les joueurs présents d'accord : l'équipe abandonne tout de suite.
+	std::vector<tw::Player*> voters = surrenderVoters(session, team);
+	bool unanimous = !voters.empty();
+	for (tw::Player * voter : voters)
+		unanimous = unanimous && votes.count(voter) > 0;
+	if (unanimous)
+	{
+		std::cout << "Combat " << session->getId() << " : abandon de l'equipe " << team << "." << std::endl;
+		votes.clear();
+		session->surrenderSince[team] = 0;
+		session->getEngine()->surrender(team, now);
+		broadcastBattleEvents(session);
+		return;
+	}
+	if (votes.empty())
+		session->surrenderSince[team] = 0;
+	sendSurrenderVote(session, team, player, false);
+}
+
+void TWParser::sendSurrenderVote(BattleSession * session, int team, tw::Player * from, bool expired)
+{
+	const std::set<tw::Player*> & votes = session->surrenderVotes[team];
+	std::int64_t remaining = votes.empty() ? 0
+		: std::max<std::int64_t>(0, (session->surrenderSince[team] + SURRENDER_VOTE_MS - nowMs() + 999) / 1000);
+	int needed = (int)surrenderVoters(session, team).size();
+	for (tw::Player * mate : session->getParticipants())
+	{
+		ClientState * mateClient = getClientStateFromPlayer(mate);
+		if (session->teamOf(mate) != team || mateClient == NULL || !mate->getHasJoinBattle())
+			continue;
+		nlohmann::json body = { { "from", from != NULL ? displayNameOf(from) : std::string() }, { "votes", (int)votes.size() },
+			{ "needed", needed }, { "expiresIn", remaining }, { "voted", votes.count(mate) > 0 } };
+		if (expired)
+			body["expired"] = true;
+		send(mateClient, encode("BQ", body));
+	}
+}
+
+void TWParser::clearSurrenderVotes(BattleSession * session, int team, bool expired)
+{
+	if (team != 1 && team != 2)
+		return;
+	if (session->surrenderVotes[team].empty() && session->surrenderSince[team] == 0)
+		return;
+	session->surrenderVotes[team].clear();
+	session->surrenderSince[team] = 0;
+	sendSurrenderVote(session, team, NULL, expired);
+}
+
 void TWParser::broadcastBattleEvents(BattleSession * session)
 {
 	tw::battle::BattleEngine * engine = session->getEngine();
@@ -497,6 +587,8 @@ void TWParser::finishBattle(BattleSession * session)
 		reason = tw::tournament::ResultReason::ADMIN;
 	else if (state.endReason == tw::battle::EndReason::OBJECTIVE)
 		reason = tw::tournament::ResultReason::OBJECTIVE;
+	else if (state.endReason == tw::battle::EndReason::SURRENDER)
+		reason = tw::tournament::ResultReason::SURRENDER;
 	// Bilan des joueurs : enregistré avec le résultat du tournoi, et affiché sur la page projetée.
 	std::vector<tw::tournament::PlayerRecord> players;
 	nlohmann::json mvp;
@@ -646,6 +738,8 @@ void TWParser::onPlayerConnectionChanged(tw::Player * player, bool connected)
 
 	session->getEngine()->setConnected(session->fighterIdOf(player), connected, nowMs());
 	refreshPilots(session);
+	// Les votants changent : un vote d'abandon en cours est annulé.
+	clearSurrenderVotes(session, session->teamOf(player), false);
 	broadcastBattleEvents(session);
 }
 
@@ -766,6 +860,12 @@ void TWParser::tickBattles()
 		}
 		else if (session->getPhase() == BattleSession::Phase::BATTLE)
 		{
+			// Vote d'abandon non confirmé à temps : annulé.
+			for (int team = 1; team <= 2; team++)
+			{
+				if (session->surrenderSince[team] != 0 && now - session->surrenderSince[team] >= SURRENDER_VOTE_MS)
+					clearSurrenderVotes(session, team, true);
+			}
 			trackAbsences(session, now);
 			session->getEngine()->tick(now);
 			broadcastBattleEvents(session);

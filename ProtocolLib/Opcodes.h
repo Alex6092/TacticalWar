@@ -135,6 +135,8 @@ namespace tw
 			{ "Ct", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Fin de tour" },
 			{ "CE", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote" },
 			{ "CG", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s)" },
+			{ "CQ", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Abandon (placement ou combat) : CQ{vote: true} propose ou confirme l'abandon de son équipe, CQ{vote: false} retire son vote. Seul joueur présent de l'équipe : abandon immédiat ; sinon chaque joueur présent doit voter dans les 30 s" },
+			{ "BQ", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Vote d'abandon de son équipe : BQ{from: nom du dernier votant, votes, needed: joueurs présents de l'équipe, expiresIn: secondes restantes, voted: le destinataire a voté, expired: vote expiré} (votes 0 : plus de vote en cours)" },
 			{ "BG", Direction::SERVER_TO_CLIENT, Role::ANY, "Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs" },
 		};
 

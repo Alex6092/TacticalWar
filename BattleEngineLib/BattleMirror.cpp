@@ -21,6 +21,7 @@ namespace
 		if (text == "FORFEIT") return EndReason::FORFEIT;
 		if (text == "ADMIN") return EndReason::ADMIN;
 		if (text == "OBJECTIVE") return EndReason::OBJECTIVE;
+		if (text == "SURRENDER") return EndReason::SURRENDER;
 		return EndReason::NONE;
 	}
 

@@ -65,6 +65,7 @@ namespace tw
 		float onEmote(const Context & c);
 		float onTimeout(const Context & c);
 		float onConnection(const Context & c);
+		float onSurrender(const Context & c);
 		float onEnd(const Context & c);
 
 		BattleScreen & screen;

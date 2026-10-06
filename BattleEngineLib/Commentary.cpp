@@ -209,7 +209,10 @@ std::string Commentary::onEvents(const nlohmann::json & events, const BattleStat
 		else if (type == "end")
 		{
 			int winner = event.value("winner", 0);
-			std::string text = winner == 1 || winner == 2
+			std::string text = (winner == 1 || winner == 2) && event.value("reason", std::string()) == "SURRENDER"
+				? fill(pick({ u8"{l} abandonne : victoire pour {t} !", u8"Drapeau blanc pour {l} : {t} remporte le combat." }),
+					{ { "{t}", team(winner) }, { "{l}", team(3 - winner) } })
+				: winner == 1 || winner == 2
 				? fill(pick({ u8"Victoire pour {t} au tour {r} !", u8"C'est fini : {t} remporte le combat !", u8"{t} l'emporte ! Quel combat." }),
 					{ { "{t}", team(winner) }, { "{r}", std::to_string(event.value("round", 0)) } })
 				: std::string(u8"Fin du combat : match nul.");

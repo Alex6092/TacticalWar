@@ -190,6 +190,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void handlePing(ClientState * client, const nlohmann::json & body);
 	std::map<tw::Player*, std::deque<std::int64_t>> recentPings;
 	void startBattle(BattleSession * session);
+	// Abandon (CQ) : vote des joueurs présents de l'équipe ; état du vote envoyé à l'équipe (BQ).
+	void handleSurrender(ClientState * client, const nlohmann::json & body);
+	void sendSurrenderVote(BattleSession * session, int team, tw::Player * from, bool expired);
+	void clearSurrenderVotes(BattleSession * session, int team, bool expired);
+	std::vector<tw::Player*> surrenderVoters(BattleSession * session, int team);
 	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
 	void broadcastBattleEvents(BattleSession * session);
 	void finishBattle(BattleSession * session);

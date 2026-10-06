@@ -22,7 +22,7 @@ function el(id) {
   return document.getElementById(id);
 }
 
-const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", ADMIN: "arbitrage", BYE: "exempt", OBJECTIVE: "zone" };
+const REASONS = { KO: "KO", ROUND_LIMIT: "aux PV", FORFEIT: "forfait", SURRENDER: "abandon", ADMIN: "arbitrage", BYE: "exempt", OBJECTIVE: "zone" };
 const STATUS = { RUNNING: "En cours", FINISHED: "Terminé", DRAFT: "Préparation" };
 
 function teamName(tournament, id) {

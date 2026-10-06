@@ -76,6 +76,9 @@ namespace tw
 			void setPiloted(int fighterId, bool piloted, std::int64_t nowMs);
 			// L'équipe "team" perd par forfait.
 			void forfeit(int team, std::int64_t nowMs);
+			// L'équipe "team" abandonne (décidé par ses joueurs, voir le serveur), pendant le placement ou
+			// le combat : événement {"t": "surrender", "team"}, puis victoire de l'autre équipe.
+			void surrender(int team, std::int64_t nowMs);
 			// Arrêt par l'admin : décision aux points de vie restants.
 			void stopByDecision(std::int64_t nowMs);
 			// Arrêt par l'admin avec un vainqueur désigné.

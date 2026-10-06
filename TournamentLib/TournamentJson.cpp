@@ -64,7 +64,7 @@ bool tw::tournament::parseFormat(const std::string & text, Format & format)
 bool tw::tournament::parseReason(const std::string & text, ResultReason & reason)
 {
 	return parseEnum(text, reason, { ResultReason::KO, ResultReason::ROUND_LIMIT, ResultReason::FORFEIT, ResultReason::ADMIN, ResultReason::BYE,
-		ResultReason::OBJECTIVE });
+		ResultReason::OBJECTIVE, ResultReason::SURRENDER });
 }
 
 nlohmann::json tw::tournament::toJson(const Settings & settings)

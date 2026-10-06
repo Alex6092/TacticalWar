@@ -200,5 +200,10 @@ namespace tw
 		int hoveredFighter;
 		bool closeRequested;
 		bool endShown;
+		// Vote d'abandon de l'équipe (BQ) : secondes restantes (0 : aucun), vote du joueur, dernier votant.
+		float surrenderRemaining = 0;
+		bool surrenderVoted = false;
+		sf::String surrenderFrom;
+		void refreshSurrenderVote();
 	};
 }

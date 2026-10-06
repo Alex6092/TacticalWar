@@ -137,4 +137,6 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `Ct` | C → S | joueur | Fin de tour |
 | `CE` | C → S | joueur | Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote |
 | `CG` | C → S | joueur | Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s) |
+| `CQ` | C → S | joueur | Abandon (placement ou combat) : CQ{vote: true} propose ou confirme l'abandon de son équipe, CQ{vote: false} retire son vote. Seul joueur présent de l'équipe : abandon immédiat ; sinon chaque joueur présent doit voter dans les 30 s |
+| `BQ` | S → C | joueur | Vote d'abandon de son équipe : BQ{from: nom du dernier votant, votes, needed: joueurs présents de l'équipe, expiresIn: secondes restantes, voted: le destinataire a voté, expired: vote expiré} (votes 0 : plus de vote en cours) |
 | `BG` | S → C | tous | Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs |

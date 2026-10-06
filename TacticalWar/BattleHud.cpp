@@ -10,6 +10,9 @@
 #include <Emotes.h>
 #include <algorithm>
 
+// Windows.h définit MessageBox comme une macro, en conflit avec tgui::MessageBox.
+#undef MessageBox
+
 using namespace tw::battle;
 namespace palette = tw::palette;
 namespace ui = tw::ui;
@@ -326,6 +329,23 @@ BattleHud::BattleHud(tgui::Gui * gui, const sf::Font & font)
 	});
 	gui->add(leaveButton);
 
+	surrenderButton = tgui::Button::create(L"Abandonner");
+	surrenderButton->setInheritedFont(font);
+	surrenderButton->setTextSize(16);
+	surrenderButton->getRenderer()->setTextColor(sf::Color(170, 30, 30));
+	surrenderButton->getRenderer()->setTextColorHover(sf::Color(210, 40, 40));
+	surrenderButton->setVisible(false);
+	surrenderButton->connect("pressed", [this]() { confirmSurrender(); });
+	gui->add(surrenderButton);
+
+	surrenderLabel = createLabel(16, sf::Color(255, 160, 90));
+	surrenderLabel->setHorizontalAlignment(tgui::Label::HorizontalAlignment::Center);
+	surrenderLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	surrenderLabel->getRenderer()->setTextOutlineThickness(2);
+	surrenderLabel->setEnabled(false);
+	surrenderLabel->setVisible(false);
+	gui->add(surrenderLabel);
+
 	cameraHelp = createLabel(13, sf::Color(220, 220, 220));
 	cameraHelp->setText(L"Molette : zoom   Clic droit : déplacer   F : suivre   C : recentrer");
 	cameraHelp->getRenderer()->setTextOutlineColor(sf::Color::Black);
@@ -348,6 +368,40 @@ void BattleHud::showLeaveButton(const sf::String & text)
 	leaveButton->setText(text);
 	leaveButton->setVisible(true);
 	layout(windowSize);
+}
+
+void BattleHud::allowSurrender(bool allowed)
+{
+	surrenderAllowed = allowed;
+	if (!allowed)
+		surrenderButton->setVisible(false);
+}
+
+void BattleHud::showSurrenderVote(const sf::String & text)
+{
+	if (surrenderLabel->getText() != text)
+		surrenderLabel->setText(text);
+	surrenderLabel->setVisible(!text.isEmpty() && !endPanel->isVisible());
+	layout(windowSize);
+}
+
+void BattleHud::confirmSurrender()
+{
+	if (surrenderBox != nullptr && surrenderBox->getParent() != nullptr)
+		return;
+	bool voteOpen = surrenderLabel->isVisible();
+	surrenderBox = tgui::MessageBox::create(L"Abandonner", voteOpen ? sf::String(L"Confirmer l'abandon ? Votre équipe perd le combat.")
+		: sf::String(L"Abandonner le combat ? Votre équipe perd le combat.\nSi votre coéquipier est connecté, il doit confirmer dans les 30 s."));
+	surrenderBox->setInheritedFont(font);
+	surrenderBox->addButton(L"Abandonner");
+	surrenderBox->addButton(L"Annuler");
+	surrenderBox->setPosition("(&.size - size) / 2");
+	surrenderBox->connect("ButtonPressed", [this](const sf::String & button) {
+		if (button == L"Abandonner" && onSurrender)
+			onSurrender();
+		gui->remove(surrenderBox);
+	});
+	gui->add(surrenderBox);
 }
 
 void BattleHud::setEndButtonText(const sf::String & text)
@@ -453,6 +507,9 @@ void BattleHud::layout(const sf::Vector2u & size)
 		leaveButton->setSize(150, 36);
 		leaveButton->setPosition(width - 165, height - cameraHelp->getSize().y - 56);
 	}
+	surrenderButton->setSize(150, 36);
+	surrenderButton->setPosition(width - 165, height - cameraHelp->getSize().y - 56);
+	surrenderLabel->setPosition((width - surrenderLabel->getSize().x) / 2, 80);
 	cameraHelp->setPosition(width - cameraHelp->getSize().x - 15, height - cameraHelp->getSize().y - 10);
 }
 
@@ -818,6 +875,7 @@ void BattleHud::refresh(const BattleState & state, const GameData & data, int yo
 	if (!canEmote)
 		emotePanel->setVisible(false);
 	readyButton->setVisible(state.phase == BattlePhase::PLACEMENT && me != nullptr);
+	surrenderButton->setVisible(surrenderAllowed && canEmote && !endPanel->isVisible());
 	if (me != nullptr && me->ready != readyState)
 	{
 		readyState = me->ready;
@@ -923,6 +981,10 @@ void BattleHud::showEnd(const sf::String & title, const sf::String & details, bo
 	emoteButton->setVisible(false);
 	emotePanel->setVisible(false);
 	helpButton->setVisible(false);
+	surrenderButton->setVisible(false);
+	surrenderLabel->setVisible(false);
+	if (surrenderBox != nullptr && surrenderBox->getParent() != nullptr)
+		gui->remove(surrenderBox);
 	helpPanel->hide();
 	optionsPanel->hide();
 	for (SpellButton & button : spells)
