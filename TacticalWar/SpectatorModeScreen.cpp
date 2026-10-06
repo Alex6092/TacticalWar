@@ -7,10 +7,23 @@
 
 #include <Message.h>
 
+#include <iostream>
+
+namespace
+{
+	// Un moment d'un combat en cours est proposé pendant 3 minutes.
+	const int LIVE_MOMENT_MAX_AGE = 180;
+	// Le réalisateur quitte un direct pour un moment d'un autre combat au plus une fois par minute.
+	const float LIVE_SWITCH_SECONDS = 60.f;
+}
+
 bool SpectatorModeScreen::directorMode = false;
 nlohmann::json SpectatorModeScreen::highlights = nlohmann::json::array();
 float SpectatorModeScreen::highlightsAge = 1e9f;
-std::size_t SpectatorModeScreen::nextHighlight = 0;
+std::set<std::string> SpectatorModeScreen::played;
+int SpectatorModeScreen::liveSession = 0;
+float SpectatorModeScreen::lastSwitch = -1e9f;
+sf::Clock SpectatorModeScreen::directorClock;
 sf::String SpectatorModeScreen::currentTab = L"En direct";
 
 SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
@@ -80,6 +93,14 @@ SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 	LinkToServer::getInstance()->SendRaw("SL{}");
 	if (!tabs->select(currentTab))
 		tabs->select(0);
+	// Réalisateur : choix suivant dès l'arrivée des listes (enchaînement sans attente).
+	liveSession = 0;
+	if (directorMode)
+	{
+		decidePending = true;
+		highlightRequest = 5.f;
+		LinkToServer::getInstance()->SendRaw("HL{}");
+	}
 
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/animatedBackground2.glsl");
 }
@@ -107,27 +128,103 @@ void SpectatorModeScreen::watch(int session)
 	LinkToServer::getInstance()->SendRaw("SW" + nlohmann::json({ { "session", session } }).dump());
 }
 
-void SpectatorModeScreen::playNextHighlight()
+std::string SpectatorModeScreen::keyOf(const nlohmann::json & highlight)
 {
-	// Liste vieille d'une minute (ou vide) : redemandée, au plus toutes les 10 secondes.
-	if ((highlights.empty() || highlightsAge > 60.f) && highlightRequest <= 0)
+	return highlight.value("live", false) ? "s" + std::to_string(highlight.value("session", 0)) + ":" + std::to_string(highlight.value("from", 0))
+		: "r" + highlight.value("replay", std::string()) + ":" + std::to_string(highlight.value("from", 0));
+}
+
+void SpectatorModeScreen::direct()
+{
+	sinceRefresh = 0;
+	decidePending = false;
+	// Liste vieille de plus de 10 secondes : redemandée pour le choix suivant.
+	if (highlightsAge > 10.f && highlightRequest <= 0)
 	{
-		highlightRequest = 10.f;
+		highlightRequest = 5.f;
 		LinkToServer::getInstance()->SendRaw("HL{}");
 	}
-	if (highlights.empty())
+
+	// 1. Le meilleur moment pas encore vu des combats en cours (léger différé).
+	const nlohmann::json * best = nullptr;
+	for (const nlohmann::json & highlight : highlights)
 	{
-		sessionsPanel->setStatus(L"Mode réalisateur : en attente d'un combat...", sf::Color(200, 220, 255));
+		if (!highlight.value("live", false) || highlight.value("age", 0) >= LIVE_MOMENT_MAX_AGE || played.count(keyOf(highlight)) > 0)
+			continue;
+		if (best == nullptr || highlight.value("score", 0) > best->value("score", 0))
+			best = &highlight;
+	}
+	if (best != nullptr)
+	{
+		playExtract(*best);
 		return;
 	}
 
-	const nlohmann::json & highlight = highlights[nextHighlight % highlights.size()];
-	nextHighlight++;
-	sessionsPanel->setStatus(L"Mode réalisateur : temps fort « " + fromServerText(highlight.value("title", std::string())) + L" »",
-		sf::Color(255, 215, 120));
+	// 2. Le combat en cours le plus serré, en direct.
+	int session = sessionsPanel->mostContestedSession();
+	if (session > 0)
+	{
+		sessionsPanel->setStatus(L"Mode réalisateur : connexion au combat le plus serré...", sf::Color(200, 220, 255));
+		std::cout << "Realisateur : combat " << session << " en direct" << std::endl;
+		watch(session);
+		liveSession = session;
+		lastSwitch = directorClock.getElapsedTime().asSeconds();
+		return;
+	}
+
+	// 3. Les temps forts des rediffusions, chacun une fois ; tous joués : on recommence.
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (const nlohmann::json & highlight : highlights)
+		{
+			if (!highlight.value("live", false) && played.count(keyOf(highlight)) == 0)
+			{
+				playExtract(highlight);
+				return;
+			}
+		}
+		for (auto it = played.begin(); it != played.end();)
+			it = (*it)[0] == 'r' ? played.erase(it) : std::next(it);
+	}
+	sessionsPanel->setStatus(L"Mode réalisateur : en attente d'un combat...", sf::Color(200, 220, 255));
+}
+
+void SpectatorModeScreen::playExtract(const nlohmann::json & highlight)
+{
+	played.insert(keyOf(highlight));
+	liveSession = 0;
+	bool live = highlight.value("live", false);
+	std::string title = highlight.value("title", std::string());
+	sessionsPanel->setStatus((live ? sf::String(L"Mode réalisateur : à l'instant, « ") : sf::String(L"Mode réalisateur : temps fort « "))
+		+ fromServerText(title) + L" »", sf::Color(255, 215, 120));
+	std::cout << "Realisateur : extrait " << (live ? "en direct du combat " + std::to_string(highlight.value("session", 0))
+		+ " (il y a " + std::to_string(highlight.value("age", 0)) + " s)" : "de la rediffusion " + highlight.value("replay", std::string()))
+		<< " : " << title << std::endl;
 	watchPending = 5.f;
-	LinkToServer::getInstance()->SendRaw("RP" + nlohmann::json({ { "id", highlight.value("replay", std::string()) },
-		{ "from", highlight.value("from", 0) }, { "to", highlight.value("to", 0) } }).dump());
+	nlohmann::json request = { { "from", highlight.value("from", 0) }, { "to", highlight.value("to", 0) } };
+	if (live)
+		request["session"] = highlight.value("session", 0);
+	else
+		request["id"] = highlight.value("replay", std::string());
+	LinkToServer::getInstance()->SendRaw("RP" + request.dump());
+}
+
+bool SpectatorModeScreen::onLiveHighlights(const nlohmann::json & body)
+{
+	highlights = body.value("highlights", nlohmann::json::array());
+	highlightsAge = 0;
+	bool elsewhere = false;
+	for (const nlohmann::json & highlight : highlights)
+	{
+		if (!highlight.value("live", false))
+			continue;
+		// Les moments du combat regardé ne seront pas rejoués.
+		if (highlight.value("session", 0) == liveSession)
+			played.insert(keyOf(highlight));
+		else if (highlight.value("age", 0) < LIVE_MOMENT_MAX_AGE && played.count(keyOf(highlight)) == 0)
+			elsewhere = true;
+	}
+	return elsewhere && directorClock.getElapsedTime().asSeconds() - lastSwitch >= LIVE_SWITCH_SECONDS;
 }
 
 void SpectatorModeScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
@@ -170,23 +267,12 @@ void SpectatorModeScreen::update(float deltatime)
 	if (highlightRequest > 0)
 		highlightRequest -= deltatime;
 
-	// Mode réalisateur : dès qu'un combat est regardable, on le rejoint.
+	// Mode réalisateur : choix suivant dès l'arrivée des listes (au plus 1,5 s d'attente), puis
+	// toutes les 2 secondes tant que rien n'est regardable.
 	sinceRefresh += deltatime;
-	if (directorMode && watchPending <= 0 && sinceRefresh > 2.f && currentTab != L"Rediffusions")
-	{
-		sinceRefresh = 0;
-		int session = sessionsPanel->mostContestedSession();
-		if (session > 0)
-		{
-			sessionsPanel->setStatus(L"Mode réalisateur : connexion au combat le plus serré...", sf::Color(200, 220, 255));
-			watch(session);
-		}
-		else
-		{
-			// Aucun combat : les temps forts des derniers combats, en attendant le prochain.
-			playNextHighlight();
-		}
-	}
+	if (directorMode && watchPending <= 0 && currentTab != L"Rediffusions"
+		&& (decidePending ? (sessionsReceived && highlightsReceived) || sinceRefresh > 1.5f : sinceRefresh > 2.f))
+		direct();
 
 	LinkToServer::getInstance()->UpdateReceivedData();
 }
@@ -219,6 +305,7 @@ void SpectatorModeScreen::onMessageReceived(std::string msg)
 		nlohmann::json body;
 		if (message.parseJson(body))
 			sessionsPanel->onSessionList(body);
+		sessionsReceived = true;
 	}
 	else if (message.op == "HL")
 	{
@@ -227,8 +314,8 @@ void SpectatorModeScreen::onMessageReceived(std::string msg)
 		{
 			highlights = body.value("highlights", nlohmann::json::array());
 			highlightsAge = 0;
-			nextHighlight = 0;
 		}
+		highlightsReceived = true;
 	}
 	else if (message.op == "RL")
 	{

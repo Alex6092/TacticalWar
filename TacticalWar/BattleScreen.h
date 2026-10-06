@@ -200,6 +200,8 @@ namespace tw
 		int hoveredFighter;
 		bool closeRequested;
 		bool endShown;
+		// Réalisateur devant un combat en direct : temps forts redemandés toutes les 10 secondes.
+		float highlightPoll = 0;
 		// Vote d'abandon de l'équipe (BQ) : secondes restantes (0 : aucun), vote du joueur, dernier votant.
 		float surrenderRemaining = 0;
 		bool surrenderVoted = false;

@@ -194,6 +194,15 @@ void BattleScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
 	hud->update(deltatime);
+	if (mode == Mode::SPECTATOR && SpectatorModeScreen::watchingLive() && shown.phase != battle::BattlePhase::ENDED)
+	{
+		highlightPoll += deltatime;
+		if (highlightPoll >= 10.f)
+		{
+			highlightPoll = 0;
+			LinkToServer::getInstance()->SendRaw("HL{}");
+		}
+	}
 	if (surrenderRemaining > 0)
 	{
 		int before = (int)std::ceil(surrenderRemaining);
@@ -548,9 +557,9 @@ void BattleScreen::onMessageReceived(std::string msg)
 	}
 	else if (message.op == "RE")
 	{
-		// Fin d'un extrait (temps fort rejoué par le réalisateur) : retour à la liste.
+		// Fin d'un extrait (temps fort rejoué) : retour à la liste ; le réalisateur enchaîne aussitôt.
 		if (mode == Mode::SPECTATOR)
-			autoCloseRemaining = 2.5f;
+			autoCloseRemaining = SpectatorModeScreen::isDirectorMode() ? 0.5f : 2.5f;
 	}
 	else if (message.op == "PA")
 	{
@@ -560,6 +569,17 @@ void BattleScreen::onMessageReceived(std::string msg)
 			sf::String text = L"Nouvelle apparence débloquée : " + fromServerText(appearanceName(id)) + L" !";
 			hud->log(text, sf::Color(255, 215, 70));
 			hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
+		}
+	}
+	else if (message.op == "HL")
+	{
+		// Réalisateur en direct : un moment d'un autre combat, pas encore vu, l'emporte (une fois par minute).
+		json list;
+		if (mode == Mode::SPECTATOR && SpectatorModeScreen::watchingLive() && message.parseJson(list)
+			&& SpectatorModeScreen::onLiveHighlights(list) && shown.phase != battle::BattlePhase::ENDED && autoCloseRemaining <= 0)
+		{
+			hud->showMessage(L"Temps fort dans un autre combat !", sf::Color(255, 215, 120), 1.5f);
+			autoCloseRemaining = 1.5f;
 		}
 	}
 	else if (message.op == "BQ")

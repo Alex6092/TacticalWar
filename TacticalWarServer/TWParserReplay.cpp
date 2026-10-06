@@ -17,10 +17,22 @@
 
 namespace
 {
-	// Entre deux lots, l'attente est plafonnée (les longues réflexions ne sont pas rejouées).
+	// Entre deux lots, l'attente est plafonnée (les longues réflexions ne sont pas rejouées). Les
+	// extraits du réalisateur s'enchaînent sans temps morts.
 	const std::int64_t PLAYBACK_START_DELAY_MS = 800;
 	const std::int64_t PLAYBACK_MIN_GAP_MS = 30;
 	const std::int64_t PLAYBACK_MAX_GAP_MS = 2500;
+	const std::int64_t EXTRACT_START_DELAY_MS = 400;
+	const std::int64_t EXTRACT_MAX_GAP_MS = 800;
+	// Moments d'un combat en cours : les plus récents, au plus ce nombre par combat.
+	const std::size_t LIVE_HIGHLIGHTS = 8;
+	// Temps forts des rediffusions proposés au réalisateur.
+	const std::size_t REPLAY_HIGHLIGHTS = 24;
+
+	std::string teamOf(const nlohmann::json & teams, std::size_t index)
+	{
+		return teams.is_array() && teams.size() > index && teams[index].is_string() ? teams[index].get<std::string>() : std::string();
+	}
 
 	std::string encode(const std::string & op, const nlohmann::json & body)
 	{
@@ -69,6 +81,8 @@ void TWParser::startRecording(BattleSession * session)
 	recording.startMs = nowMs();
 	recording.snapshot = header;
 	recording.teams = header["teams"];
+	recording.mapId = session->getMapId();
+	recording.match = header.value("title", std::string());
 	if (!recording.writer->open(replays.pathOf(replays.newId(session->getId())), record, &error))
 	{
 		std::cout << "Rediffusion non enregistrée : " << error << std::endl;
@@ -100,12 +114,11 @@ void TWParser::stopRecording(BattleSession * session, const nlohmann::json & end
 	if (keep && end.is_object() && !end.empty())
 	{
 		const nlohmann::json & teams = it->second.teams;
-		std::string team1 = teams.is_array() && teams.size() > 0 && teams[0].is_string() ? teams[0].get<std::string>() : std::string();
-		std::string team2 = teams.is_array() && teams.size() > 1 && teams[1].is_string() ? teams[1].get<std::string>() : std::string();
 		nlohmann::json highlights = nlohmann::json::array();
-		for (const tw::battle::Highlight & highlight : tw::battle::detectHighlights(it->second.snapshot, it->second.batches, team1, team2))
+		for (const tw::battle::Highlight & highlight : tw::battle::detectHighlights(it->second.snapshot, it->second.batches, teamOf(teams, 0), teamOf(teams, 1)))
 			highlights.push_back(tw::battle::highlightJson(highlight));
 		finalEnd["highlights"] = highlights;
+		replayHighlightsValid = false;
 	}
 	it->second.writer->finish(finalEnd);
 	recordings.erase(it);
@@ -131,10 +144,17 @@ void TWParser::handleReplayMessage(ClientState * client, const std::string & op,
 		return;
 	}
 
-	// RP : revoir un combat.
+	// RP : revoir un combat, ou un extrait d'un combat en cours (RP{session, from, to}, léger différé).
 	ReplayPlayback playback;
 	std::string error;
-	if (!replays.load(body.value("id", std::string()), playback.replay, &error))
+	bool live = body.contains("session");
+	if (live && !(body.contains("from") && body.contains("to")))
+		error = u8"Un combat en cours se regarde en direct (SW).";
+	else if (live)
+		loadLiveRecording(body.value("session", 0), playback.replay, error);
+	else if (!replays.load(body.value("id", std::string()), playback.replay, &error) && error.empty())
+		error = u8"Rediffusion introuvable.";
+	if (!error.empty())
 	{
 		send(client, encode("ER", { { "op", op }, { "message", error } }));
 		return;
@@ -168,11 +188,12 @@ void TWParser::handleReplayMessage(ClientState * client, const std::string & op,
 				tw::battle::BattleMirror::applyEvent(state, event);
 			seq = batch.value("seq", seq);
 		}
-		std::string title = u8"Temps fort";
+		std::string prefix = live ? u8"À l'instant : " : u8"Temps fort : ";
+		std::string title = live ? u8"À l'instant" : u8"Temps fort";
 		for (const nlohmann::json & highlight : playback.replay.end.is_object() ? playback.replay.end.value("highlights", nlohmann::json::array()) : nlohmann::json::array())
 		{
 			if (highlight.value("from", (std::size_t)0) == from && highlight.value("to", (std::size_t)0) == to)
-				title = u8"Temps fort : " + highlight.value("title", std::string());
+				title = prefix + highlight.value("title", std::string());
 		}
 		snapshot = tw::battle::statejson::snapshot(state, map, seq, -1, 0);
 		// Champs ajoutés par le serveur à l'état d'origine (noms des équipes, classes interdites).
@@ -188,12 +209,13 @@ void TWParser::handleReplayMessage(ClientState * client, const std::string & op,
 		playback.extract = true;
 	}
 
-	std::int64_t due = PLAYBACK_START_DELAY_MS;
+	std::int64_t due = playback.extract ? EXTRACT_START_DELAY_MS : PLAYBACK_START_DELAY_MS;
+	std::int64_t maxGap = playback.extract ? EXTRACT_MAX_GAP_MS : PLAYBACK_MAX_GAP_MS;
 	std::int64_t previous = 0;
 	for (const auto & batch : playback.replay.batches)
 	{
 		if (!playback.due.empty())
-			due += std::max(PLAYBACK_MIN_GAP_MS, std::min(PLAYBACK_MAX_GAP_MS, batch.first - previous));
+			due += std::max(PLAYBACK_MIN_GAP_MS, std::min(maxGap, batch.first - previous));
 		playback.due.push_back(due);
 		previous = batch.first;
 	}
@@ -240,26 +262,104 @@ void TWParser::tickReplays(std::int64_t now)
 	}
 }
 
+bool TWParser::loadLiveRecording(int session, tw::store::Replay & replay, std::string & error)
+{
+	auto it = recordings.find(session);
+	if (it == recordings.end())
+	{
+		error = u8"Ce combat est terminé : ses temps forts sont dans les rediffusions.";
+		return false;
+	}
+	const ReplayRecording & recording = it->second;
+	replay.header = { { "snapshot", recording.snapshot }, { "mapId", recording.mapId } };
+	auto map = mapMessages.find(recording.mapId);
+	if (map != mapMessages.end())
+	{
+		nlohmann::json mapJson = nlohmann::json::parse(map->second.substr(2), nullptr, false);
+		if (!mapJson.is_discarded())
+			replay.header["map"] = mapJson;
+	}
+	replay.batches = recording.batches;
+	nlohmann::json highlights = nlohmann::json::array();
+	for (const tw::battle::Highlight & highlight : recording.liveHighlights)
+		highlights.push_back(tw::battle::highlightJson(highlight));
+	replay.end = { { "highlights", highlights } };
+	return true;
+}
+
 nlohmann::json TWParser::highlightListJson()
 {
-	// Les temps forts des 10 dernières rediffusions complètes, les mieux notés d'abord.
-	nlohmann::json all = nlohmann::json::array();
-	std::size_t complete = 0;
-	for (const nlohmann::json & summary : replays.list(100))
+	// Rediffusions : les temps forts des 10 dernières complètes, chacune à son tour (le meilleur de
+	// chaque combat, puis le deuxième...), pour que le réalisateur varie les combats.
+	if (!replayHighlightsValid)
 	{
-		if (!summary.value("complete", false))
-			continue;
-		if (++complete > 10)
-			break;
-		for (const nlohmann::json & highlight : summary.value("highlights", nlohmann::json::array()))
+		std::vector<std::vector<nlohmann::json>> perReplay;
+		std::size_t complete = 0;
+		for (const nlohmann::json & summary : replays.list(100))
 		{
-			all.push_back({ { "replay", summary.value("id", std::string()) }, { "match", summary.value("title", std::string()) },
-				{ "title", highlight.value("title", std::string()) }, { "kind", highlight.value("kind", std::string()) },
-				{ "score", highlight.value("score", 0) }, { "from", highlight.value("from", 0) }, { "to", highlight.value("to", 0) } });
+			if (!summary.value("complete", false))
+				continue;
+			if (++complete > 10)
+				break;
+			std::vector<nlohmann::json> items;
+			for (const nlohmann::json & highlight : summary.value("highlights", nlohmann::json::array()))
+			{
+				items.push_back({ { "replay", summary.value("id", std::string()) }, { "match", summary.value("title", std::string()) },
+					{ "title", highlight.value("title", std::string()) }, { "kind", highlight.value("kind", std::string()) },
+					{ "score", highlight.value("score", 0) }, { "from", highlight.value("from", 0) }, { "to", highlight.value("to", 0) } });
+			}
+			std::stable_sort(items.begin(), items.end(), [](const nlohmann::json & a, const nlohmann::json & b) { return a.value("score", 0) > b.value("score", 0); });
+			if (!items.empty())
+				perReplay.push_back(items);
+		}
+		replayHighlights = nlohmann::json::array();
+		for (std::size_t round = 0; replayHighlights.size() < REPLAY_HIGHLIGHTS; round++)
+		{
+			bool any = false;
+			for (const std::vector<nlohmann::json> & items : perReplay)
+			{
+				if (round < items.size() && replayHighlights.size() < REPLAY_HIGHLIGHTS)
+				{
+					replayHighlights.push_back(items[round]);
+					any = true;
+				}
+			}
+			if (!any)
+				break;
+		}
+		replayHighlightsValid = true;
+	}
+
+	// Combats en cours : moments dont la fenêtre est terminée (environ 4 s après), les plus récents
+	// d'abord, avec leur âge en secondes. Rejoués en léger différé par le réalisateur (RP{session, from, to}).
+	nlohmann::json live = nlohmann::json::array();
+	std::int64_t now = nowMs();
+	for (auto & entry : recordings)
+	{
+		ReplayRecording & recording = entry.second;
+		if (recording.batches.size() != recording.liveBatchCount)
+		{
+			recording.liveBatchCount = recording.batches.size();
+			recording.liveHighlights = tw::battle::detectHighlights(recording.snapshot, recording.batches, teamOf(recording.teams, 0),
+				teamOf(recording.teams, 1), LIVE_HIGHLIGHTS);
+		}
+		std::int64_t elapsed = now - recording.startMs;
+		for (const tw::battle::Highlight & highlight : recording.liveHighlights)
+		{
+			if (highlight.atMs + tw::battle::HIGHLIGHT_AFTER_MS > elapsed || highlight.to >= recording.batches.size())
+				continue;
+			nlohmann::json item = tw::battle::highlightJson(highlight);
+			item["session"] = entry.first;
+			item["match"] = recording.match;
+			item["live"] = true;
+			item["age"] = (elapsed - highlight.atMs) / 1000;
+			live.push_back(item);
 		}
 	}
-	std::stable_sort(all.begin(), all.end(), [](const nlohmann::json & a, const nlohmann::json & b) { return a.value("score", 0) > b.value("score", 0); });
-	if (all.size() > 12)
-		all.erase(all.begin() + 12, all.end());
+	std::stable_sort(live.begin(), live.end(), [](const nlohmann::json & a, const nlohmann::json & b) { return a.value("age", 0) < b.value("age", 0); });
+
+	nlohmann::json all = live;
+	for (const nlohmann::json & highlight : replayHighlights)
+		all.push_back(highlight);
 	return { { "highlights", all } };
 }

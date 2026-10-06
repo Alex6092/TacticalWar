@@ -91,9 +91,9 @@ namespace tw
 			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
 			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder (combat ou rediffusion)" },
 			{ "RL", Direction::BOTH, Role::SPECTATOR, "Rediffusions des combats terminés (S->C : {replays})" },
-			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE" },
-			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} : RE{}" },
-			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts des dernières rediffusions. C->S : HL{} ; S->C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord" },
+			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort, silences de 0,8 s au plus), suivi de RE. Avec {session, from, to} : extrait d'un combat en cours (léger différé)" },
+			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} ou RP{session, from, to} : RE{}" },
+			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts. C->S : HL{} ; S->C : HL{highlights:[...]} : d'abord les moments des combats en cours {session, match, title, kind, score, from, to, at, live: true, age: secondes}, les plus récents d'abord ; puis ceux des dernières rediffusions {replay, match, title, kind, score, from, to}, un combat après l'autre" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },

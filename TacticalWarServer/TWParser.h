@@ -16,6 +16,7 @@
 #include <ProfileStore.h>
 #include <Appearances.h>
 #include <Commentary.h>
+#include <Highlights.h>
 #include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -217,10 +218,16 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	{
 		std::unique_ptr<tw::store::ReplayWriter> writer;
 		std::int64_t startMs = 0;
-		// Gardés en mémoire pour les temps forts, calculés à la fin du combat.
+		// Gardés en mémoire pour les temps forts (pendant le combat, puis à la fin) et les extraits en
+		// léger différé du réalisateur.
 		nlohmann::json snapshot;
 		nlohmann::json teams;
 		std::vector<std::pair<std::int64_t, nlohmann::json>> batches;
+		int mapId = 0;
+		std::string match;
+		// Temps forts déjà détectés, pour ce nombre de lots.
+		std::size_t liveBatchCount = 0;
+		std::vector<tw::battle::Highlight> liveHighlights;
 	};
 	struct ReplayPlayback
 	{
@@ -231,6 +238,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 		bool extract = false;			// Extrait (temps fort) : RE à la fin
 	};
 	nlohmann::json highlightListJson();
+	// Temps forts des rediffusions, à tour de rôle ; recalculés quand une rediffusion se termine.
+	nlohmann::json replayHighlights;
+	bool replayHighlightsValid = false;
+	// Extrait d'un combat en cours (enregistrement en mémoire), présenté comme une rediffusion.
+	bool loadLiveRecording(int session, tw::store::Replay & replay, std::string & error);
 	tw::store::ReplayLibrary replays;
 	std::map<int, ReplayRecording> recordings;
 	std::map<tw::net::ConnId, ReplayPlayback> playbacks;

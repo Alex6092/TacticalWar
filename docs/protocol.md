@@ -84,9 +84,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `SW` | C → S | spectateur | Regarder un combat {session} (réponse : HG puis BI, puis le flux BV) |
 | `SU` | C → S | spectateur | Arrêter de regarder (combat ou rediffusion) |
 | `RL` | C ↔ S | spectateur | Rediffusions des combats terminés (S-&gt;C : {replays}) |
-| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE |
-| `RE` | S → C | spectateur | Fin de l'extrait demandé par RP{id, from, to} : RE{} |
-| `HL` | C ↔ S | spectateur | Temps forts des dernières rediffusions. C-&gt;S : HL{} ; S-&gt;C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord |
+| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort, silences de 0,8 s au plus), suivi de RE. Avec {session, from, to} : extrait d'un combat en cours (léger différé) |
+| `RE` | S → C | spectateur | Fin de l'extrait demandé par RP{id, from, to} ou RP{session, from, to} : RE{} |
+| `HL` | C ↔ S | spectateur | Temps forts. C-&gt;S : HL{} ; S-&gt;C : HL{highlights:[...]} : d'abord les moments des combats en cours {session, match, title, kind, score, from, to, at, live: true, age: secondes}, les plus récents d'abord ; puis ceux des dernières rediffusions {replay, match, title, kind, score, from, to}, un combat après l'autre |
 
 ## Création de match manuelle
 
