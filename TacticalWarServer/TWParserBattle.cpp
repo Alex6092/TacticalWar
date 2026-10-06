@@ -19,6 +19,35 @@ namespace
 	{
 		return tw::protocol::Message::encode(op, body);
 	}
+
+	// Sorts (indices dans les sorts de la classe) et talents d'un message PC ou PV.
+	std::vector<int> spellList(const nlohmann::json & body)
+	{
+		std::vector<int> spells;
+		if (body.contains("spells") && body["spells"].is_array())
+		{
+			for (const nlohmann::json & index : body["spells"])
+			{
+				if (index.is_number_integer())
+					spells.push_back(index.get<int>());
+			}
+		}
+		return spells;
+	}
+
+	std::vector<std::string> talentList(const nlohmann::json & body)
+	{
+		std::vector<std::string> talents;
+		if (body.contains("talents") && body["talents"].is_array())
+		{
+			for (const nlohmann::json & talent : body["talents"])
+			{
+				if (talent.is_string())
+					talents.push_back(talent.get<std::string>());
+			}
+		}
+		return talents;
+	}
 }
 
 std::int64_t TWParser::nowMs() const
@@ -60,10 +89,27 @@ std::string TWParser::classSelectionMessage(tw::Player * player)
 	BattleSession * session = sessionOfPlayer(player);
 	int talents = session != NULL ? session->talentSlots(player) : 0;
 	nlohmann::json body = { { "talents", talents }, { "team", session != NULL ? session->teamOf(player) : 0 } };
-	// Phase de bannissement en cours : secondes restantes.
+	// Phase de bannissement en cours : secondes restantes ; sinon, secondes restantes pour choisir.
 	if (session != NULL && session->getPhase() == BattleSession::Phase::BAN)
 		body["ban"] = std::max<std::int64_t>(1, (session->getBanDeadline() - nowMs() + 999) / 1000);
+	else if (session != NULL && session->getPhase() == BattleSession::Phase::CLASS_SELECTION)
+		body["seconds"] = std::max<std::int64_t>(0, (session->getClassSelectionDeadline() - nowMs() + 999) / 1000);
 	return encode("HC", body);
+}
+
+std::string TWParser::classChoiceMessage(BattleSession * session, tw::Player * player)
+{
+	nlohmann::json body = {
+		{ "class", session->chosenClass(player) },
+		{ "spells", session->chosenSpells(player) },
+		{ "talents", session->chosenTalents(player) },
+		{ "appearance", session->appearanceOf(player) }
+	};
+	// Choix fait par le coéquipier pendant une absence : son nom est montré.
+	tw::Player * chooser = session->chooserOf(player);
+	if (chooser != NULL && chooser != player)
+		body["by"] = displayNameOf(chooser);
+	return encode("PO", body);
 }
 
 void TWParser::handleBan(ClientState * client, tw::Player * player, const std::string & body)
@@ -97,11 +143,24 @@ void TWParser::handleViewClass(ClientState * client, tw::Player * player, const 
 	if (session == NULL || !player->getHasJoinBattle())
 		return;
 
-	// PV{"class": id} : la classe que le joueur regarde, montrée à son coéquipier.
+	// PV{"class", "spells", "talents", "appearance"} : brouillon du joueur. La classe regardée est
+	// montrée à son coéquipier ; le tout est retenu si le délai expire sans verrouillage.
+	// Avec "teammate": true, brouillon pour le coéquipier absent (ou le second personnage).
 	nlohmann::json view = nlohmann::json::parse(body, nullptr, false);
-	int classId = view.is_object() ? view.value("class", 0) : 0;
-	if (gameData.findClass(classId) != nullptr && session->setViewing(player, classId))
-		sendTeammateStates(session, player);
+	if (!view.is_object())
+		return;
+	BattleSession::Draft draft;
+	draft.classId = view.value("class", 0);
+	if (gameData.findClass(draft.classId) == nullptr)
+		return;
+	draft.spells = spellList(view);
+	draft.talents = talentList(view);
+	if (view.contains("appearance") && view["appearance"].is_string())
+		draft.appearance = tw::battle::allowedAppearance(gameData, progressOf(player->getPseudo()), view["appearance"].get<std::string>());
+	bool forTeammate = view.contains("teammate") && view["teammate"].is_boolean() && view["teammate"].get<bool>();
+	tw::Player * target = forTeammate ? absentTeammate(session, player) : player;
+	if (target != NULL && session->setDraft(target, draft))
+		sendTeammateStates(session, target);
 }
 
 nlohmann::json TWParser::teammateState(BattleSession * session, tw::Player * player)
@@ -141,9 +200,12 @@ void TWParser::sendBanState(BattleSession * session, ClientState * client, tw::P
 	int team = session->teamOf(player);
 	bool done = session->getPhase() != BattleSession::Phase::BAN;
 	nlohmann::json body = { { "banned", session->bannedBy(team) }, { "done", done } };
-	// La classe interdite par l'adversaire n'est connue qu'à la fin de la phase.
+	// La classe interdite par l'adversaire n'est connue qu'à la fin de la phase, avec le délai du choix.
 	if (done)
+	{
 		body["forbidden"] = session->forbiddenClass(team);
+		body["seconds"] = std::max<std::int64_t>(0, (session->getClassSelectionDeadline() - nowMs() + 999) / 1000);
+	}
 	send(client, encode("BB", body));
 }
 
@@ -182,22 +244,8 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 			classId = pick.value("class", 0);
 			forTeammate = pick.value("teammate", false);
 			appearance = pick.value("appearance", std::string());
-			if (pick.contains("spells") && pick["spells"].is_array())
-			{
-				for (const nlohmann::json & index : pick["spells"])
-				{
-					if (index.is_number_integer())
-						spells.push_back(index.get<int>());
-				}
-			}
-			if (pick.contains("talents") && pick["talents"].is_array())
-			{
-				for (const nlohmann::json & talent : pick["talents"])
-				{
-					if (talent.is_string())
-						talents.push_back(talent.get<std::string>());
-				}
-			}
+			spells = spellList(pick);
+			talents = talentList(pick);
 		}
 	}
 	else
@@ -207,15 +255,22 @@ void TWParser::handlePickClass(ClientState * client, tw::Player * player, const 
 
 	// PC{..., "teammate": true} : choix pour le coéquipier absent (refusé s'il est là).
 	tw::Player * target = forTeammate ? absentTeammate(session, player) : player;
+	// Refus (délai écoulé, classe interdite ou déjà verrouillée...) : le joueur en est averti.
+	std::string refusal = target == NULL ? std::string("Votre coéquipier est là : il choisit lui-même.") : session->choiceRefusal(target, classId);
+	if (!refusal.empty())
+	{
+		send(client, encode("ER", { { "op", "PC" }, { "message", refusal } }));
+		return;
+	}
 	// Apparence : une de celles que le joueur qui choisit a débloquées (sinon classique).
 	appearance = tw::battle::allowedAppearance(gameData, progressOf(player->getPseudo()), appearance);
-	if (target != NULL && session->chooseClass(target, classId, spells, talents))
+	if (session->chooseClass(target, classId, spells, talents, player))
 	{
 		session->setAppearance(target, appearance);
 		if (target == player && !appearance.empty())
 			profiles.setAppearance(player->getPseudo(), appearance);
 		if (target == player)
-			send(client, "PO" + std::to_string(classId) + "\n");
+			send(client, classChoiceMessage(session, player));
 		sendTeammateStates(session, target);
 		if (session->allClassesChosen())
 			startBattle(session);
@@ -675,8 +730,8 @@ void TWParser::tickBattles()
 			if (now < session->getClassSelectionDeadline())
 				continue;
 
-			// Délai écoulé : les classes manquantes sont tirées au hasard, à condition
-			// qu'au moins un joueur de chaque équipe soit présent.
+			// Délai écoulé : le combat commence (classes affichées retenues, sinon au hasard), à
+			// condition qu'au moins un joueur de chaque équipe soit présent.
 			bool present[2] = { false, false };
 			for (tw::Player * player : session->getParticipants())
 			{
@@ -686,6 +741,10 @@ void TWParser::tickBattles()
 
 			if (present[0] && present[1])
 			{
+				// Joueurs non verrouillés : la classe affichée sur leur écran (et leurs sorts) est retenue.
+				int drafted = session->lockViewedClasses();
+				if (drafted > 0)
+					std::cout << "Combat " << session->getId() << " : " << drafted << " classe(s) affichee(s) retenue(s) a l'expiration du delai." << std::endl;
 				startBattle(session);
 			}
 			else if (present[0] || present[1])

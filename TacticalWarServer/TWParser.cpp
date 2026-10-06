@@ -280,7 +280,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 									if (session != NULL)
 										sendBanState(session, client, p);
 									if (session != NULL && session->chosenClass(p) != 0)
-										send(client, "PO" + std::to_string(session->chosenClass(p)) + "\n");
+										send(client, classChoiceMessage(session, p));
 								}
 
 								notifyMatchConnectedPlayerChanged(match);

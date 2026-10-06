@@ -157,9 +157,10 @@ void Bot::pickClass(int forbiddenClass, bool forTeammate)
 		log(std::string(forTeammate ? "Choix pour le coequipier : classe " : "Choix de la classe ") + std::to_string(classId));
 }
 
-void Bot::pickForAbsentMate()
+void Bot::pickForAbsentMate(std::int64_t now)
 {
-	if (ownPicked && mateAbsent && !mateLocked && !matePickSent)
+	const std::int64_t MATE_WAIT_MS = 10 * 1000;
+	if (ownPicked && mateAbsent && !mateLocked && !matePickSent && (mateStandIn || now - mateAbsentSince >= MATE_WAIT_MS))
 	{
 		matePickSent = true;
 		pickClass(forbidden, true);
@@ -213,7 +214,7 @@ void Bot::onLine(const std::string & line)
 			selection = nlohmann::json::object();
 		talentSlots = selection.value("talents", 0);
 		forbidden = 0;
-		ownPicked = mateAbsent = mateLocked = matePickSent = false;
+		ownPicked = mateAbsent = mateLocked = matePickSent = mateStandIn = false;
 		if (selection.value("ban", 0) > 0 && !data.classes.empty())
 		{
 			// Bannissement d'abord : une classe au hasard ; le choix de classe suit le message BB.
@@ -226,7 +227,7 @@ void Bot::onLine(const std::string & line)
 		{
 			pickClass(0);
 			ownPicked = true;
-			pickForAbsentMate();
+			pickForAbsentMate(nowMs());
 		}
 	}
 	else if (op == "PT")
@@ -234,9 +235,13 @@ void Bot::onLine(const std::string & line)
 		nlohmann::json mate = nlohmann::json::parse(message.payload, nullptr, false);
 		if (mate.is_object())
 		{
-			mateAbsent = !mate.value("present", true);
+			bool absent = !mate.value("present", true);
+			if (absent && !mateAbsent)
+				mateAbsentSince = nowMs();
+			mateAbsent = absent;
+			mateStandIn = mate.value("standIn", false);
 			mateLocked = mate.value("locked", false);
-			pickForAbsentMate();
+			pickForAbsentMate(nowMs());
 		}
 	}
 	else if (op == "BB")
@@ -247,7 +252,7 @@ void Bot::onLine(const std::string & line)
 			forbidden = ban.value("forbidden", 0);
 			pickClass(forbidden);
 			ownPicked = true;
-			pickForAbsentMate();
+			pickForAbsentMate(nowMs());
 		}
 	}
 	else if (op == "HG")
@@ -319,6 +324,8 @@ void Bot::onBattleEvent(const json & event)
 
 void Bot::act(std::int64_t now)
 {
+	pickForAbsentMate(now);
+
 	if (!inBattle || you < 0 || awaiting || now < nextActionAt)
 		return;
 

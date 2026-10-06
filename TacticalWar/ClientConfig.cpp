@@ -241,6 +241,18 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		{
 			classScreenSolo = true;
 		}
+		else if (arg == "--class-screen-solo-done")
+		{
+			classScreenSolo = classScreenSoloDone = true;
+		}
+		else if (arg == "--class-screen-seconds" && hasValue)
+		{
+			classScreenSeconds = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-chosen-by")
+		{
+			classScreenChosenBy = true;
+		}
 		else if (arg == "--class-screen-alone" && hasValue)
 		{
 			classScreenAlone = std::atoi(argv[++i]);

@@ -183,6 +183,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void finishBanPhase(BattleSession * session);
 	// Passage au choix de classe : HC{"talents": nombre de talents de tournoi à choisir}.
 	std::string classSelectionMessage(tw::Player * player);
+	// PO : classe verrouillée du joueur, avec ses sorts, talents, apparence et qui l'a choisie.
+	std::string classChoiceMessage(BattleSession * session, tw::Player * player);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
 	// Signal d'un joueur à ses coéquipiers (CG -> BG), limité en cadence.
 	void handlePing(ClientState * client, const nlohmann::json & body);

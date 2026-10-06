@@ -546,8 +546,8 @@ l'écran d'attente (panneau « Défier une équipe », actualisé toutes les 5 s
 ## Mise à jour des clients
 
 À la connexion, le client envoie la version du protocole. Un client d'une autre version que le
-serveur est refusé avec un message clair (« Ce jeu (version 6) ne correspond pas au serveur
-(version 7) ») et l'adresse de la page de téléchargement, avec un bouton **Ouvrir la page**.
+serveur est refusé avec un message clair (« Ce jeu (version 7) ne correspond pas au serveur
+(version 8) ») et l'adresse de la page de téléchargement, avec un bouton **Ouvrir la page**.
 
 La page `http://<serveur>:8080/telecharger.html` (lien « Télécharger le jeu » de la vue projetée)
 donne la version et le zip du client, avec les étapes : télécharger, dézipper, lancer. Le zip est

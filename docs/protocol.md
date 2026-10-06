@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **7**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **8**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -32,7 +32,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 |---|---|---|---|
 | `HG` | C ↔ S | tous | C-&gt;S : login;password;v&lt;version du protocole&gt; (identifiants vides = spectateur ; sans version : ancien client, accepté). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
 | `HV` | S → C | tous | Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client} |
-| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), seconds: secondes restantes pour choisir (pendant le choix des classes), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -105,9 +105,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
-| `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
-| `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut). Refus : ER{op: PC, message} |
+| `PO` | S → C | joueur | Classe verrouillée : PO{class, spells, talents, appearance, by: nom du coéquipier qui a choisi pendant une absence (absent : le joueur lui-même)} |
+| `PV` | C → S | joueur | Brouillon de l'écran de choix : PV{class, spells, talents, appearance, teammate: true pour le coéquipier absent}. La classe est montrée au coéquipier ; le tout est retenu si le délai expire sans verrouillage |
 | `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
 | `DL` | C ↔ S | joueur | Équipes à défier (match amical hors tournoi). C-&gt;S : DL{} ; S-&gt;C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible} |
@@ -117,7 +117,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `DR` | S → C | joueur | Résultat d'un défi : DR{ok, message, from, to} |
 | `PZ` | C → S | joueur | Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]} |
 | `PA` | S → C | joueur | Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}} |
-| `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
+| `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin), seconds: secondes restantes pour choisir (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |
 | `MP` | S → C | tous | Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG |

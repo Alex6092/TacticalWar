@@ -89,31 +89,86 @@ void BattleSession::endBanPhase(std::int64_t deadline)
 	classSelectionDeadline = deadline;
 }
 
-bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells, const std::vector<std::string> & talents)
+std::string BattleSession::choiceRefusal(tw::Player * player, int classId) const
 {
-	const tw::battle::ClassDef * classDef = data.findClass(classId);
-	if (phase != Phase::CLASS_SELECTION || fighterIdOf(player) < 0 || classes.count(player) > 0 || classDef == nullptr
-		|| classId == forbiddenClass(teamOf(player)))
+	if (phase == Phase::BAN)
+		return "Le bannissement n'est pas terminé.";
+	if (phase != Phase::CLASS_SELECTION)
+		return "Délai écoulé : la classe affichée a été retenue.";
+	if (fighterIdOf(player) < 0)
+		return "Ce combat n'est pas le vôtre.";
+	if (classes.count(player) > 0)
+		return "Classe déjà verrouillée.";
+	if (data.findClass(classId) == nullptr)
+		return "Classe inconnue.";
+	if (classId == forbiddenClass(teamOf(player)))
+		return "Classe interdite par l'adversaire.";
+	return std::string();
+}
+
+bool BattleSession::chooseClass(tw::Player * player, int classId, const std::vector<int> & spells, const std::vector<std::string> & talents,
+	tw::Player * chooser)
+{
+	if (!choiceRefusal(player, classId).empty())
 		return false;
 
+	const tw::battle::ClassDef * classDef = data.findClass(classId);
 	classes[player] = classId;
 	spellChoices[player] = tw::battle::validSpellChoice(*classDef, spells);
 	talentChoices[player] = tw::battle::validTalentChoice(data, talents, talentSlots(player));
+	choosers[player] = chooser != NULL ? chooser : player;
 	return true;
 }
 
-bool BattleSession::setViewing(tw::Player * player, int classId)
+bool BattleSession::setDraft(tw::Player * player, const Draft & draft)
 {
-	if ((phase != Phase::BAN && phase != Phase::CLASS_SELECTION) || fighterIdOf(player) < 0 || viewing[player] == classId)
+	if ((phase != Phase::BAN && phase != Phase::CLASS_SELECTION) || fighterIdOf(player) < 0 || classes.count(player) > 0)
 		return false;
-	viewing[player] = classId;
-	return true;
+	bool changed = viewingClass(player) != draft.classId;
+	drafts[player] = draft;
+	return changed;
 }
 
 int BattleSession::viewingClass(tw::Player * player) const
 {
-	auto it = viewing.find(player);
-	return it == viewing.end() ? 0 : it->second;
+	auto it = drafts.find(player);
+	return it == drafts.end() ? 0 : it->second.classId;
+}
+
+int BattleSession::lockViewedClasses()
+{
+	int locked = 0;
+	for (tw::Player * player : participants)
+	{
+		auto draft = drafts.find(player);
+		if (draft == drafts.end() || classes.count(player) > 0)
+			continue;
+		if (chooseClass(player, draft->second.classId, draft->second.spells, draft->second.talents))
+		{
+			if (!draft->second.appearance.empty())
+				appearances[player] = draft->second.appearance;
+			locked++;
+		}
+	}
+	return locked;
+}
+
+std::vector<int> BattleSession::chosenSpells(tw::Player * player) const
+{
+	auto it = spellChoices.find(player);
+	return it == spellChoices.end() ? std::vector<int>() : it->second;
+}
+
+std::vector<std::string> BattleSession::chosenTalents(tw::Player * player) const
+{
+	auto it = talentChoices.find(player);
+	return it == talentChoices.end() ? std::vector<std::string>() : it->second;
+}
+
+tw::Player * BattleSession::chooserOf(tw::Player * player) const
+{
+	auto it = choosers.find(player);
+	return it == choosers.end() ? NULL : it->second;
 }
 
 int BattleSession::chosenClass(tw::Player * player) const
@@ -138,7 +193,7 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 	for (int i = 0; i < (int)participants.size(); i++)
 	{
 		tw::Player * player = participants[i];
-		// Classe (et sorts) non choisis à temps : classe au hasard, sorts par défaut.
+		// Ni classe choisie ni classe regardée (joueur jamais connecté) : classe au hasard, sorts par défaut.
 		int team = teamOf(player);
 		int classId = chosenClass(player);
 		std::vector<int> spells;

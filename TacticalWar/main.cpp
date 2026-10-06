@@ -32,13 +32,21 @@ int main(int argc, char** argv)
 	else if (config.classScreenTalents >= 0)
 	{
 		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan)
-			+ ", \"team\": " + std::to_string(config.classScreenTeam) + "}";
+			+ ", \"team\": " + std::to_string(config.classScreenTeam)
+			+ (config.classScreenSeconds >= 0 ? ", \"seconds\": " + std::to_string(config.classScreenSeconds) : std::string()) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
 		if (config.classScreenSolo)
 		{
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false}");
 			screen->onMessageReceived("PO4");
+			if (config.classScreenSoloDone)
+				screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 2, \"viewing\": 2, \"locked\": true, \"present\": false}");
+		}
+		if (config.classScreenChosenBy)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 4, \"viewing\": 4, \"locked\": true, \"present\": true}");
+			screen->onMessageReceived("PO{\"class\": 2, \"spells\": [3, 4, 5, 6], \"talents\": [], \"appearance\": \"braise\", \"by\": \"Camille\"}");
 		}
 		if (config.classScreenAlone > 0)
 		{

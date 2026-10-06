@@ -91,8 +91,14 @@ public:
 	int classScreenMate = 0;
 	// Équipe du joueur sur l'écran de classe de démonstration (couleur des apparences).
 	int classScreenTeam = 1;
-	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
+	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape ;
+	// avec --class-screen-solo-done, le choix pour le coéquipier est fait (retour à sa propre classe).
 	bool classScreenSolo = false;
+	bool classScreenSoloDone = false;
+	// Secondes restantes pour choisir (--class-screen-seconds S, -1 : inconnues) et choix fait par le
+	// coéquipier pendant une absence (--class-screen-chosen-by).
+	int classScreenSeconds = -1;
+	bool classScreenChosenBy = false;
 	// Joueur seul dans son équipe simulé (--class-screen-alone 1 : son choix, 2 : le second personnage).
 	int classScreenAlone = 0;
 	// Onglet ouvert à la connexion admin (--admin-tab N : 0 Matchs, 1 Équipes, 2 Tournoi, 3 Combats),

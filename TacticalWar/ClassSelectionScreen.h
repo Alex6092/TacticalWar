@@ -22,12 +22,16 @@ class PictureCharacterView;
 // Certains matchs de tournoi commencent par un bannissement : le même écran sert à choisir la classe
 // interdite à l'adversaire (bandeau au-dessus du bouton, qui devient « Bannir cette classe »).
 // Coéquipier absent : après son propre choix, le joueur choisit aussi le personnage de son coéquipier,
-// qu'il jouera pendant le combat (seconde étape, PC{..., "teammate": true}).
+// qu'il jouera pendant le combat (seconde étape, PC{..., "teammate": true}), puis l'écran revient à
+// sa propre classe.
+// Brouillon : la classe affichée, les sorts, les talents et l'apparence en cours sont envoyés au
+// serveur à chaque changement (PV) ; sans verrouillage, ils sont retenus à la fin du délai, dont le
+// compte à rebours est affiché à côté du bouton.
 class ClassSelectionScreen : public tw::Screen, ServerMessageListener
 {
 public:
 	// selection : contenu du message HC du serveur ({"talents": nombre de talents à choisir,
-	// "ban": secondes de bannissement restantes}).
+	// "ban": secondes de bannissement restantes, "seconds": secondes restantes pour choisir}).
 	ClassSelectionScreen(tgui::Gui * gui, const std::string & selection = std::string());
 	~ClassSelectionScreen();
 
@@ -42,9 +46,15 @@ private:
 	void showClass(int index);
 	void layout(const sf::Vector2u & size);
 	void refreshLock();
+	void setLockText(const sf::String & text);
 	void refreshBan();
 	void refreshMate();
 	void updateMatePick();
+	// Fin du choix pour le coéquipier : retour à sa propre classe, ses sorts, talents et apparence.
+	void showOwnChoice();
+	// Envoie le brouillon (PV) s'il a changé.
+	void sendDraft();
+	void refreshTimer();
 	sf::String classLabel(int classId) const;
 	int currentClassId() const;
 
@@ -77,6 +87,11 @@ private:
 	tgui::Panel::Ptr descriptionPanel;
 	tgui::Label::Ptr descriptionLabel;
 	tgui::Label::Ptr banLabel;
+	// Compte à rebours du choix, ou message d'un refus du serveur (ER) pendant quelques secondes.
+	tgui::Label::Ptr timerLabel;
+	float selectionRemaining = -1;	// Négatif : inconnu
+	sf::String notice;
+	float noticeTime = 0;
 	tgui::Panel::Ptr matePanel;
 	tgui::Label::Ptr mateTitle;
 	tgui::Label::Ptr mateStatus;
@@ -112,9 +127,15 @@ private:
 	// Le « coéquipier » est le second personnage d'un joueur seul dans son équipe.
 	bool mateStandIn = false;
 	std::string mateAppearance;
-	// Classe verrouillée par le joueur (PO), rappelée pendant le choix pour le second personnage.
+	// Choix verrouillé du joueur (PO), rappelé pendant le choix pour le second personnage, et nom du
+	// coéquipier qui l'a fait pendant son absence (vide : lui-même).
 	int myClass = 0;
-	int viewSent = -1;
+	std::vector<int> mySpells;
+	std::vector<std::string> myTalents;
+	std::string myAppearance;
+	sf::String chosenBy;
+	// Dernier brouillon envoyé (PV).
+	std::string draftSent;
 	// Seconde étape : choix pour le coéquipier absent (envoyé, puis verrouillé).
 	bool forMate = false;
 	bool mateSent = false;
