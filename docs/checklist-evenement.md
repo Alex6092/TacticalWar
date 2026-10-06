@@ -33,7 +33,8 @@
 2. Lancer un bot par joueur : `TacticalWarBot.exe --login <login> --password <mdp> --server <IP> --delay 800`.
 3. Suivre l'avancée sur `http://<IP>:8080/` (onglet « Combats » : mosaïque des combats en cours ;
    panneau « Commentaire ») et avec un client en mode réalisateur.
-4. Une fois des combats terminés, sans combat en cours, le réalisateur rejoue leurs temps forts.
+4. Le réalisateur rejoue les moments des combats en cours quelques secondes après, puis, une fois des
+   combats terminés, leurs temps forts, un combat après l'autre.
 
 ## Le jour J
 
@@ -41,12 +42,14 @@
 2. Sur chaque PC joueur, lancer `TacticalWar.exe` et se connecter avec la fiche de l'équipe
    (l'adresse du serveur se règle sur l'écran de connexion).
 3. **Écran projeté** :
-   - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?rotate=20` (plein écran : F11).
-     La page montre aussi les derniers combats avec leur MVP, et un onglet « Meilleurs joueurs ».
-     À la fin du tournoi, elle passe sur la « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
-   - combats en direct : `Spectateur-realisateur.bat` (suit le combat le plus serré). Entre deux combats,
-     il rejoue automatiquement les **temps forts** des derniers combats (KO, double KO, combinaisons,
-     retournements…) et repasse en direct dès qu'un combat commence ;
+   - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?carousel=1` (plein
+     écran : F11). Les deux zones font défiler leurs onglets (combats, poules ou arbre, meilleurs joueurs
+     à gauche ; en direct, commentaire, derniers combats, à venir, classement à droite) ; le bouton
+     « Défilement » de chaque zone l'arrête ou le relance. À la fin du tournoi, la page reste sur la
+     « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
+   - combats en direct : `Spectateur-realisateur.bat`. Il enchaîne les **moments forts des combats en
+     cours** en léger différé (quelques secondes après), le combat le plus serré en direct, et les temps
+     forts des derniers combats, en variant les combats ;
    - la page projetée montre aussi la **mosaïque** de tous les combats en cours (onglet « Combats ») et
      le **commentaire** automatique ;
    - rediffusions complètes : chaque combat est enregistré (`data\replays\`) et peut être revu depuis
@@ -60,7 +63,12 @@
    Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
    Réglage « Bonus sur la carte » : des orbes (soin, énergie, protection) apparaissent au centre à partir
    du tour 3 ; désactivé par défaut.
-   Onglet **Matchs** : matchs amicaux hors tournoi (équipes, carte), à regarder ou annuler.
+   Réglage « Rétrécissement au tour » : à partir de ce tour, un anneau de cases se ferme au bord à chaque
+   tour (12 par défaut, 0 : jamais). Les tours durent 25 s.
+   **Démarrer le tournoi annule les matchs amicaux** prévus ou en cours (les joueurs sont prévenus) et
+   lance aussitôt les premiers matchs.
+   Onglet **Matchs** : matchs amicaux hors tournoi (équipes, carte), à regarder ou annuler. Leur
+   rétrécissement se règle par `"shrinkRound"` dans `server.json`.
 5. Accueil et attente (facultatif) : un PC en entraînement libre pour les équipes qui attendent leur
    match (niveau Difficile pour les plus aguerris), ou en démonstration (`TacticalWar.exe
    --training-autoplay`, combats entre ordinateurs).
@@ -75,6 +83,8 @@
 | Le serveur s'est arrêté | Le relancer : le tournoi reprend, les matchs en cours sont rejoués. |
 | Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
 | Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
+| Un combat dure trop | Onglet Combats, « Rétrécir la carte » (ou « Rétrécir » dans l'onglet Tournoi) : un anneau de cases se ferme tout de suite, puis un à chaque tour. |
+| Une équipe veut arrêter | Bouton « Abandonner » de ses joueurs (le coéquipier connecté confirme) : défaite par abandon. |
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`, ou décocher « Sons et musique » dans Options. |
 | Un joueur distingue mal les couleurs | Options : mode daltonien (couleurs, hachures, symboles d'équipe). Texte trop petit : taille du texte 115 ou 130 %. |
 | « Ce jeu ne correspond pas au serveur » | Le client n'a pas la bonne version : bouton « Ouvrir la page de téléchargement », dézipper le nouveau client, le lancer. |

@@ -71,7 +71,7 @@ void HelpPanel::rebuild()
 		L"- Molette : zoom. Clic droit maintenu : déplacer la vue. F : suivre le personnage actif. C : recentrer.\n"
 		L"- Passer le tour : quand il n'y a plus rien à faire.\n"
 		L"- H : afficher ou fermer cette aide. Options : sons, mode daltonien (motifs, symboles), "
-		L"taille du texte, alerte des 5 dernières secondes du tour.", ui::text(15), white);
+		L"taille du texte, alerte des 5 dernières secondes du tour, voir à travers le décor.", ui::text(15), white);
 	commands->setPosition(20, 52);
 	panel->add(commands);
 
@@ -91,6 +91,9 @@ void HelpPanel::rebuild()
 		L"- Murs (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre mur "
 		L"pour passer. Survol : PV et tours restants.\n"
 		L"- Orbes (si activés) : au centre ; passez dessus pour un soin, un PA ou un bouclier.\n"
+		L"- Carte qui rétrécit : à partir du tour réglé, les cases du bord se ferment à chaque tour ; "
+		L"ceux qui s'y trouvent glissent vers le centre, sans dégâts.\n"
+		L"- Abandonner (en bas à droite) : votre coéquipier connecté doit confirmer dans les 30 s.\n"
 		L"- Un tour dure " + std::to_wstring(gameRules.turnSeconds) + L" s, puis la réserve de temps ("
 		+ std::to_wstring(gameRules.timeBankSeconds) + L" s pour tout le combat) s'entame.", ui::text(15), white);
 	rules->setPosition(40 + COLUMN, 52);
