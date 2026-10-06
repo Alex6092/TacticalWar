@@ -14,6 +14,8 @@ public:
 
 	// Appelé avec l'identifiant de la session à regarder.
 	std::function<void(int)> onWatch;
+	// Administration : faire rétrécir la carte du combat choisi (bouton affiché si défini).
+	std::function<void(int)> onShrink;
 
 	void setVisible(bool visible);
 	void layout(const sf::Vector2u & windowSize, float top);
@@ -36,6 +38,7 @@ private:
 	tgui::ListView::Ptr list;
 	tgui::Button::Ptr watchButton;
 	tgui::Button::Ptr refreshButton;
+	tgui::Button::Ptr shrinkButton;
 	tgui::Label::Ptr status;
 
 	nlohmann::json sessions;

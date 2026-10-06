@@ -125,6 +125,11 @@ nlohmann::json TWParser::publicStateJson()
 			for (const tw::battle::Orb & orb : state.orbs)
 				orbs.push_back({ { "x", orb.cell.x }, { "y", orb.cell.y }, { "kind", orb.kind } });
 			battle["orbs"] = orbs;
+			// Carte qui rétrécit : cases fermées.
+			nlohmann::json closed = nlohmann::json::array();
+			for (const tw::battle::Cell & cell : state.closedCells())
+				closed.push_back(nlohmann::json::array({ cell.x, cell.y }));
+			battle["closed"] = closed;
 
 			nlohmann::json fighters = nlohmann::json::array();
 			for (const tw::battle::Fighter & fighter : state.fighters)

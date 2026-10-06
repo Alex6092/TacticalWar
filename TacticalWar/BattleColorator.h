@@ -31,6 +31,8 @@ public:
 	void setGlyphs(const std::vector<tw::battle::Glyph> & glyphs, int viewerTeam);
 	// Zone à tenir : voile doré sous tout le reste.
 	void setZone(const std::vector<tw::battle::Cell> & cells);
+	// Carte qui rétrécit : cases fermées, assombries (hachurées en mode daltonien).
+	void setClosed(const std::vector<tw::battle::Cell> & cells);
 
 	bool isReachable(const tw::battle::Cell & cell) const { return reachable.count(cell) > 0; }
 	bool isInRange(const tw::battle::Cell & cell) const { return range.count(cell) > 0; }
@@ -52,4 +54,5 @@ private:
 	std::set<tw::battle::Cell> impact;
 	std::map<tw::battle::Cell, sf::Color> glyphColors;
 	std::set<tw::battle::Cell> zone;
+	std::set<tw::battle::Cell> closed;
 };

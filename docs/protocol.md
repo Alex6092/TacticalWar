@@ -74,6 +74,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `UF` | C → S | admin | Imposer un vainqueur {id, match, winner, cascade} |
 | `US` | C → S | admin | Arrêter un combat en cours (décision aux PV) {id, match} |
 | `UX` | C → S | admin | Rejouer un match en cours {id, match} |
+| `SK` | C ↔ S | admin | Faire rétrécir la carte d'un combat en cours (un anneau tout de suite, puis un par tour). C-&gt;S : SK{session} ; S-&gt;C : SK{ok, message} |
 | `UA` | S → C | admin | Résultat d'une opération sur un tournoi {ok, message, id} |
 
 ## Mode spectateur (contenu JSON)

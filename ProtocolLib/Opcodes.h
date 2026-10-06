@@ -84,6 +84,7 @@ namespace tw
 			{ "UF", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Imposer un vainqueur {id, match, winner, cascade}" },
 			{ "US", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Arrêter un combat en cours (décision aux PV) {id, match}" },
 			{ "UX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Rejouer un match en cours {id, match}" },
+			{ "SK", Direction::BOTH, Role::ADMIN, "Faire rétrécir la carte d'un combat en cours (un anneau tout de suite, puis un par tour). C->S : SK{session} ; S->C : SK{ok, message}" },
 			{ "UA", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur un tournoi {ok, message, id}" },
 
 			// Mode spectateur (contenu JSON)

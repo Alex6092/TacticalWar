@@ -177,6 +177,8 @@ namespace tw
 			MapPool maps = MapPool::CLASSIC;
 			// Bonus sur la carte : des orbes (soin, énergie, protection) apparaissent au centre.
 			bool mapBonuses = false;
+			// Carte qui rétrécit : un anneau de cases se ferme à chaque tour à partir de ce tour (0 : jamais).
+			int shrinkRound = 12;
 		};
 
 		struct Stage

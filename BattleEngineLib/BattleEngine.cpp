@@ -4,6 +4,7 @@
 #include "Emotes.h"
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 
 using namespace tw::battle;
@@ -63,6 +64,118 @@ void BattleEngine::enableZone(int pointsToWin)
 	state.zone.enabled = true;
 	state.zone.cells = objectiveZone(map);
 	state.zone.pointsToWin = std::max(1, pointsToWin);
+}
+
+void BattleEngine::enableShrink(int round)
+{
+	state.shrink.startRound = std::max(0, round);
+}
+
+bool BattleEngine::shrinkNow(std::int64_t nowMs)
+{
+	return closeRing();
+}
+
+bool BattleEngine::closeRing()
+{
+	if (state.phase != BattlePhase::FIGHT)
+		return false;
+	if (!shrinkKeepReady)
+	{
+		shrinkKeep = objectiveZone(map);
+		shrinkKeepReady = true;
+	}
+	auto kept = [this](const Cell & cell) { return std::find(shrinkKeep.begin(), shrinkKeep.end(), cell) != shrinkKeep.end(); };
+	int width = std::min(64, map.getWidth());
+	int height = map.getHeight();
+
+	// Cases encore ouvertes autour de la zone centrale : il en reste toujours MIN_OPEN_CELLS.
+	int open = 0;
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			Cell cell = { x, y };
+			if (map.isWalkable(cell) && !state.isClosed(cell) && !kept(cell))
+				open++;
+		}
+	}
+
+	// Anneau "ring" : cases à "ring" cases du bord ; un anneau sans case à fermer est sauté.
+	for (int ring = state.shrink.ring; ring <= (std::min(width, height) - 1) / 2; ring++)
+	{
+		std::vector<Cell> cells;
+		for (int y = 0; y < height; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				Cell cell = { x, y };
+				if (std::min(std::min(x, y), std::min(width - 1 - x, height - 1 - y)) == ring && map.isWalkable(cell) && !state.isClosed(cell) && !kept(cell))
+					cells.push_back(cell);
+			}
+		}
+		if (cells.empty())
+			continue;
+		if (open - (int)cells.size() < MIN_OPEN_CELLS)
+			return false;
+
+		json list = json::array();
+		for (const Cell & cell : cells)
+		{
+			state.close(cell);
+			list.push_back(json::array({ cell.x, cell.y }));
+		}
+		state.shrink.ring = ring + 1;
+		state.shrink.active = true;
+		emit({ { "t", "shrink" }, { "ring", ring }, { "cells", list } });
+
+		// Murs, orbes et glyphes de l'anneau disparaissent.
+		removeBlocks([this](const Block & block) { return state.isClosed(block.cell); }, "shrink");
+		for (auto it = state.orbs.begin(); it != state.orbs.end();)
+		{
+			if (state.isClosed(it->cell))
+			{
+				emit({ { "t", "orb-" }, { "uid", it->uid }, { "kind", it->kind }, { "x", it->cell.x }, { "y", it->cell.y }, { "reason", "shrink" } });
+				it = state.orbs.erase(it);
+			}
+			else
+				++it;
+		}
+		state.dropClosedGlyphCells();
+
+		// Les combattants de l'anneau glissent sur la case libre la plus proche, côté centre.
+		for (Fighter & fighter : state.fighters)
+		{
+			if (!fighter.alive || !state.isClosed(fighter.position))
+				continue;
+			Cell best = fighter.position;
+			int bestDistance = INT_MAX;
+			int bestCenter = INT_MAX;
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					Cell cell = { x, y };
+					if (!cellWalkable(state, map, cell) || state.fighterAt(cell) != nullptr)
+						continue;
+					int distance = manhattan(fighter.position, cell);
+					int center = INT_MAX;
+					for (const Cell & zone : shrinkKeep)
+						center = std::min(center, manhattan(cell, zone));
+					if (distance < bestDistance || (distance == bestDistance && center < bestCenter))
+					{
+						best = cell;
+						bestDistance = distance;
+						bestCenter = center;
+					}
+				}
+			}
+			if (bestDistance != INT_MAX)
+				moveFighterTo(fighter, best, "shrink");
+		}
+		return true;
+	}
+	return false;
 }
 
 void BattleEngine::enableMapBonuses()
@@ -353,6 +466,10 @@ void BattleEngine::finishTurn(std::int64_t nowMs)
 		scoreZone();
 		if (state.phase == BattlePhase::ENDED)
 			return;
+		// Carte qui rétrécit : un anneau par tour complet, une fois le tour réglé atteint (ou après un
+		// déclenchement par l'admin).
+		if (state.shrink.active || (state.shrink.startRound > 0 && state.round >= state.shrink.startRound))
+			closeRing();
 		spawnOrbs();
 	}
 

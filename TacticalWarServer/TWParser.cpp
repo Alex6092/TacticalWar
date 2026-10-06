@@ -156,6 +156,17 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		return;
 	}
 
+	// Rétrécissement de la carte d'un combat (admin) :
+	if (op == "SK")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleShrink(client, body);
+		return;
+	}
+
 	// Matchs amicaux de l'admin (contenu JSON) :
 	if (op == "FL" || op == "FC" || op == "FX")
 	{

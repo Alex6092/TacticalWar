@@ -64,6 +64,7 @@ void TWParser::createSession(tw::Match * match)
 	// Matchs amicaux : mode de server.json (un match de tournoi prend ensuite le réglage du tournoi).
 	session->setZonePoints(config.battleMode == "ZONE" ? config.zonePoints : 0);
 	session->setMapBonuses(config.mapBonuses);
+	session->setShrinkRound(config.shrinkRound);
 	sessions[session->getId()] = session;
 	match->setBattlePayload(session);
 }
@@ -527,6 +528,27 @@ void TWParser::clearSurrenderVotes(BattleSession * session, int team, bool expir
 	session->surrenderVotes[team].clear();
 	session->surrenderSince[team] = 0;
 	sendSurrenderVote(session, team, NULL, expired);
+}
+
+void TWParser::handleShrink(ClientState * client, const nlohmann::json & body)
+{
+	// SK{session} (admin) : la carte d'un combat qui dure trop rétrécit tout de suite, puis à chaque tour.
+	auto found = sessions.find(body.value("session", 0));
+	BattleSession * session = found != sessions.end() ? found->second : NULL;
+	std::string error;
+	if (session == NULL || session->getPhase() != BattleSession::Phase::BATTLE
+		|| session->getEngine()->getState().phase != tw::battle::BattlePhase::FIGHT)
+		error = u8"Ce combat n'est pas en cours (placement terminé).";
+	else if (!session->getEngine()->shrinkNow(nowMs()))
+		error = u8"La carte ne peut plus rétrécir (zone centrale atteinte).";
+	if (error.empty())
+	{
+		std::cout << "Combat " << session->getId() << " : rétrécissement déclenché par l'admin." << std::endl;
+		broadcastBattleEvents(session);
+		publicDirty = true;
+	}
+	send(client, encode("SK", { { "ok", error.empty() },
+		{ "message", error.empty() ? std::string(u8"La carte rétrécit : un anneau maintenant, puis un par tour.") : error } }));
 }
 
 void TWParser::broadcastBattleEvents(BattleSession * session)

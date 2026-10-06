@@ -30,6 +30,8 @@ namespace tw
 		static const int ZONE_POINTS = 5;
 		// Bonus sur la carte (orbes au centre).
 		bool bonuses = false;
+		// Carte qui rétrécit à partir de ce tour (0 : jamais), comme en tournoi.
+		int shrinkRound = 12;
 		// Talents de tournoi : autant pour chaque combattant ; ceux du joueur sont choisis, ceux de
 		// l'ordinateur tirés au hasard.
 		int talentCount = 0;

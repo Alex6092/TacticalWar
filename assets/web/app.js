@@ -233,6 +233,8 @@ function miniMap(battle, map) {
       parts.push(`<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="${CELL_COLORS[kind] || CELL_COLORS["."]}"/>`);
     }
   }
+  // Carte qui rétrécit : cases fermées en noir.
+  (battle.closed || []).forEach(([x, y]) => parts.push(`<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="#05060a"/>`));
   if (battle.zone && battle.zone.cells) {
     battle.zone.cells.forEach(([x, y]) => parts.push(`<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="#ffd34d" opacity="0.28"/>`));
   }

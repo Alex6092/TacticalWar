@@ -55,6 +55,16 @@ namespace tw
 			void enableZone(int pointsToWin);
 			// Bonus sur la carte (avant le placement) : des orbes apparaissent au centre pendant le combat.
 			void enableMapBonuses();
+			// Carte qui rétrécit : à partir du tour "round" (0 : jamais), un anneau de cases se ferme au
+			// début de chaque tour complet, depuis le bord, sans toucher la zone centrale (objectiveZone)
+			// ni descendre sous MIN_OPEN_CELLS cases ouvertes autour d'elle. Murs, orbes et glyphes de
+			// l'anneau disparaissent ; les combattants qui s'y trouvent glissent vers le centre, sans
+			// dégâts. Événement {"t": "shrink", "ring", "cells"}.
+			void enableShrink(int round);
+			// Déclenchement par l'admin (combat en cours) : un anneau tout de suite, puis un par tour.
+			// false si rien ne peut plus se fermer.
+			bool shrinkNow(std::int64_t nowMs);
+			static const int MIN_OPEN_CELLS = 12;
 
 			void startPlacement(std::int64_t nowMs);
 
@@ -111,6 +121,10 @@ namespace tw
 			void scoreZone();
 			// Début d'un tour complet : apparition des orbes (bonus sur la carte).
 			void spawnOrbs();
+			// Ferme l'anneau suivant (voir enableShrink) ; false s'il n'y a plus rien à fermer.
+			bool closeRing();
+			std::vector<Cell> shrinkKeep;	// Zone centrale, jamais fermée (calculée au premier anneau)
+			bool shrinkKeepReady = false;
 			// Le combattant arrive (ou passe) sur la case : il ramasse l'orbe qui s'y trouve.
 			void pickUpOrb(Fighter & fighter, const Cell & cell);
 			// Vainqueur sans KO (limite de tours, arrêt par l'admin) : points de zone, puis PV restants.

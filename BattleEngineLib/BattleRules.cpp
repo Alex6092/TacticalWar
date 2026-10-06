@@ -90,7 +90,7 @@ int tw::battle::periodicDamage(const BattleState & state, const GameData & data,
 
 bool tw::battle::cellWalkable(const BattleState & state, const BattleMap & map, const Cell & cell)
 {
-	if (!map.isWalkable(cell))
+	if (!map.isWalkable(cell) || state.isClosed(cell))
 		return false;
 	const Block * block = state.blockAt(cell);
 	return block == nullptr || !block->blocksMove;

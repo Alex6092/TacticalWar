@@ -232,6 +232,8 @@ void BattleSession::startBattle(std::int64_t nowMs, const std::map<tw::Player*, 
 		engine->enableZone(zonePoints);
 	if (mapBonuses)
 		engine->enableMapBonuses();
+	if (shrinkRound > 0)
+		engine->enableShrink(shrinkRound);
 	engine->startPlacement(nowMs);
 
 	// Les joueurs absents ne bloquent pas le placement (ils peuvent revenir en cours de combat).

@@ -26,6 +26,8 @@ sf::Color BattleColorator::getColorForCell(tw::CellData * data)
 	// La visée d'un sort est dessinée par-dessus la case (getOverlayForCell) : la tuile reste claire.
 	if (cell == hovered || impact.count(cell) > 0 || castable.count(cell) > 0 || range.count(cell) > 0)
 		return sf::Color::White;
+	if (closed.count(cell) > 0)
+		return sf::Color(70, 62, 78);
 	if (path.count(cell) > 0)
 		return paletteColor(pathTruncated ? Role::PATH_TRUNCATED : Role::PATH);
 	if (reachable.count(cell) > 0)
@@ -56,6 +58,8 @@ sf::Color BattleColorator::getOverlayForCell(tw::CellData * data)
 		return paletteColor(Role::RANGE);
 	if (threat.count(cell) > 0)
 		return paletteColor(threatEnemy ? Role::THREAT_ENEMY : Role::THREAT_ALLY);
+	if (closed.count(cell) > 0)
+		return sf::Color(10, 5, 20, 120);
 	if (zone.count(cell) > 0)
 		return paletteColor(Role::ZONE);
 	return sf::Color::Transparent;
@@ -63,7 +67,13 @@ sf::Color BattleColorator::getOverlayForCell(tw::CellData * data)
 
 bool BattleColorator::isHatched(tw::CellData * data)
 {
-	return tw::palette::colorblind() && impact.count({ data->getX(), data->getY() }) > 0;
+	Cell cell = { data->getX(), data->getY() };
+	return tw::palette::colorblind() && (impact.count(cell) > 0 || closed.count(cell) > 0);
+}
+
+void BattleColorator::setClosed(const std::vector<Cell> & cells)
+{
+	closed = toSet(cells);
 }
 
 void BattleColorator::setZone(const std::vector<Cell> & cells)

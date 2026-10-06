@@ -73,6 +73,7 @@ BattleEventView::BattleEventView(BattleScreen & screen)
 		{ "timeout", &BattleEventView::onTimeout },
 		{ "connection", &BattleEventView::onConnection },
 		{ "surrender", &BattleEventView::onSurrender },
+		{ "shrink", &BattleEventView::onShrink },
 		{ "end", &BattleEventView::onEnd },
 	};
 }
@@ -144,6 +145,17 @@ float BattleEventView::onConnection(const Context & c)
 	screen.hud->log(screen.fighterName(c.fighterId) + (connected ? L" est revenu."
 		: piloted ? L" est absent : son coéquipier le joue." : L" s'est déconnecté."), sf::Color(200, 200, 200));
 	return 0;
+}
+
+float BattleEventView::onShrink(const Context & c)
+{
+	// Carte qui rétrécit : un anneau de cases se ferme ; ceux qui s'y trouvaient glissent vers le centre.
+	screen.hud->showMessage(L"La carte rétrécit !", sf::Color(255, 160, 90), 1.6f);
+	screen.hud->log(L"La carte rétrécit ! " + num((int)c.event.value("cells", json::array()).size()) + L" cases se ferment au bord.",
+		sf::Color(255, 160, 90));
+	if (!c.fast)
+		screen.playSound("./assets/sound/ui/ping.ogg");
+	return c.fast ? 0 : 0.6f;
 }
 
 float BattleEventView::onSurrender(const Context & c)
@@ -532,6 +544,8 @@ float BattleEventView::onOrbAdded(const Context & c)
 
 float BattleEventView::onOrbTaken(const Context & c)
 {
+	if (c.event.value("reason", std::string()) == "shrink")
+		return 0;
 	sf::String label = screen.orbLabel(c.event.value("kind", std::string()));
 	if (!c.fast)
 		screen.fx.playEffect("sparkles", sf::Vector2f((float)c.event.value("x", 0), (float)c.event.value("y", 0)));

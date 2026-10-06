@@ -43,6 +43,9 @@ AdminScreen::AdminScreen(tgui::Gui * gui)
 	livePanel->onWatch = [](int session) {
 		LinkToServer::getInstance()->SendRaw("SW" + nlohmann::json({ { "session", session } }).dump());
 	};
+	livePanel->onShrink = [](int session) {
+		LinkToServer::getInstance()->SendRaw("SK" + nlohmann::json({ { "session", session } }).dump());
+	};
 
 	tabs = tgui::Tabs::create();
 	tabs->setInheritedFont(font);
@@ -191,6 +194,19 @@ void AdminScreen::onMessageReceived(std::string msg)
 			{
 				teamsPanel->onTeamResult(body);
 			}
+		}
+	}
+	else if (m.substring(0, 2) == "SK")
+	{
+		// Réponse au rétrécissement d'une carte (onglets Combats et Tournoi).
+		tw::protocol::Message message;
+		nlohmann::json body;
+		if (tw::protocol::Message::decode(msg, message) && message.parseJson(body))
+		{
+			sf::String text = fromServerText(body.value("message", std::string()));
+			bool ok = body.value("ok", false);
+			livePanel->setStatus(text, ok ? sf::Color(140, 255, 140) : sf::Color(255, 140, 120));
+			tournamentPanel->showMessage(text, ok);
 		}
 	}
 	else if (m.substring(0, 2) == "SL" || m.substring(0, 2) == "ER")

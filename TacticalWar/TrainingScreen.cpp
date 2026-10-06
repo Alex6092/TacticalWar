@@ -125,6 +125,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 		created->enableZone(TrainingSettings::ZONE_POINTS);
 	if (settings.bonuses)
 		created->enableMapBonuses();
+	if (settings.shrinkRound > 0)
+		created->enableShrink(settings.shrinkRound);
 	created->startPlacement(nowMs);
 
 	// Les combattants de l'IA se placent au hasard sur les cases de départ de leur équipe, puis sont prêts.

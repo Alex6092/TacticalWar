@@ -172,6 +172,16 @@ void BattleMirror::applySnapshot(BattleState & state, BattleMap & map, const jso
 		fresh.zone.holder = zone.value("holder", 0);
 	}
 
+	for (const json & cell : snapshot.value("closed", json::array()))
+		fresh.close(cellFromJson(cell));
+	const json & shrink = snapshot.contains("shrink") ? snapshot["shrink"] : json();
+	if (shrink.is_object())
+	{
+		fresh.shrink.startRound = shrink.value("start", 0);
+		fresh.shrink.active = shrink.value("active", false);
+		fresh.shrink.ring = shrink.value("ring", 0);
+	}
+
 	if (snapshot.contains("startCells"))
 	{
 		for (int team = 1; team <= 2; team++)
@@ -339,6 +349,14 @@ void BattleMirror::applyEvent(BattleState & state, const json & event)
 	{
 		for (const json & orb : event.value("orbs", json::array()))
 			state.orbs.push_back({ orb.value("uid", 0), orb.value("kind", std::string()), { orb.value("x", 0), orb.value("y", 0) } });
+	}
+	else if (type == "shrink")
+	{
+		for (const json & cell : event.value("cells", json::array()))
+			state.close(cellFromJson(cell));
+		state.shrink.ring = event.value("ring", 0) + 1;
+		state.shrink.active = true;
+		state.dropClosedGlyphCells();
 	}
 	else if (type == "orb-")
 	{

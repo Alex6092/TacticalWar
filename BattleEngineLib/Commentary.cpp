@@ -20,6 +20,7 @@ namespace
 	const int ZONE_POINT = 30;
 	const int ORB = 25;
 	const int WALL_UP = 20;
+	const int SHRINK = 32;
 
 	std::string fill(std::string text, const std::vector<std::pair<std::string, std::string>> & values)
 	{
@@ -174,7 +175,7 @@ std::string Commentary::onEvents(const nlohmann::json & events, const BattleStat
 					{ "{c}", event.value("name", std::string()) } });
 			offer(best, COMBO, text, nowMs);
 		}
-		else if (type == "orb-")
+		else if (type == "orb-" && event.value("reason", std::string()) != "shrink")
 		{
 			std::string text = fill(pick({ u8"{a} ramasse l'orbe {k}.", u8"Orbe {k} pour {a} !" }),
 				{ { "{a}", fighterName(after, event.value("f", -1)) }, { "{k}", orbLabel(event.value("kind", std::string())) } });
@@ -193,6 +194,10 @@ std::string Commentary::onEvents(const nlohmann::json & events, const BattleStat
 			std::string text = fill(pick({ u8"{w} cède : le passage est ouvert !", u8"Brèche ! {w} vole en éclats." }),
 				{ { "{w}", event.value("name", std::string(u8"Le mur")) } });
 			offer(best, WALL_DOWN, text, nowMs);
+		}
+		else if (type == "shrink")
+		{
+			offer(best, SHRINK, pick({ u8"La carte rétrécit : tout le monde se resserre !", u8"Le terrain se referme, plus de place pour fuir !" }), nowMs);
 		}
 		else if (type == "score")
 		{

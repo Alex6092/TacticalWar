@@ -462,6 +462,108 @@ TEST_CASE("The battle ends when a team is dead, and a forfeit ends it immediatel
 	CHECK_FALSE(arena.engine->endTurn(arena.active(), arena.now).ok);
 }
 
+namespace
+{
+	// Passe les tours jusqu'au tour complet suivant.
+	void finishRound(Arena & arena)
+	{
+		int round = arena.state().round;
+		while (arena.state().round == round && !arena.engine->isOver())
+			REQUIRE(arena.engine->endTurn(arena.active(), arena.now).ok);
+	}
+
+	int openCellsOutside(const BattleState & state, const BattleMap & map, const std::vector<Cell> & keep)
+	{
+		int open = 0;
+		for (int y = 0; y < map.getHeight(); y++)
+		{
+			for (int x = 0; x < map.getWidth(); x++)
+			{
+				Cell cell = { x, y };
+				if (map.isWalkable(cell) && !state.isClosed(cell) && std::find(keep.begin(), keep.end(), cell) == keep.end())
+					open++;
+			}
+		}
+		return open;
+	}
+}
+
+TEST_CASE("The map shrinks one ring per round from the configured round and fighters slide inwards")
+{
+	Arena arena({ { ARCHER, { 0, 7 } } }, { { MAGE, { 14, 7 } } });
+	arena.engine->enableShrink(arena.state().round + 1);
+	int archerHp = arena.fighter(0).hp;
+
+	auto ofType = [](const nlohmann::json & events, const char * type) {
+		std::vector<nlohmann::json> found;
+		for (const nlohmann::json & event : events)
+		{
+			if (event["t"] == type)
+				found.push_back(event);
+		}
+		return found;
+	};
+	finishRound(arena);
+	nlohmann::json events = arena.engine->flushEvents()["ev"];
+	std::vector<nlohmann::json> shrinks = ofType(events, "shrink");
+	REQUIRE(shrinks.size() == 1);
+	CHECK(shrinks[0]["ring"] == 0);
+	CHECK(shrinks[0]["cells"].size() == 56);
+	CHECK(arena.state().isClosed({ 0, 0 }));
+	CHECK(arena.state().isClosed({ 14, 7 }));
+	CHECK_FALSE(arena.state().isClosed({ 1, 1 }));
+	CHECK_FALSE(cellWalkable(arena.state(), arena.engine->getMap(), { 0, 7 }));
+	// Glissade vers l'intérieur, sans dégâts.
+	CHECK((arena.fighter(0).position == Cell{ 1, 7 }));
+	CHECK((arena.fighter(1).position == Cell{ 13, 7 }));
+	CHECK(arena.fighter(0).hp == archerHp);
+	bool slid = false;
+	for (const nlohmann::json & slide : ofType(events, "slide"))
+		slid = slid || slide["kind"] == "shrink";
+	CHECK(slid);
+
+	// Tour suivant : l'anneau suivant.
+	finishRound(arena);
+	shrinks = arena.eventsOfType("shrink");
+	REQUIRE(shrinks.size() == 1);
+	CHECK(shrinks[0]["ring"] == 1);
+	CHECK((arena.fighter(0).position == Cell{ 2, 7 }));
+	CHECK(arena.state().shrink.ring == 2);
+}
+
+TEST_CASE("Shrinking never closes the central zone and keeps at least 12 open cells around it")
+{
+	Arena arena({ { ARCHER, { 2, 7 } }, { GUERRIER, { 2, 9 } } }, { { MAGE, { 12, 7 } }, { PROTECTEUR, { 12, 9 } } }, openMap(), 3, {}, true);
+	arena.engine->enableShrink(arena.state().round + 1);
+	std::vector<Cell> zone = objectiveZone(arena.engine->getMap());
+	int lastRing = -1;
+	for (int i = 0; i < 12 && !arena.engine->isOver(); i++)
+	{
+		finishRound(arena);
+		for (const Cell & cell : zone)
+			REQUIRE_FALSE(arena.state().isClosed(cell));
+		REQUIRE(openCellsOutside(arena.state(), arena.engine->getMap(), zone) >= BattleEngine::MIN_OPEN_CELLS);
+		for (const Fighter & fighter : arena.state().fighters)
+			REQUIRE_FALSE((fighter.alive && arena.state().isClosed(fighter.position)));
+		for (const Orb & orb : arena.state().orbs)
+			REQUIRE_FALSE(arena.state().isClosed(orb.cell));
+		lastRing = arena.state().shrink.ring;
+	}
+	// Plus rien ne ferme : l'anneau suivant reste le même.
+	CHECK(lastRing >= 3);
+	CHECK(lastRing <= 7);
+}
+
+TEST_CASE("The admin can shrink the map at once, then one ring per round")
+{
+	Arena arena({ { ARCHER, { 2, 7 } } }, { { MAGE, { 12, 7 } } });
+	CHECK(arena.engine->shrinkNow(arena.now));
+	CHECK(arena.state().isClosed({ 0, 0 }));
+	CHECK(arena.state().shrink.active);
+	finishRound(arena);
+	CHECK(arena.state().isClosed({ 1, 1 }));
+}
+
 TEST_CASE("A team can surrender during the fight or the placement")
 {
 	Arena arena({ { ARCHER, { 2, 7 } }, { GUERRIER, { 2, 9 } } }, { { MAGE, { 6, 7 } }, { PROTECTEUR, { 6, 9 } } });
@@ -532,6 +634,9 @@ TEST_CASE("Random battles always end and every event serializes")
 			{ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } },
 			{ { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
 			map, (std::uint32_t)battle, spells, battle % 2 == 0);
+		// Un combat sur trois : la carte rétrécit.
+		if (battle % 3 == 0)
+			arena.engine->enableShrink(2 + battle % 4);
 
 		// Copie tenue par un client : snapshot initial puis événements.
 		BattleState mirror;
@@ -550,6 +655,7 @@ TEST_CASE("Random battles always end and every event serializes")
 			REQUIRE(mirror.glyphs.size() == truth.glyphs.size());
 			REQUIRE(mirror.blocks.size() == truth.blocks.size());
 			REQUIRE(mirror.orbs.size() == truth.orbs.size());
+			REQUIRE(mirror.closedCells() == truth.closedCells());
 			for (const Orb & orb : truth.orbs)
 				REQUIRE(mirror.orbAt(orb.cell) != nullptr);
 			for (const Block & block : truth.blocks)
@@ -2117,6 +2223,8 @@ TEST_CASE("The state rebuilt by the mirror serializes exactly like the engine sn
 		}
 		Arena arena({ { picked[0], { 0, 4 } }, { picked[1], { 0, 8 } } }, { { picked[2], { 12, 4 } }, { picked[3], { 12, 8 } } },
 			map, (std::uint32_t)(1000 + battle), spells, battle % 2 == 1);
+		if (battle % 3 == 1)
+			arena.engine->enableShrink(2);
 
 		// Comme une rediffusion : l'état de départ, puis les lots d'événements.
 		BattleState mirror;

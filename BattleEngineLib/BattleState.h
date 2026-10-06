@@ -207,6 +207,14 @@ namespace tw
 			bool contains(const Cell & cell) const;
 		};
 
+		// Carte qui rétrécit : un anneau de cases se ferme à chaque tour complet, depuis le bord.
+		struct ShrinkState
+		{
+			int startRound = 0;		// Tour à partir duquel les anneaux se ferment (0 : jamais, sauf l'admin)
+			bool active = false;	// Rétrécissement commencé (un anneau déjà fermé)
+			int ring = 0;			// Prochain anneau à fermer (0 : le bord de la carte)
+		};
+
 		struct BattleState
 		{
 			BattlePhase phase = BattlePhase::PLACEMENT;
@@ -226,6 +234,10 @@ namespace tw
 			int mvpFighterId = -1;			// Meilleur combattant, connu à la fin du combat
 			int firstBloodFighterId = -1;	// Auteur du premier KO du combat
 			ZoneState zone;
+			ShrinkState shrink;
+			// Cases fermées par le rétrécissement (infranchissables) : un masque de bits par ligne, pour
+			// un test rapide (cartes de 64 colonnes au plus).
+			std::vector<std::uint64_t> closedRows;
 			int nextUid = 1;
 
 			int activeFighterId() const;
@@ -234,6 +246,14 @@ namespace tw
 			const Fighter * fighterAt(const Cell & cell) const;	// Combattant vivant sur la cellule
 			const Block * blockAt(const Cell & cell) const;		// Bloc de mur sur la cellule
 			const Orb * orbAt(const Cell & cell) const;
+			bool isClosed(const Cell & cell) const
+			{
+				return cell.y >= 0 && cell.y < (int)closedRows.size() && cell.x >= 0 && cell.x < 64 && ((closedRows[cell.y] >> cell.x) & 1) != 0;
+			}
+			void close(const Cell & cell);
+			std::vector<Cell> closedCells() const;
+			// Retire les cases fermées des glyphes ; un glyphe sans case disparaît (moteur et miroir).
+			void dropClosedGlyphCells();
 			Block * findBlock(int uid);
 			const Block * findBlock(int uid) const;
 		};

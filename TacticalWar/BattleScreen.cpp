@@ -1040,6 +1040,7 @@ void BattleScreen::refreshPreview()
 	colorator->clearPreview();
 	const battle::Fighter * me = truth.findFighter(actor());
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
+	colorator->setClosed(shown.closedCells());
 	hud->setHint("");
 	const tw::battle::GameData & data = ClientGameData::get().data();
 	sf::String terrain = terrainHint(hoveredCell);

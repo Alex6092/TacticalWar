@@ -199,6 +199,8 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void startBattle(BattleSession * session);
 	// Abandon (CQ) : vote des joueurs présents de l'équipe ; état du vote envoyé à l'équipe (BQ).
 	void handleSurrender(ClientState * client, const nlohmann::json & body);
+	// Rétrécissement de la carte d'un combat en cours, demandé par l'admin (SK).
+	void handleShrink(ClientState * client, const nlohmann::json & body);
 	void sendSurrenderVote(BattleSession * session, int team, tw::Player * from, bool expired);
 	void clearSurrenderVotes(BattleSession * session, int team, bool expired);
 	std::vector<tw::Player*> surrenderVoters(BattleSession * session, int team);

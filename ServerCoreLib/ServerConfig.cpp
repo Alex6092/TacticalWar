@@ -22,6 +22,7 @@ nlohmann::json ServerConfig::toJson() const
 		{ "battleMode", battleMode },
 		{ "zonePoints", zonePoints },
 		{ "mapBonuses", mapBonuses },
+		{ "shrinkRound", shrinkRound },
 		{ "admin", {
 			{ "login", admin.login },
 			{ "passwordHash", admin.passwordHash },
@@ -47,6 +48,7 @@ ServerConfig ServerConfig::fromJson(const nlohmann::json & json)
 	config.battleMode = json.value("battleMode", config.battleMode) == "ZONE" ? "ZONE" : "KO";
 	config.zonePoints = json.value("zonePoints", config.zonePoints);
 	config.mapBonuses = json.value("mapBonuses", config.mapBonuses);
+	config.shrinkRound = std::max(0, json.value("shrinkRound", config.shrinkRound));
 	if (config.zonePoints < 1)
 		config.zonePoints = 1;
 

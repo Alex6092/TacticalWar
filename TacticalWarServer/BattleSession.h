@@ -106,6 +106,8 @@ public:
 	void setZonePoints(int points) { zonePoints = points; }
 	// Bonus sur la carte (orbes). À régler avant le début du combat.
 	void setMapBonuses(bool enabled) { mapBonuses = enabled; }
+	// Carte qui rétrécit à partir de ce tour (0 : jamais). À régler avant le début du combat.
+	void setShrinkRound(int round) { shrinkRound = round; }
 
 	// Match de tournoi joué par cette session (0 : match amical).
 	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
@@ -150,4 +152,5 @@ private:
 	int tournamentMatchId = 0;
 	int zonePoints = 0;
 	bool mapBonuses = false;
+	int shrinkRound = 0;
 };

@@ -20,7 +20,7 @@ namespace
 	const float PANEL_WIDTH = 780;
 	const float LABEL_WIDTH = 230;
 	// Lignes serrées : tout tient dans une fenêtre de 720 pixels de haut.
-	const float ROW_HEIGHT = 34;
+	const float ROW_HEIGHT = 31;
 	const float ROWS_TOP = 76;
 	const float FIELD_HEIGHT = 28;
 	const unsigned int TEXT_SIZE = 16;
@@ -85,6 +85,14 @@ TrainingSetupScreen::TrainingSetupScreen(tgui::Gui * gui)
 	bonuses->addItem(L"Aucun", "0");
 	bonuses->addItem(L"Orbes au centre (soin, énergie, protection)", "1");
 	bonuses->setSelectedItemById(settings.bonuses ? "1" : "0");
+
+	// Carte qui rétrécit : un anneau de cases se ferme à chaque tour à partir du tour choisi.
+	shrink = addRow(L"Rétrécissement");
+	shrink->addItem(L"Jamais", "0");
+	for (int round : { 6, 8, 12, 16 })
+		shrink->addItem(L"Un anneau par tour dès le tour " + std::to_wstring(round), std::to_string(round));
+	if (!shrink->setSelectedItemById(std::to_string(settings.shrinkRound)))
+		shrink->setSelectedItemById("0");
 
 	difficulty = addRow(L"Difficulté");
 	difficulty->addItem(L"Facile (l'IA fait des erreurs)", "easy");
@@ -264,6 +272,7 @@ void TrainingSetupScreen::save()
 		: difficulty->getSelectedItemId() == "hard" ? TrainingSettings::Difficulty::HARD : TrainingSettings::Difficulty::NORMAL;
 	settings.zone = mode->getSelectedItemId() == "zone";
 	settings.bonuses = bonuses->getSelectedItemId() == "1";
+	settings.shrinkRound = std::atoi(shrink->getSelectedItemId().toAnsiString().c_str());
 
 	settings.talentCount = selectedId(talentCount);
 	settings.talents = talentPicker->getChosen();
