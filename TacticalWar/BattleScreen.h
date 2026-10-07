@@ -92,6 +92,8 @@ namespace tw
 		// Combattant joué en ce moment : le combattant actif s'il est contrôlé par le joueur, sinon le sien.
 		int actor() const;
 		bool isMouseOverHud() const;
+		// Même test pour une position donnée (pixels de la fenêtre), celle d'un clic par exemple.
+		bool isOverHud(const sf::Vector2i & pixel) const;
 		void selectSpell(int slot);
 		// Action de jeu du joueur (une seule à la fois, en attendant la réponse du serveur).
 		void sendAction(const std::string & op, const nlohmann::json & body);

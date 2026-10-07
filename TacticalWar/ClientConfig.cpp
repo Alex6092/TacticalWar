@@ -50,6 +50,8 @@ void ClientConfig::load()
 	if (textScale != 115 && textScale != 130)
 		textScale = 100;
 	turnAlert = json.value("turnAlert", turnAlert);
+	fullscreenInFile = json.value("fullscreen", fullscreenInFile);
+	fullscreen = fullscreenInFile;
 	seeThrough = json.value("seeThrough", seeThrough);
 	tw::palette::setColorblind(colorblind);
 
@@ -97,6 +99,7 @@ void ClientConfig::save() const
 		{ "colorblind", colorblind },
 		{ "textScale", textScale },
 		{ "turnAlert", turnAlert },
+		{ "fullscreen", fullscreenInFile },
 		{ "seeThrough", seeThrough }
 	};
 	if (!talentChoice.empty())
@@ -165,6 +168,10 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--no-sound")
 		{
 			soundEnabled = false;
+		}
+		else if (arg == "--windowed")
+		{
+			fullscreen = false;
 		}
 		else if (arg == "--frame-stats")
 		{

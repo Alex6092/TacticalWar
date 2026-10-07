@@ -19,11 +19,15 @@ int main(int argc, char** argv)
 	ClientConfig & config = ClientConfig::get();
 	config.applyCommandLine(argc, argv);
 
+	// Plein écran si client.json le demande (paquet de l'événement) ; une taille de fenêtre donnée en
+	// ligne de commande (captures, débogage) garde la fenêtre.
 	sf::VideoMode mode = sf::VideoMode::getDesktopMode();
-	if (config.windowWidth > 0 && config.windowHeight > 0)
+	bool windowed = config.windowWidth > 0 && config.windowHeight > 0;
+	if (windowed)
 		mode = sf::VideoMode(config.windowWidth, config.windowHeight);
+	sf::Uint32 style = config.fullscreen && !windowed ? sf::Style::Fullscreen : sf::Style::Default;
 
-	sf::RenderWindow window(mode, "Tactical War"/*, sf::Style::Fullscreen*/);
+	sf::RenderWindow window(mode, "Tactical War", style);
 	tgui::Gui gui{ window };
 	window.setVerticalSyncEnabled(true);
 	if (config.fxGallery)

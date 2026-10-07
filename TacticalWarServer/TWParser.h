@@ -97,8 +97,9 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	tw::Match * createFriendlyMatch(const std::string & name, int teamA, int teamB, int mapId, std::string & error);
 	// Annule un match amical prévu ou en cours (les joueurs reviennent à l'attente).
 	void cancelFriendly(FriendlyMatch & friendly);
-	// Tournoi qui démarre : les matchs amicaux prévus ou en cours sont annulés, leurs joueurs prévenus.
-	void cancelFriendlyMatchesForTournament();
+	// Tournoi qui démarre ou reprend : les matchs amicaux prévus ou en cours sont annulés, leurs joueurs
+	// prévenus (« Match amical annulé : <reason> »).
+	void cancelFriendlyMatchesForTournament(const std::string & reason);
 	// L'équipe joue un tournoi en cours (elle ne peut pas jouer de match amical).
 	bool teamInRunningTournament(int teamId);
 	nlohmann::json friendlyListJson();

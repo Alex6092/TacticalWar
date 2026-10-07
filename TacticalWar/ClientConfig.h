@@ -13,6 +13,10 @@ public:
 	unsigned short serverPort = 12345;
 	// Musique et sons (désactivables, ex : poste de projection ou PC sans carte son).
 	bool soundEnabled = true;
+	// Plein écran (client.json « fullscreen », mis par le paquet de l'événement). Fenêtré par défaut
+	// pour le développement ; --windowed et --window LxH forcent la fenêtre.
+	bool fullscreen = false;
+	bool fullscreenInFile = false;
 	// Accessibilité (écran Options) : couleurs pour daltoniens (Palette.h), taille du texte des
 	// surfaces de lecture en pour cent (100, 115 ou 130), alerte des 5 dernières secondes du tour.
 	bool colorblind = false;

@@ -283,7 +283,7 @@ void TWParser::handleTournamentAdminMessage(ClientState * client, const std::str
 			// Les matchs amicaux retarderaient le tournoi : annulés, puis premiers matchs lancés tout de suite.
 			if (error.empty())
 			{
-				cancelFriendlyMatchesForTournament();
+				cancelFriendlyMatchesForTournament(u8"le tournoi commence.");
 				dispatchTournamentMatches();
 			}
 			sendTournamentAck(client, error, "Tournoi démarré : les matchs amicaux sont annulés, les matchs du tournoi lancés.", id);
@@ -292,7 +292,17 @@ void TWParser::handleTournamentAdminMessage(ClientState * client, const std::str
 		{
 			bool paused = body.value("paused", true);
 			error = tournaments.setPaused(id, paused);
-			sendTournamentAck(client, error, paused ? "Lancement des matchs suspendu." : "Lancement des matchs repris.", id);
+			// Reprise d'un tournoi en cours : comme au démarrage, les matchs amicaux (prévus ou en cours) sont
+			// annulés et les matchs du tournoi relancés tout de suite. Les défis restent fermés pendant la
+			// pause comme pendant tout le tournoi ; ceux en attente sont retirés (tickChallenges).
+			const TournamentEngine * engine = tournaments.find(id);
+			if (error.empty() && !paused && engine != NULL && engine->get().status == tw::tournament::TournamentStatus::RUNNING)
+			{
+				cancelFriendlyMatchesForTournament(u8"le tournoi reprend.");
+				dispatchTournamentMatches();
+			}
+			sendTournamentAck(client, error, paused ? "Lancement des matchs suspendu."
+				: "Lancement des matchs repris : les matchs amicaux sont annulés.", id);
 		}
 		else if (op == "UD")
 		{

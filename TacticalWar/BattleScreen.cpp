@@ -931,10 +931,13 @@ int BattleScreen::actor() const
 
 bool BattleScreen::isMouseOverHud() const
 {
-	if (window == NULL)
-		return false;
+	return window != NULL && isOverHud(sf::Mouse::getPosition(*window));
+}
 
-	sf::Vector2i mouse = sf::Mouse::getPosition(*window);
+bool BattleScreen::isOverHud(const sf::Vector2i & mouse) const
+{
+	if (gui == NULL)
+		return false;
 	for (const tgui::Widget::Ptr & widget : gui->getWidgets())
 	{
 		// Les textes désactivés (messages, ligne d'aide) laissent passer les clics vers la carte.
@@ -1331,8 +1334,10 @@ void BattleScreen::onEvent(void * e)
 		}
 	}
 
-	// Clic molette : signal pour son équipe sur la case survolée.
-	if (event->type == sf::Event::MouseButtonPressed && event->mouseButton.button == sf::Mouse::Middle && window != NULL && !isMouseOverHud())
+	// Clic molette : signal « Ici » pour son équipe sur la case du clic (le moteur de rendu vient d'en
+	// faire la case survolée), sauf sur l'interface, d'après la position du clic.
+	if (event->type == sf::Event::MouseButtonPressed && event->mouseButton.button == sf::Mouse::Middle && window != NULL
+		&& !isOverHud({ event->mouseButton.x, event->mouseButton.y }))
 		sendPing(hoveredCell);
 
 	// Caméra : la molette au-dessus de l'interface (journal) reste à l'interface.

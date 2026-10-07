@@ -130,6 +130,15 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 			break;
 
 		case sf::Event::MouseButtonPressed:
+			// Clic molette (signal « Ici ») : la case survolée devient celle du clic, avant que l'écran ne
+			// reçoive l'événement (sans dépendre du survol de l'image précédente).
+			if (e.mouseButton.button == sf::Mouse::Middle)
+			{
+				sf::Vector2f world = window->mapPixelToCoords(sf::Vector2i(e.mouseButton.x, e.mouseButton.y));
+				sf::Vector2i isoCoords = screenCoordinatesToIsoGridCoordinates(world.x, world.y);
+				if (isoCoords.x >= 0 && isoCoords.x < environment->getWidth() && isoCoords.y >= 0 && isoCoords.y < environment->getHeight())
+					notifyCellHover(isoCoords.x, isoCoords.y);
+			}
 			if (e.mouseButton.button == sf::Mouse::Left)
 			{
 				int x = e.mouseButton.x;

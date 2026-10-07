@@ -40,7 +40,9 @@
 
 1. Démarrer le serveur. Il affiche ses adresses sur le réseau local.
 2. Sur chaque PC joueur, lancer `TacticalWar.exe` et se connecter avec la fiche de l'équipe
-   (l'adresse du serveur se règle sur l'écran de connexion).
+   (l'adresse du serveur se règle sur l'écran de connexion). Le client du paquet démarre en **plein
+   écran** (`"fullscreen": true` dans `client.json`) ; `TacticalWar.exe --windowed` ou
+   `"fullscreen": false` pour une fenêtre. Alt+F4 pour quitter.
 3. **Écran projeté** :
    - arbre du tournoi et résultats en direct : navigateur sur `http://<IP>:8080/?carousel=1` (plein
      écran : F11). Les deux zones font défiler leurs onglets (combats, poules ou arbre, meilleurs joueurs
@@ -82,7 +84,7 @@
 | Un joueur est déconnecté | Il se reconnecte avec les mêmes identifiants et retrouve son combat. Son tour passe automatiquement en attendant ; une équipe absente pendant 90 s perd par forfait. |
 | Le serveur s'est arrêté | Le relancer : le tournoi reprend, les matchs en cours sont rejoués. |
 | Résultat contesté ou match à rejouer | Onglet Tournoi : « Victoire A/B », « Arrêter (PV) » ou « Rejouer ». Le journal `data\results.jsonl` garde chaque résultat avec la graine du combat. |
-| Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. |
+| Une équipe est en retard | « Suspendre » arrête le lancement de nouveaux matchs. À la reprise, les matchs amicaux lancés pendant la pause sont annulés (joueurs prévenus) et les matchs du tournoi repartent aussitôt. |
 | Un combat dure trop | Onglet Combats, « Rétrécir la carte » (ou « Rétrécir » dans l'onglet Tournoi) : un anneau de cases se ferme tout de suite, puis un à chaque tour. |
 | Une équipe veut arrêter | Bouton « Abandonner » de ses joueurs (le coéquipier connecté confirme) : défaite par abandon. |
 | Un PC n'a pas de son | Lancer le client avec `--no-sound`, ou décocher « Sons et musique » dans Options. |
