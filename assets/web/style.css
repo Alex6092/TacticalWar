@@ -104,8 +104,27 @@ html, body {
 }
 .tabs button.active { color: var(--text); border-color: var(--gold); }
 
-.side { display: grid; grid-template-rows: auto auto 1fr; gap: 1rem; min-height: 0; }
+.side { display: flex; flex-direction: column; min-height: 0; }
 .side .panel { overflow: hidden; }
+/* Colonne de droite : un onglet à la fois, sur toute la hauteur, en plus grand. */
+.side-panel { flex: 1; }
+.side-tabs button { font-size: 1.05rem; }
+.tab-count { display: inline-block; min-width: 1.3em; padding: 0 0.3em; border-radius: 999px; background: var(--gold); color: #000; font-weight: 700; font-size: 0.85em; }
+.side-content { flex: 1; min-height: 0; overflow: auto; font-size: 1.12rem; }
+.side-tab { display: flex; flex-direction: column; }
+.rotate-toggle {
+  background: var(--bg-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rotate-toggle.on { color: #000; background: var(--gold); border-color: var(--gold); }
+.board .panel-head .tabs { flex: 1; justify-content: flex-end; }
 
 /* Combats en direct */
 .live { display: flex; flex-direction: column; gap: 0.7rem; overflow: auto; }
@@ -160,7 +179,7 @@ html, body {
 .phase-note { color: var(--muted); font-style: italic; }
 
 /* Prochains matchs */
-.upcoming { margin: 0; padding-left: 1.4rem; overflow: auto; max-height: 30vh; }
+.upcoming { margin: 0; padding-left: 1.4rem; }
 .upcoming li { margin-bottom: 0.4rem; }
 .upcoming .label { color: var(--muted); font-size: 0.85rem; display: block; }
 

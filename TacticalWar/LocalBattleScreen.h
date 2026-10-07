@@ -5,6 +5,7 @@
 #include <random>
 #include <set>
 
+#include "AsyncBotDecision.h"
 #include "BattleScreen.h"
 #include <BattleEngine.h>
 #include <BotBrain.h>
@@ -51,6 +52,7 @@ namespace tw
 		void playBots(float deltatime);
 
 		std::mt19937 botRng;
+		AsyncBotDecision botDecision;
 		float botWait;
 		int botTurn;
 		int botActions;

@@ -12,7 +12,7 @@ Le serveur fait autorité : il valide chaque action et diffuse des **événement
 (PV, bouclier, PA, PM, positions) par lots numérotés (`BV`, champ `seq`). Un client qui détecte un trou
 dans la numérotation redemande l'état complet (`BR`, réponse `BI`).
 
-Version du protocole : **7**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
+Version du protocole : **8**. Une page web de suivi du tournoi est servie en HTTP sur le port 8080
 (`/`, `/api/state`, `/api/events` en Server-Sent Events, `/api/health`).
 
 **Rôle requis** : rôle minimal du client pour envoyer le message au serveur (le serveur ignore les messages
@@ -32,7 +32,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 |---|---|---|---|
 | `HG` | C ↔ S | tous | C-&gt;S : login;password;v&lt;version du protocole&gt; (identifiants vides = spectateur ; sans version : ancien client, accepté). S-&gt;C : entrer en combat sur la carte &lt;id&gt; |
 | `HV` | S → C | tous | Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client} |
-| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
+| `HC` | S → C | tous | Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), seconds: secondes restantes pour choisir (pendant le choix des classes), team: équipe du joueur (1 ou 2, couleur de l'aperçu)} |
 | `HS` | S → C | tous | Aller au mode spectateur |
 | `HW` | S → C | tous | Aller à l'attente de match |
 | `HK` | S → C | tous | Identifiants refusés |
@@ -74,6 +74,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `UF` | C → S | admin | Imposer un vainqueur {id, match, winner, cascade} |
 | `US` | C → S | admin | Arrêter un combat en cours (décision aux PV) {id, match} |
 | `UX` | C → S | admin | Rejouer un match en cours {id, match} |
+| `SK` | C ↔ S | admin | Faire rétrécir la carte d'un combat en cours (un anneau tout de suite, puis un par tour). C-&gt;S : SK{session} ; S-&gt;C : SK{ok, message} |
 | `UA` | S → C | admin | Résultat d'une opération sur un tournoi {ok, message, id} |
 
 ## Mode spectateur (contenu JSON)
@@ -84,9 +85,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `SW` | C → S | spectateur | Regarder un combat {session} (réponse : HG puis BI, puis le flux BV) |
 | `SU` | C → S | spectateur | Arrêter de regarder (combat ou rediffusion) |
 | `RL` | C ↔ S | spectateur | Rediffusions des combats terminés (S-&gt;C : {replays}) |
-| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE |
-| `RE` | S → C | spectateur | Fin de l'extrait demandé par RP{id, from, to} : RE{} |
-| `HL` | C ↔ S | spectateur | Temps forts des dernières rediffusions. C-&gt;S : HL{} ; S-&gt;C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord |
+| `RP` | C → S | spectateur | Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort, silences de 0,8 s au plus), suivi de RE. Avec {session, from, to} : extrait d'un combat en cours (léger différé) |
+| `RE` | S → C | spectateur | Fin de l'extrait demandé par RP{id, from, to} ou RP{session, from, to} : RE{} |
+| `HL` | C ↔ S | spectateur | Temps forts. C-&gt;S : HL{} ; S-&gt;C : HL{highlights:[...]} : d'abord les moments des combats en cours {session, match, title, kind, score, from, to, at, live: true, age: secondes}, les plus récents d'abord ; puis ceux des dernières rediffusions {replay, match, title, kind, score, from, to}, un combat après l'autre |
 
 ## Création de match manuelle
 
@@ -105,9 +106,9 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 
 | Opcode | Sens | Rôle requis | Description |
 |---|---|---|---|
-| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut) |
-| `PO` | S → C | joueur | Classe verrouillée : PO&lt;classId&gt; |
-| `PV` | C → S | joueur | Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class} |
+| `PC` | C → S | joueur | Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC&lt;classId&gt; : sorts par défaut). Refus : ER{op: PC, message} |
+| `PO` | S → C | joueur | Classe verrouillée : PO{class, spells, talents, appearance, by: nom du coéquipier qui a choisi pendant une absence (absent : le joueur lui-même)} |
+| `PV` | C → S | joueur | Brouillon de l'écran de choix : PV{class, spells, talents, appearance, teammate: true pour le coéquipier absent}. La classe est montrée au coéquipier ; le tout est retenu si le délai expire sans verrouillage |
 | `PT` | S → C | joueur | État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe} |
 | `PB` | C → S | joueur | Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte) |
 | `DL` | C ↔ S | joueur | Équipes à défier (match amical hors tournoi). C-&gt;S : DL{} ; S-&gt;C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible} |
@@ -117,7 +118,7 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `DR` | S → C | joueur | Résultat d'un défi : DR{ok, message, from, to} |
 | `PZ` | C → S | joueur | Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]} |
 | `PA` | S → C | joueur | Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}} |
-| `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)} |
+| `BB` | S → C | joueur | Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin), seconds: secondes restantes pour choisir (à la fin)} |
 | `PS` | S → C | tous | Statut de connexion des joueurs |
 | `GD` | S → C | tous | Données de jeu (contenu de assets/data/gamedata.json) |
 | `MP` | S → C | tous | Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG |
@@ -137,4 +138,6 @@ non autorisés). « Spectateur » inclut les joueurs et l'administrateur.
 | `Ct` | C → S | joueur | Fin de tour |
 | `CE` | C → S | joueur | Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote |
 | `CG` | C → S | joueur | Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s) |
+| `CQ` | C → S | joueur | Abandon (placement ou combat) : CQ{vote: true} propose ou confirme l'abandon de son équipe, CQ{vote: false} retire son vote. Seul joueur présent de l'équipe : abandon immédiat ; sinon chaque joueur présent doit voter dans les 30 s |
+| `BQ` | S → C | joueur | Vote d'abandon de son équipe : BQ{from: nom du dernier votant, votes, needed: joueurs présents de l'équipe, expiresIn: secondes restantes, voted: le destinataire a voté, expired: vote expiré} (votes 0 : plus de vote en cours) |
 | `BG` | S → C | tous | Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs |

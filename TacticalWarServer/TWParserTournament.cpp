@@ -28,6 +28,7 @@ namespace
 		case tw::battle::EndReason::FORFEIT: return ResultReason::FORFEIT;
 		case tw::battle::EndReason::ADMIN: return ResultReason::ADMIN;
 		case tw::battle::EndReason::OBJECTIVE: return ResultReason::OBJECTIVE;
+		case tw::battle::EndReason::SURRENDER: return ResultReason::SURRENDER;
 		default: return ResultReason::KO;
 		}
 	}
@@ -279,13 +280,29 @@ void TWParser::handleTournamentAdminMessage(ClientState * client, const std::str
 		else if (op == "UB")
 		{
 			error = tournaments.start(id);
-			sendTournamentAck(client, error, "Tournoi démarré : les matchs vont être lancés automatiquement.", id);
+			// Les matchs amicaux retarderaient le tournoi : annulés, puis premiers matchs lancés tout de suite.
+			if (error.empty())
+			{
+				cancelFriendlyMatchesForTournament(u8"le tournoi commence.");
+				dispatchTournamentMatches();
+			}
+			sendTournamentAck(client, error, "Tournoi démarré : les matchs amicaux sont annulés, les matchs du tournoi lancés.", id);
 		}
 		else if (op == "UP")
 		{
 			bool paused = body.value("paused", true);
 			error = tournaments.setPaused(id, paused);
-			sendTournamentAck(client, error, paused ? "Lancement des matchs suspendu." : "Lancement des matchs repris.", id);
+			// Reprise d'un tournoi en cours : comme au démarrage, les matchs amicaux (prévus ou en cours) sont
+			// annulés et les matchs du tournoi relancés tout de suite. Les défis restent fermés pendant la
+			// pause comme pendant tout le tournoi ; ceux en attente sont retirés (tickChallenges).
+			const TournamentEngine * engine = tournaments.find(id);
+			if (error.empty() && !paused && engine != NULL && engine->get().status == tw::tournament::TournamentStatus::RUNNING)
+			{
+				cancelFriendlyMatchesForTournament(u8"le tournoi reprend.");
+				dispatchTournamentMatches();
+			}
+			sendTournamentAck(client, error, paused ? "Lancement des matchs suspendu."
+				: "Lancement des matchs repris : les matchs amicaux sont annulés.", id);
 		}
 		else if (op == "UD")
 		{
@@ -424,6 +441,7 @@ void TWParser::dispatchTournamentMatches()
 		session->setTournamentMatch(request.tournamentId, request.matchId);
 		session->setZonePoints(tournament.settings.zoneMode ? tournament.settings.zonePoints : 0);
 		session->setMapBonuses(tournament.settings.mapBonuses);
+		session->setShrinkRound(tournament.settings.shrinkRound);
 		session->setTalentSlots(tw::tournament::talentSlots(tournament, request.teamA), tw::tournament::talentSlots(tournament, request.teamB));
 		if (tw::tournament::hasBanPhase(tournament, *match))
 			session->startBanPhase(nowMs() + (std::int64_t)config.banSeconds * 1000);

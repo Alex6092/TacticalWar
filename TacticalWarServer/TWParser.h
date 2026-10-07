@@ -16,6 +16,7 @@
 #include <ProfileStore.h>
 #include <Appearances.h>
 #include <Commentary.h>
+#include <Highlights.h>
 #include <deque>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -94,6 +95,13 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	// Crée le match et sa session (choix des classes envoyé aux joueurs connectés). mapId 0 : au
 	// hasard. NULL avec un message d'erreur en français si c'est impossible.
 	tw::Match * createFriendlyMatch(const std::string & name, int teamA, int teamB, int mapId, std::string & error);
+	// Annule un match amical prévu ou en cours (les joueurs reviennent à l'attente).
+	void cancelFriendly(FriendlyMatch & friendly);
+	// Tournoi qui démarre ou reprend : les matchs amicaux prévus ou en cours sont annulés, leurs joueurs
+	// prévenus (« Match amical annulé : <reason> »).
+	void cancelFriendlyMatchesForTournament(const std::string & reason);
+	// L'équipe joue un tournoi en cours (elle ne peut pas jouer de match amical).
+	bool teamInRunningTournament(int teamId);
 	nlohmann::json friendlyListJson();
 	void handleFriendlyAdminMessage(ClientState * client, const std::string & op, const nlohmann::json & body);
 	void notifyFriendlyMatches(ClientState * only = NULL);
@@ -183,11 +191,20 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	void finishBanPhase(BattleSession * session);
 	// Passage au choix de classe : HC{"talents": nombre de talents de tournoi à choisir}.
 	std::string classSelectionMessage(tw::Player * player);
+	// PO : classe verrouillée du joueur, avec ses sorts, talents, apparence et qui l'a choisie.
+	std::string classChoiceMessage(BattleSession * session, tw::Player * player);
 	void handleBattleAction(ClientState * client, const std::string & op, const nlohmann::json & body);
 	// Signal d'un joueur à ses coéquipiers (CG -> BG), limité en cadence.
 	void handlePing(ClientState * client, const nlohmann::json & body);
 	std::map<tw::Player*, std::deque<std::int64_t>> recentPings;
 	void startBattle(BattleSession * session);
+	// Abandon (CQ) : vote des joueurs présents de l'équipe ; état du vote envoyé à l'équipe (BQ).
+	void handleSurrender(ClientState * client, const nlohmann::json & body);
+	// Rétrécissement de la carte d'un combat en cours, demandé par l'admin (SK).
+	void handleShrink(ClientState * client, const nlohmann::json & body);
+	void sendSurrenderVote(BattleSession * session, int team, tw::Player * from, bool expired);
+	void clearSurrenderVotes(BattleSession * session, int team, bool expired);
+	std::vector<tw::Player*> surrenderVoters(BattleSession * session, int team);
 	void sendBattleState(BattleSession * session, ClientState * client, tw::Player * player, bool enterScreen);
 	void broadcastBattleEvents(BattleSession * session);
 	void finishBattle(BattleSession * session);
@@ -204,10 +221,16 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 	{
 		std::unique_ptr<tw::store::ReplayWriter> writer;
 		std::int64_t startMs = 0;
-		// Gardés en mémoire pour les temps forts, calculés à la fin du combat.
+		// Gardés en mémoire pour les temps forts (pendant le combat, puis à la fin) et les extraits en
+		// léger différé du réalisateur.
 		nlohmann::json snapshot;
 		nlohmann::json teams;
 		std::vector<std::pair<std::int64_t, nlohmann::json>> batches;
+		int mapId = 0;
+		std::string match;
+		// Temps forts déjà détectés, pour ce nombre de lots.
+		std::size_t liveBatchCount = 0;
+		std::vector<tw::battle::Highlight> liveHighlights;
 	};
 	struct ReplayPlayback
 	{
@@ -218,6 +241,11 @@ class TWParser : public tw::net::NetHandler, tw::MatchEventListener
 		bool extract = false;			// Extrait (temps fort) : RE à la fin
 	};
 	nlohmann::json highlightListJson();
+	// Temps forts des rediffusions, à tour de rôle ; recalculés quand une rediffusion se termine.
+	nlohmann::json replayHighlights;
+	bool replayHighlightsValid = false;
+	// Extrait d'un combat en cours (enregistrement en mémoire), présenté comme une rediffusion.
+	bool loadLiveRecording(int session, tw::store::Replay & replay, std::string & error);
 	tw::store::ReplayLibrary replays;
 	std::map<int, ReplayRecording> recordings;
 	std::map<tw::net::ConnId, ReplayPlayback> playbacks;

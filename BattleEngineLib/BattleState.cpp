@@ -117,6 +117,36 @@ const Block * BattleState::blockAt(const Cell & cell) const
 	return nullptr;
 }
 
+void BattleState::close(const Cell & cell)
+{
+	if (cell.x < 0 || cell.x >= 64 || cell.y < 0)
+		return;
+	if ((int)closedRows.size() <= cell.y)
+		closedRows.resize(cell.y + 1, 0);
+	closedRows[cell.y] |= (std::uint64_t)1 << cell.x;
+}
+
+std::vector<Cell> BattleState::closedCells() const
+{
+	std::vector<Cell> cells;
+	for (int y = 0; y < (int)closedRows.size(); y++)
+	{
+		for (int x = 0; x < 64; x++)
+		{
+			if ((closedRows[y] >> x) & 1)
+				cells.push_back({ x, y });
+		}
+	}
+	return cells;
+}
+
+void BattleState::dropClosedGlyphCells()
+{
+	for (Glyph & glyph : glyphs)
+		glyph.cells.erase(std::remove_if(glyph.cells.begin(), glyph.cells.end(), [this](const Cell & cell) { return isClosed(cell); }), glyph.cells.end());
+	glyphs.erase(std::remove_if(glyphs.begin(), glyphs.end(), [](const Glyph & glyph) { return glyph.cells.empty(); }), glyphs.end());
+}
+
 const Orb * BattleState::orbAt(const Cell & cell) const
 {
 	for (const Orb & orb : orbs)
@@ -163,6 +193,7 @@ const char * tw::battle::toString(EndReason reason)
 	case EndReason::FORFEIT: return "FORFEIT";
 	case EndReason::ADMIN: return "ADMIN";
 	case EndReason::OBJECTIVE: return "OBJECTIVE";
+	case EndReason::SURRENDER: return "SURRENDER";
 	}
 	return "";
 }

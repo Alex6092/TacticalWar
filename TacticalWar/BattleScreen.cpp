@@ -76,6 +76,7 @@ namespace
 		case battle::EndReason::FORFEIT: return L"Victoire par forfait.";
 		case battle::EndReason::ADMIN: return L"Combat arrêté par l'organisateur : décision aux points de vie.";
 		case battle::EndReason::OBJECTIVE: return L"L'équipe a tenu la zone jusqu'au score demandé.";
+		case battle::EndReason::SURRENDER: return L"Abandon de l'équipe adverse.";
 		default: return L"";
 		}
 	}
@@ -133,7 +134,11 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	hud->onEmote = [this](int id) { sendEmote(id); };
 	hud->onClose = [this]() { closeRequested = true; };
 	hud->onOptionsChanged = [this]() { applyOptions(); };
+	// Abandon : seulement pour un joueur d'un combat en ligne (les combats locaux le retirent).
+	hud->onSurrender = [this]() { sendToServer("CQ", { { "vote", true } }); };
+	hud->allowSurrender(mode == Mode::PLAYER);
 	renderer->setTextScale(ui::scale());
+	renderer->setSeeThrough(ClientConfig::get().seeThrough);
 	if (ClientConfig::get().openHelp)
 		hud->toggleHelp();
 
@@ -173,10 +178,38 @@ void BattleScreen::handleEvents(sf::RenderWindow * window, tgui::Gui * gui)
 	}
 }
 
+void BattleScreen::refreshSurrenderVote()
+{
+	if (surrenderRemaining <= 0 || shown.phase == battle::BattlePhase::ENDED)
+	{
+		hud->showSurrenderVote(sf::String());
+		return;
+	}
+	sf::String seconds = L" (" + num((int)std::ceil(surrenderRemaining)) + L" s)";
+	hud->showSurrenderVote(surrenderVoted ? L"Abandon demandé" + seconds + L"\nVotre coéquipier doit cliquer « Abandonner »"
+		: surrenderFrom + L" veut abandonner" + seconds + L"\nCliquez « Abandonner » pour confirmer");
+}
+
 void BattleScreen::update(float deltatime)
 {
 	Screen::update(deltatime);
 	hud->update(deltatime);
+	if (mode == Mode::SPECTATOR && SpectatorModeScreen::watchingLive() && shown.phase != battle::BattlePhase::ENDED)
+	{
+		highlightPoll += deltatime;
+		if (highlightPoll >= 10.f)
+		{
+			highlightPoll = 0;
+			LinkToServer::getInstance()->SendRaw("HL{}");
+		}
+	}
+	if (surrenderRemaining > 0)
+	{
+		int before = (int)std::ceil(surrenderRemaining);
+		surrenderRemaining = std::max(0.f, surrenderRemaining - deltatime);
+		if ((int)std::ceil(surrenderRemaining) != before)
+			refreshSurrenderVote();
+	}
 
 	for (auto & entry : views)
 		entry.second->update(deltatime);
@@ -524,9 +557,9 @@ void BattleScreen::onMessageReceived(std::string msg)
 	}
 	else if (message.op == "RE")
 	{
-		// Fin d'un extrait (temps fort rejoué par le réalisateur) : retour à la liste.
+		// Fin d'un extrait (temps fort rejoué) : retour à la liste ; le réalisateur enchaîne aussitôt.
 		if (mode == Mode::SPECTATOR)
-			autoCloseRemaining = 2.5f;
+			autoCloseRemaining = SpectatorModeScreen::isDirectorMode() ? 0.5f : 2.5f;
 	}
 	else if (message.op == "PA")
 	{
@@ -536,6 +569,32 @@ void BattleScreen::onMessageReceived(std::string msg)
 			sf::String text = L"Nouvelle apparence débloquée : " + fromServerText(appearanceName(id)) + L" !";
 			hud->log(text, sf::Color(255, 215, 70));
 			hud->showMessage(text, sf::Color(255, 215, 70), 4.f);
+		}
+	}
+	else if (message.op == "HL")
+	{
+		// Réalisateur en direct : un moment d'un autre combat, pas encore vu, l'emporte (une fois par minute).
+		json list;
+		if (mode == Mode::SPECTATOR && SpectatorModeScreen::watchingLive() && message.parseJson(list)
+			&& SpectatorModeScreen::onLiveHighlights(list) && shown.phase != battle::BattlePhase::ENDED && autoCloseRemaining <= 0)
+		{
+			hud->showMessage(L"Temps fort dans un autre combat !", sf::Color(255, 215, 120), 1.5f);
+			autoCloseRemaining = 1.5f;
+		}
+	}
+	else if (message.op == "BQ")
+	{
+		// Vote d'abandon de l'équipe : bandeau avec le temps restant (votes 0 : vote fini ou annulé).
+		json vote;
+		if (message.parseJson(vote))
+		{
+			int votes = vote.value("votes", 0);
+			surrenderFrom = fromServerText(vote.value("from", std::string()));
+			surrenderVoted = vote.value("voted", false);
+			surrenderRemaining = votes > 0 ? (float)std::max(1, vote.value("expiresIn", 30)) : 0.f;
+			if (votes == 0 && vote.value("expired", false))
+				hud->showMessage(L"Abandon annulé : pas de confirmation à temps.", sf::Color(255, 200, 120), 2.5f);
+			refreshSurrenderVote();
 		}
 	}
 	else if (message.op == "BG")
@@ -739,6 +798,9 @@ void BattleScreen::showEnd()
 	}
 
 	sf::String reason = reasonLabel(shown.endReason);
+	if (shown.endReason == battle::EndReason::SURRENDER)
+		reason = me != NULL && me->team != shown.winnerTeam ? sf::String(L"Votre équipe a abandonné.")
+			: me != NULL ? sf::String(L"L'équipe adverse a abandonné.") : teamLabel(3 - shown.winnerTeam) + L" a abandonné.";
 	if (shown.zone.enabled && (shown.endReason == battle::EndReason::ROUND_LIMIT || shown.endReason == battle::EndReason::ADMIN))
 		reason = L"Décision aux points de la zone, puis aux points de vie.";
 	if (shown.zone.enabled && me != NULL)
@@ -869,10 +931,13 @@ int BattleScreen::actor() const
 
 bool BattleScreen::isMouseOverHud() const
 {
-	if (window == NULL)
-		return false;
+	return window != NULL && isOverHud(sf::Mouse::getPosition(*window));
+}
 
-	sf::Vector2i mouse = sf::Mouse::getPosition(*window);
+bool BattleScreen::isOverHud(const sf::Vector2i & mouse) const
+{
+	if (gui == NULL)
+		return false;
 	for (const tgui::Widget::Ptr & widget : gui->getWidgets())
 	{
 		// Les textes désactivés (messages, ligne d'aide) laissent passer les clics vers la carte.
@@ -978,6 +1043,7 @@ void BattleScreen::refreshPreview()
 	colorator->clearPreview();
 	const battle::Fighter * me = truth.findFighter(actor());
 	colorator->setGlyphs(shown.glyphs, me != NULL ? me->team : 0);
+	colorator->setClosed(shown.closedCells());
 	hud->setHint("");
 	const tw::battle::GameData & data = ClientGameData::get().data();
 	sf::String terrain = terrainHint(hoveredCell);
@@ -1126,8 +1192,13 @@ sf::String BattleScreen::terrainHint(const battle::Cell & cell) const
 		return fromServerText(block->name) + L" : " + num(block->hp) + L"/" + num(block->maxHp) + L" PV, encore " + num(block->remainingTurns)
 			+ (block->remainingTurns > 1 ? L" tours, " : L" tour, ") + blocks + L" (un sort de dégâts peut le casser)";
 	}
-	if (!map.contains(cell) || !map.isWalkable(cell))
+	if (!map.contains(cell))
 		return sf::String();
+	// Obstacle (arbre, rocher, buisson, eau) : ce qu'il bloque, d'après les règles de sa tuile. Le
+	// buisson, aussi gros qu'un petit arbre, laisse passer les tirs.
+	if (!map.isWalkable(cell))
+		return terrainName(cell) + (map.blocksSight(cell) ? sf::String(L" : bloque le passage et la vue")
+			: sf::String(L" : bloque le passage, pas la vue (on tire par-dessus)"));
 	int damage = map.turnDamage(cell);
 	int heal = map.turnHeal(cell);
 	if (damage > 0)
@@ -1263,8 +1334,10 @@ void BattleScreen::onEvent(void * e)
 		}
 	}
 
-	// Clic molette : signal pour son équipe sur la case survolée.
-	if (event->type == sf::Event::MouseButtonPressed && event->mouseButton.button == sf::Mouse::Middle && window != NULL && !isMouseOverHud())
+	// Clic molette : signal « Ici » pour son équipe sur la case du clic (le moteur de rendu vient d'en
+	// faire la case survolée), sauf sur l'interface, d'après la position du clic.
+	if (event->type == sf::Event::MouseButtonPressed && event->mouseButton.button == sf::Mouse::Middle && window != NULL
+		&& !isOverHud({ event->mouseButton.x, event->mouseButton.y }))
 		sendPing(hoveredCell);
 
 	// Caméra : la molette au-dessus de l'interface (journal) reste à l'interface.
@@ -1362,6 +1435,7 @@ void BattleScreen::addFloatingTextAt(const battle::Cell & cell, const sf::String
 void BattleScreen::applyOptions()
 {
 	renderer->setTextScale(ui::scale());
+	renderer->setSeeThrough(ClientConfig::get().seeThrough);
 	for (const battle::Fighter & fighter : shown.fighters)
 	{
 		BaseCharacterModel * view = viewOf(fighter.id);

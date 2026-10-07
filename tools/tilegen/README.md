@@ -52,7 +52,8 @@ dans le jeu de tuiles est conservée. La texture et l'ancre sont toujours mises 
 | `empty` | non | non | vide (rien n'est dessiné) |
 
 Une tuile peut changer ces règles (`walkable`, `blocksLineOfSight`) : le buisson est un obstacle
-qui ne bloque pas la vue. Praticable et bloque la vue sont indépendants : les hautes herbes
+qui ne bloque pas la vue (on tire par-dessus, malgré sa taille de petit arbre ; le jeu le rappelle
+au survol de la case, dans l'aide en combat et dans le guide). Praticable et bloque la vue sont indépendants : les hautes herbes
 (`tall_grass`) sont praticables et bloquent la vue.
 
 `turnStart` donne un effet au début du tour du combattant qui se trouve sur la case :

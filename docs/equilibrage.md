@@ -174,6 +174,22 @@ Avec les orbes (`--bonuses`), 2000 combats : équipe 1 à 50,0 % ; Mage 50,5 %, 
 Protecteur 55,1 %, Guerrier 47,3 %. La carte 11 (la plus sensible au placement des orbes) donne 51 %
 sur 1000 combats.
 
+## Carte qui rétrécit (octobre 2026)
+
+`TacticalWarBot.exe --simulate 2000 --seed 23 --shrink 12` : un anneau de cases se ferme à chaque tour
+à partir du tour 12 (réglage par défaut des tournois).
+
+| | Sans rétrécissement | Dès le tour 12 |
+|---|---|---|
+| Victoires de l'équipe 1 | 49,8 % | 49,6 % |
+| Durée moyenne (médiane, maximum) | 13,2 tours (12, 25) | 12,9 tours (12, 24) |
+| Mage, Archer, Protecteur, Guerrier | 52,2 / 47,5 / 54,9 / 45,7 % | 50,1 / 45,6 / 56,9 / 47,4 % |
+
+Les départs restent équitables (cartes de 45,5 à 53,6 %). Entre IA, qui vont vite au contact, le gain
+de durée est faible : la moitié des combats sont finis avant le tour 12, et la mort subite agit dès le
+tour 15. Il compte surtout pour les combats humains qui s'étirent (équipes qui se fuient, soigneurs) :
+plus de place pour se cacher. Le Protecteur, qui tient mieux dans un espace réduit, gagne 2 points.
+
 ## Ordinateur Difficile (octobre 2026)
 
 `TacticalWarBot.exe --simulate 600 --hard-team 1` fait jouer l'équipe 1 au niveau Difficile contre

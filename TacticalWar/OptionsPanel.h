@@ -7,8 +7,8 @@
 namespace tw
 {
 	// Options de confort et d'accessibilité, enregistrées dans client.json : sons, mode daltonien,
-	// taille du texte, alerte de fin de tour. Ouvert depuis l'écran de connexion et depuis l'aide en
-	// combat ; les changements s'appliquent tout de suite.
+	// taille du texte, alerte de fin de tour, personnages visibles à travers le décor. Ouvert depuis
+	// l'écran de connexion et depuis l'aide en combat ; les changements s'appliquent tout de suite.
 	class OptionsPanel
 	{
 	public:
@@ -31,6 +31,7 @@ namespace tw
 		tgui::CheckBox::Ptr sound;
 		tgui::CheckBox::Ptr colorblind;
 		tgui::CheckBox::Ptr turnAlert;
+		tgui::CheckBox::Ptr seeThrough;
 		std::vector<tgui::Button::Ptr> scaleButtons;
 		tgui::Label::Ptr preview;
 		sf::Font textFont;

@@ -50,6 +50,9 @@ void ClientConfig::load()
 	if (textScale != 115 && textScale != 130)
 		textScale = 100;
 	turnAlert = json.value("turnAlert", turnAlert);
+	fullscreenInFile = json.value("fullscreen", fullscreenInFile);
+	fullscreen = fullscreenInFile;
+	seeThrough = json.value("seeThrough", seeThrough);
 	tw::palette::setColorblind(colorblind);
 
 	for (const nlohmann::json & talent : json.value("talents", nlohmann::json::array()))
@@ -68,6 +71,7 @@ void ClientConfig::load()
 			knownAppearances.push_back(id.get<std::string>());
 	}
 	appearance = json.value("appearance", std::string());
+	preferredClass = json.value("preferredClass", 0);
 
 	const nlohmann::json & spells = json.contains("spells") ? json["spells"] : nlohmann::json();
 	if (spells.is_object())
@@ -94,7 +98,9 @@ void ClientConfig::save() const
 		{ "sound", soundInFile },
 		{ "colorblind", colorblind },
 		{ "textScale", textScale },
-		{ "turnAlert", turnAlert }
+		{ "turnAlert", turnAlert },
+		{ "fullscreen", fullscreenInFile },
+		{ "seeThrough", seeThrough }
 	};
 	if (!talentChoice.empty())
 		json["talents"] = talentChoice;
@@ -104,6 +110,8 @@ void ClientConfig::save() const
 		json["appearances"] = knownAppearances;
 	if (!appearance.empty())
 		json["appearance"] = appearance;
+	if (preferredClass != 0)
+		json["preferredClass"] = preferredClass;
 	if (!spellChoices.empty())
 	{
 		nlohmann::json spells = nlohmann::json::object();
@@ -160,6 +168,14 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--no-sound")
 		{
 			soundEnabled = false;
+		}
+		else if (arg == "--windowed")
+		{
+			fullscreen = false;
+		}
+		else if (arg == "--frame-stats")
+		{
+			frameStats = true;
 		}
 		else if (arg == "--fx-gallery")
 		{
@@ -240,6 +256,18 @@ void ClientConfig::applyCommandLine(int argc, char ** argv)
 		else if (arg == "--class-screen-solo")
 		{
 			classScreenSolo = true;
+		}
+		else if (arg == "--class-screen-solo-done")
+		{
+			classScreenSolo = classScreenSoloDone = true;
+		}
+		else if (arg == "--class-screen-seconds" && hasValue)
+		{
+			classScreenSeconds = std::atoi(argv[++i]);
+		}
+		else if (arg == "--class-screen-chosen-by")
+		{
+			classScreenChosenBy = true;
 		}
 		else if (arg == "--class-screen-alone" && hasValue)
 		{

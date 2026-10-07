@@ -364,7 +364,6 @@ PAGE = """<!doctype html>
   <div class="cols">
     <div>
       <section class="box"><h2>Le but du jeu</h2>
-        <p>Deux équipes de deux joueurs s'affrontent sur une carte en cases. Chaque joueur dirige un personnage.</p>
         <ul>
           <li><b>Victoire</b> : mettre les deux adversaires hors combat (KO).</li>
           <li><b>Zone à tenir</b> (si l'organisateur la choisit) : à la fin de chaque tour complet, une équipe marque
@@ -373,6 +372,8 @@ PAGE = """<!doctype html>
           <li><b>Mort subite</b> : à partir du tour %(sudden)s, chacun perd %(sudden_pct)s %% de ses PV max au début de
             son tour, puis un peu plus à chaque tour. Au tour %(max_rounds)s, l'équipe qui a gardé la plus grande part de
             ses PV gagne.</li>
+          <li><b>Carte qui rétrécit</b> (dès le tour 12 par défaut) : à chaque tour, les cases du bord se ferment ;
+            on glisse vers le centre.</li>
         </ul>
       </section>
       <section class="box"><h2>Votre tour</h2>
@@ -405,7 +406,8 @@ PAGE = """<!doctype html>
           <li><b>Résistance</b> : réduit les dégâts reçus, de %(max_res)s %% au plus.</li>
           <li><b>Tacle</b> : quitter le contact d'un ennemi peut coûter des PM et des PA ; plus son tacle dépasse
             votre fuite, plus vous perdez.</li>
-          <li><b>Ligne de vue</b> : rochers, arbres, hautes herbes et personnages bloquent la plupart des sorts à distance.</li>
+          <li><b>Ligne de vue</b> : rochers, arbres, hautes herbes et personnages bloquent la plupart des sorts à distance ;
+            les buissons et l'eau bloquent seulement le passage.</li>
           <li><b>Collision</b> : un personnage poussé contre un obstacle subit %(collision)s dégâts par case non
             parcourue ; s'il heurte un personnage, celui-ci en subit %(collision_hit)s.</li>
           <li><b>Murs</b> (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre
@@ -434,17 +436,17 @@ PAGE = """<!doctype html>
           <li>emportez <b>4 sorts sur les %(spell_count)s</b> de la classe ;</li>
           <li>choisissez vos <b>talents</b> : un par match déjà joué par votre équipe (3 au plus) ;</li>
           <li>parfois, un <b>bannissement</b> d'abord : chaque équipe interdit une classe à l'autre ;</li>
-          <li>puis « Verrouiller mon choix ».</li>
+          <li>puis « Verrouiller mon choix » (sinon, la classe affichée est retenue).</li>
         </ul>
         <ul>
-          <li><b>Seul dans l'équipe, ou coéquipier absent</b> : vous jouez les deux personnages (vous choisissez
-            aussi la classe du second). Un coéquipier qui revient reprend la main.</li>
-          <li><b>Déconnecté ?</b> Reconnectez-vous avec les mêmes identifiants : vous retrouvez votre combat.</li>
-          <li><b>Après le combat</b> : le bilan désigne le <b>MVP</b> et décerne des <b>hauts faits</b> (Premier
-            sang, Coup double, Maître des combos…). Ils figurent sur votre diplôme et débloquent des
-            <b>apparences</b>, à choisir sur l'écran de classe.</li>
-          <li><b>Options</b> (connexion, ou aide en combat) : mode daltonien, taille du texte, alerte de fin de tour.
-            Jeu à mettre à jour ? Page « Télécharger le jeu » de la vue projetée.</li>
+          <li><b>En attendant</b> : « Mes préférences » prépare classe, sorts et talents.</li>
+          <li><b>Seul, ou coéquipier absent</b> : vous jouez les deux personnages ; il reprend la main à son retour.</li>
+          <li><b>Déconnecté ?</b> Reconnectez-vous : vous retrouvez votre combat. <b>Abandonner</b> : le
+            coéquipier connecté confirme.</li>
+          <li><b>Après le combat</b> : <b>MVP</b> et <b>hauts faits</b> (Premier sang, Coup double…), sur votre
+            diplôme ; ils débloquent des <b>apparences</b>.</li>
+          <li><b>Options</b> : mode daltonien, taille du texte, alerte de fin de tour, voir à travers le décor.
+            Jeu à mettre à jour ? Page « Télécharger le jeu ».</li>
         </ul>
       </section>
       <section class="box"><h2>Les talents</h2>

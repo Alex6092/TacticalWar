@@ -47,7 +47,8 @@ namespace
 	}
 }
 
-int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses, int hardTeam)
+int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath, int zonePoints, int talents, bool bonuses, int hardTeam,
+	int shrinkRound)
 {
 	GameData data;
 	std::string error;
@@ -129,6 +130,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 			engine.enableZone(zonePoints);
 		if (bonuses)
 			engine.enableMapBonuses();
+		if (shrinkRound > 0)
+			engine.enableShrink(shrinkRound);
 		engine.startPlacement(now);
 		for (int team = 1; team <= 2; team++)
 		{
@@ -252,6 +255,8 @@ int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string 
 		std::cout << ", zone à tenir (" << zonePoints << " points)";
 	if (bonuses)
 		std::cout << ", bonus sur la carte";
+	if (shrinkRound > 0)
+		std::cout << ", carte qui rétrécit dès le tour " << shrinkRound;
 	if (hardTeam != 0)
 		std::cout << ", équipe " << hardTeam << " en difficulté « Difficile »";
 	std::cout << " ===\n";

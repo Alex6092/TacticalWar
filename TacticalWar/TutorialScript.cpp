@@ -1,6 +1,9 @@
 ﻿#include "TutorialScript.h"
 
 #include <algorithm>
+#include <string>
+
+#include "ClientGameData.h"
 
 using namespace tw;
 
@@ -68,7 +71,7 @@ std::vector<TutorialStep> TutorialScript::standardSteps()
 		[](const TutorialContext & c) { return c.dummyHit; }));
 	steps.push_back(makeStep(L"Fin du tour",
 		L"Quand vous n'avez plus de PA (étoile jaune) ou plus rien à faire, cliquez sur le bouton Passer le tour. "
-		L"En tournoi, un tour dure 40 secondes.",
+		L"En tournoi, un tour dure " + std::to_wstring(ClientGameData::get().data().rules.turnSeconds) + L" secondes.",
 		[](const TutorialContext & c) { return c.turnEnded; }));
 	steps.push_back(makeStep(L"Anticiper",
 		L"Survolez le mannequin : la zone orange montre où il pourra aller à son prochain tour. "

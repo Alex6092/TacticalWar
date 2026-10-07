@@ -51,6 +51,9 @@
     <ClCompile Include="WaitMatchScreen.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
+    <ClCompile Include="PreferencesPanel.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
     <ClCompile Include="MusicManager.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
@@ -90,6 +93,9 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="WaitMatchScreen.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="PreferencesPanel.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="MusicManager.h">
@@ -138,9 +144,11 @@
     <ClInclude Include="FxGalleryScreen.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AsyncBotDecision.cpp" />
     <ClCompile Include="LocalBattleScreen.cpp" />
     <ClCompile Include="TrainingScreen.cpp" />
     <ClCompile Include="TrainingSetupScreen.cpp" />
+    <ClInclude Include="AsyncBotDecision.h" />
     <ClInclude Include="LocalBattleScreen.h" />
     <ClInclude Include="TrainingScreen.h" />
     <ClInclude Include="TrainingSetupScreen.h" />

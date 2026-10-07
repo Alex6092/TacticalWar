@@ -13,11 +13,17 @@ public:
 	unsigned short serverPort = 12345;
 	// Musique et sons (désactivables, ex : poste de projection ou PC sans carte son).
 	bool soundEnabled = true;
+	// Plein écran (client.json « fullscreen », mis par le paquet de l'événement). Fenêtré par défaut
+	// pour le développement ; --windowed et --window LxH forcent la fenêtre.
+	bool fullscreen = false;
+	bool fullscreenInFile = false;
 	// Accessibilité (écran Options) : couleurs pour daltoniens (Palette.h), taille du texte des
 	// surfaces de lecture en pour cent (100, 115 ou 130), alerte des 5 dernières secondes du tour.
 	bool colorblind = false;
 	int textScale = 100;
 	bool turnAlert = true;
+	// Personnages visibles à travers les arbres, rochers et murs placés devant eux.
+	bool seeThrough = true;
 	// Derniers sorts choisis pour chaque classe (identifiant de classe -> indices de ses sorts),
 	// proposés à nouveau au choix suivant et à l'entraînement.
 	std::map<int, std::vector<int>> spellChoices;
@@ -29,6 +35,8 @@ public:
 	// apparence choisie.
 	std::vector<std::string> knownAppearances;
 	std::string appearance;
+	// Classe préférée (écran d'attente, 0 : aucune) : le choix des classes s'ouvre sur elle.
+	int preferredClass = 0;
 	std::vector<int> spellChoice(int classId) const
 	{
 		auto it = spellChoices.find(classId);
@@ -48,6 +56,9 @@ public:
 	unsigned int windowWidth = 0;
 	unsigned int windowHeight = 0;
 	std::string screenshotPath;
+	// Outil de développement (--frame-stats) : le client écrit toutes les 5 s la pire durée d'image et
+	// le pire temps de calcul d'une image (mise à jour et dessin), pour repérer les à-coups.
+	bool frameStats = false;
 	float screenshotDelaySeconds = 3;
 	bool screenshotAtEnd = false;
 	// Galerie des effets de sorts, sans serveur : --fx-gallery [--fx-spell <id>] [--fx-map <id>].
@@ -91,8 +102,14 @@ public:
 	int classScreenMate = 0;
 	// Équipe du joueur sur l'écran de classe de démonstration (couleur des apparences).
 	int classScreenTeam = 1;
-	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape.
+	// Coéquipier absent simulé, choix du joueur déjà verrouillé (--class-screen-solo) : seconde étape ;
+	// avec --class-screen-solo-done, le choix pour le coéquipier est fait (retour à sa propre classe).
 	bool classScreenSolo = false;
+	bool classScreenSoloDone = false;
+	// Secondes restantes pour choisir (--class-screen-seconds S, -1 : inconnues) et choix fait par le
+	// coéquipier pendant une absence (--class-screen-chosen-by).
+	int classScreenSeconds = -1;
+	bool classScreenChosenBy = false;
 	// Joueur seul dans son équipe simulé (--class-screen-alone 1 : son choix, 2 : le second personnage).
 	int classScreenAlone = 0;
 	// Onglet ouvert à la connexion admin (--admin-tab N : 0 Matchs, 1 Équipes, 2 Tournoi, 3 Combats),

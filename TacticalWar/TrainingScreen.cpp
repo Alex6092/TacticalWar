@@ -125,6 +125,8 @@ TrainingScreen::TrainingScreen(tgui::Gui * gui, const TrainingSettings & setting
 		created->enableZone(TrainingSettings::ZONE_POINTS);
 	if (settings.bonuses)
 		created->enableMapBonuses();
+	if (settings.shrinkRound > 0)
+		created->enableShrink(settings.shrinkRound);
 	created->startPlacement(nowMs);
 
 	// Les combattants de l'IA se placent au hasard sur les cases de départ de leur équipe, puis sont prêts.
@@ -179,15 +181,19 @@ void TrainingScreen::playAsPlayer(float deltatime)
 		autoTurn = turn;
 		autoActions = 0;
 	}
+	// Décision calculée en tâche de fond pendant le délai, comme pour l'IA des adversaires ; au plus
+	// 12 actions par tour.
+	AsyncBotDecision::Key key = { actor(), turn, autoActions };
+	if (autoActions < 12 && !autoDecision.requested(key))
+		autoDecision.request(key, truth, map, engine->getData(), autoRng(), botOptions);
 	autoWait += deltatime;
 	if (autoWait < botDelay)
 		return;
-	autoWait = 0;
-
-	// Au plus 12 actions par tour, comme l'IA des adversaires.
 	battle::BotAction action;
-	if (autoActions++ < 12)
-		action = battle::chooseBotAction(truth, map, engine->getData(), actor(), autoRng, botOptions);
+	if (autoActions < 12 && !autoDecision.take(key, action))
+		return;
+	autoWait = 0;
+	autoActions++;
 	if (action.kind == battle::BotAction::Kind::CAST)
 	{
 		sendAction("CL", { { "slot", action.slot }, { "x", action.target.x }, { "y", action.target.y } });

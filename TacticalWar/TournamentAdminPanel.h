@@ -18,6 +18,8 @@ public:
 	void onAck(const nlohmann::json & body);
 	// Combats en cours (message SL) : pour "Regarder" le match sélectionné.
 	void onSessionList(const nlohmann::json & body);
+	// Message à afficher sous la liste des matchs (réponse du serveur à une action).
+	void showMessage(const sf::String & text, bool ok);
 	// Équipes disponibles (liste TL de l'onglet Équipes).
 	void setTeams(const nlohmann::json & teams);
 
@@ -67,6 +69,9 @@ private:
 	tgui::EditBox::Ptr zonePoints;
 	tgui::Label::Ptr talentsLabel;
 	tgui::EditBox::Ptr maxTalents;
+	// Carte qui rétrécit : un anneau par tour à partir de ce tour (0 : jamais).
+	tgui::Label::Ptr shrinkLabel;
+	tgui::EditBox::Ptr shrinkRound;
 	tgui::Label::Ptr bansLabel;
 	tgui::ComboBox::Ptr bans;
 	tgui::Label::Ptr mapsLabel;
@@ -88,6 +93,7 @@ private:
 	tgui::Button::Ptr diplomasButton;
 	tgui::Button::Ptr guideButton;
 	tgui::Button::Ptr watchButton;
+	tgui::Button::Ptr shrinkButton;
 	nlohmann::json liveSessions = nlohmann::json::array();
 	tgui::Label::Ptr standings;
 	tgui::Label::Ptr status;

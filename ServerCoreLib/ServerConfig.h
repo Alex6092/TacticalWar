@@ -47,6 +47,8 @@ namespace tw
 		int zonePoints = 5;
 		// Bonus sur la carte (orbes) dans les matchs hors tournoi.
 		bool mapBonuses = false;
+		// Carte qui rétrécit dans les matchs hors tournoi : un anneau par tour à partir de ce tour (0 : jamais).
+		int shrinkRound = 12;
 
 		AdminConfig admin;
 

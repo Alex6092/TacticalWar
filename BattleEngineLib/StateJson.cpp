@@ -162,6 +162,10 @@ json statejson::snapshot(const BattleState & state, const BattleMap & map, std::
 	for (const Orb & orb : state.orbs)
 		orbs.push_back({ { "uid", orb.uid }, { "kind", orb.kind }, { "x", orb.cell.x }, { "y", orb.cell.y } });
 
+	json closed = json::array();
+	for (const Cell & each : state.closedCells())
+		closed.push_back(cell(each));
+
 	json startCells = json::object();
 	for (int team = 1; team <= 2; team++)
 	{
@@ -188,6 +192,8 @@ json statejson::snapshot(const BattleState & state, const BattleMap & map, std::
 		{ "winner", state.winnerTeam },
 		{ "reason", toString(state.endReason) },
 		{ "mvp", state.mvpFighterId },
-		{ "zone", zone(state.zone) }
+		{ "zone", zone(state.zone) },
+		{ "closed", closed },
+		{ "shrink", { { "start", state.shrink.startRound }, { "active", state.shrink.active }, { "ring", state.shrink.ring } } }
 	};
 }

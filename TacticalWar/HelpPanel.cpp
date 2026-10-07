@@ -2,6 +2,7 @@
 
 #include <Palette.h>
 
+#include "ClientGameData.h"
 #include "LinkToServer.h"
 #include "UiScale.h"
 
@@ -54,6 +55,7 @@ void HelpPanel::rebuild()
 	const float COLUMN = column();
 	const sf::String reachable = fromServerText(palette::name(palette::Role::REACHABLE));
 	const sf::String castable = fromServerText(palette::name(palette::Role::CASTABLE));
+	const battle::BattleRules & gameRules = ClientGameData::get().data().rules;
 
 	const sf::Color gold(255, 215, 0);
 	const sf::Color white(235, 235, 235);
@@ -69,7 +71,7 @@ void HelpPanel::rebuild()
 		L"- Molette : zoom. Clic droit maintenu : déplacer la vue. F : suivre le personnage actif. C : recentrer.\n"
 		L"- Passer le tour : quand il n'y a plus rien à faire.\n"
 		L"- H : afficher ou fermer cette aide. Options : sons, mode daltonien (motifs, symboles), "
-		L"taille du texte, alerte des 5 dernières secondes du tour.", ui::text(15), white);
+		L"taille du texte, alerte des 5 dernières secondes du tour, voir à travers le décor.", ui::text(15), white);
 	commands->setPosition(20, 52);
 	panel->add(commands);
 
@@ -81,14 +83,19 @@ void HelpPanel::rebuild()
 		L"- Un sort grisé avec un chiffre est en relance : il revient dans ce nombre de tours.\n"
 		L"- Bouclier (écusson bleu) : il absorbe les dégâts avant les PV.\n"
 		L"- Tacle : quitter le contact d'un ennemi peut coûter des PM et des PA.\n"
-		L"- Ligne de vue : rochers, arbres, hautes herbes et personnages bloquent les sorts à distance.\n"
+		L"- Ligne de vue : rochers, arbres, hautes herbes et personnages bloquent les sorts à distance ; "
+		L"les buissons et l'eau non (ils bloquent seulement le passage).\n"
 		L"- Braises : 8 dégâts au début du tour. Source : +6 PV. Hautes herbes : on s'y cache.\n"
 		L"- Combinaisons : une marque posée par une classe (gelé, entravé, provoqué, brûlé) renforce un sort "
 		L"d'une autre classe. L'aperçu l'annonce.\n"
 		L"- Murs (sort de terrain) : des blocs avec leurs PV. Tout sort de dégâts les abîme, même votre mur "
 		L"pour passer. Survol : PV et tours restants.\n"
 		L"- Orbes (si activés) : au centre ; passez dessus pour un soin, un PA ou un bouclier.\n"
-		L"- Un tour dure 40 s, puis la réserve de temps (30 s pour tout le combat) s'entame.", ui::text(15), white);
+		L"- Carte qui rétrécit : à partir du tour réglé, les cases du bord se ferment à chaque tour ; "
+		L"ceux qui s'y trouvent glissent vers le centre, sans dégâts.\n"
+		L"- Abandonner (en bas à droite) : votre coéquipier connecté doit confirmer dans les 30 s.\n"
+		L"- Un tour dure " + std::to_wstring(gameRules.turnSeconds) + L" s, puis la réserve de temps ("
+		+ std::to_wstring(gameRules.timeBankSeconds) + L" s pour tout le combat) s'entame.", ui::text(15), white);
 	rules->setPosition(40 + COLUMN, 52);
 	panel->add(rules);
 

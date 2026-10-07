@@ -55,13 +55,20 @@ public:
 
 	// Choix des classes et des sorts (une seule fois par joueur). Un choix de sorts non valable
 	// donne les sorts par défaut de la classe ; la classe interdite par l'adversaire est refusée.
+	// chooser : joueur qui a fait le choix (son coéquipier absent, par exemple ; nul : lui-même).
 	bool chooseClass(tw::Player * player, int classId, const std::vector<int> & spells = std::vector<int>(),
-		const std::vector<std::string> & talents = std::vector<std::string>());
+		const std::vector<std::string> & talents = std::vector<std::string>(), tw::Player * chooser = NULL);
+	// Motif du refus d'un choix de classe (vide : le choix est possible).
+	std::string choiceRefusal(tw::Player * player, int classId) const;
 	// Talents de tournoi à choisir par chaque équipe (0 hors tournoi). Les emplacements laissés vides
 	// sont remplis au hasard au début du combat.
 	void setTalentSlots(int team1, int team2) { talentSlotsByTeam[1] = team1; talentSlotsByTeam[2] = team2; }
 	int talentSlots(tw::Player * player) const;
 	int chosenClass(tw::Player * player) const;
+	std::vector<int> chosenSpells(tw::Player * player) const;
+	std::vector<std::string> chosenTalents(tw::Player * player) const;
+	// Joueur qui a choisi la classe de player (lui-même, ou un coéquipier pendant son absence).
+	tw::Player * chooserOf(tw::Player * player) const;
 	// Apparence du personnage du joueur (vérifiée par l'appelant), avant le début du combat.
 	void setAppearance(tw::Player * player, const std::string & appearance) { appearances[player] = appearance; }
 	std::string appearanceOf(tw::Player * player) const
@@ -69,14 +76,27 @@ public:
 		auto found = appearances.find(player);
 		return found != appearances.end() ? found->second : std::string();
 	}
-	// Classe affichée par le joueur sur son écran de choix (montrée à son coéquipier).
-	bool setViewing(tw::Player * player, int classId);
+	// Brouillon d'un joueur non verrouillé : classe affichée sur son écran de choix (montrée à son
+	// coéquipier), sorts, talents et apparence en cours (apparence vérifiée par l'appelant).
+	struct Draft
+	{
+		int classId = 0;
+		std::vector<int> spells;
+		std::vector<std::string> talents;
+		std::string appearance;
+	};
+	// Renvoie true si la classe affichée a changé.
+	bool setDraft(tw::Player * player, const Draft & draft);
 	int viewingClass(tw::Player * player) const;
+	// Délai écoulé : chaque joueur non verrouillé reçoit la classe affichée sur son écran, avec ses
+	// sorts, ses talents et son apparence, si elle est permise. Renvoie le nombre de choix retenus.
+	int lockViewedClasses();
 	bool allClassesChosen() const;
 	std::int64_t getClassSelectionDeadline() const { return classSelectionDeadline; }
 	void postponeClassSelection(std::int64_t deadline) { classSelectionDeadline = deadline; }
 
-	// Crée le moteur (classe au hasard pour les joueurs qui n'ont pas choisi) et démarre le placement.
+	// Crée le moteur et démarre le placement. Classe au hasard pour les joueurs qui n'ont rien
+	// choisi ni regardé (jamais connectés), voir lockViewedClasses.
 	void startBattle(std::int64_t nowMs, const std::map<tw::Player*, bool> & connected, const std::map<tw::Player*, std::string> & names);
 	tw::battle::BattleEngine * getEngine() { return engine.get(); }
 
@@ -86,6 +106,8 @@ public:
 	void setZonePoints(int points) { zonePoints = points; }
 	// Bonus sur la carte (orbes). À régler avant le début du combat.
 	void setMapBonuses(bool enabled) { mapBonuses = enabled; }
+	// Carte qui rétrécit à partir de ce tour (0 : jamais). À régler avant le début du combat.
+	void setShrinkRound(int round) { shrinkRound = round; }
 
 	// Match de tournoi joué par cette session (0 : match amical).
 	void setTournamentMatch(int tournamentId, int matchId) { this->tournamentId = tournamentId; this->tournamentMatchId = matchId; }
@@ -95,6 +117,10 @@ public:
 
 	// Depuis quand toute une équipe (1 ou 2) est absente (0 : présente).
 	std::int64_t absentSince[3] = { 0, 0, 0 };
+
+	// Abandon : joueurs de chaque équipe (1 ou 2) qui l'ont voté, et heure du premier vote (0 : aucun).
+	std::set<tw::Player*> surrenderVotes[3];
+	std::int64_t surrenderSince[3] = { 0, 0, 0 };
 
 	// Connexions des spectateurs de ce combat.
 	std::set<tw::net::ConnId> spectators;
@@ -110,7 +136,8 @@ private:
 	Phase phase;
 	std::vector<tw::Player*> participants;
 	std::map<tw::Player*, int> classes;
-	std::map<tw::Player*, int> viewing;
+	std::map<tw::Player*, Draft> drafts;
+	std::map<tw::Player*, tw::Player*> choosers;
 	std::map<tw::Player*, std::vector<int>> spellChoices;
 	std::map<tw::Player*, std::vector<std::string>> talentChoices;
 	std::map<tw::Player*, std::string> appearances;
@@ -125,4 +152,5 @@ private:
 	int tournamentMatchId = 0;
 	int zonePoints = 0;
 	bool mapBonuses = false;
+	int shrinkRound = 0;
 };

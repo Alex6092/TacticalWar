@@ -12,5 +12,6 @@
 // talents > 0 : chaque combattant reçoit ce nombre de talents de tournoi, tirés au hasard.
 // bonuses : bonus sur la carte (orbes au centre).
 // hardTeam (1 ou 2) : cette équipe joue en difficulté « Difficile » (0 : aucune), pour la comparer au niveau normal.
+// shrinkRound > 0 : la carte rétrécit (un anneau par tour) à partir de ce tour.
 int runSimulation(int battles, int mapId, std::uint32_t seed, const std::string & dataPath = "./assets/data/gamedata.json",
-	int zonePoints = 0, int talents = 0, bool bonuses = false, int hardTeam = 0);
+	int zonePoints = 0, int talents = 0, bool bonuses = false, int hardTeam = 0, int shrinkRound = 0);

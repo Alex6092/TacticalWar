@@ -38,6 +38,34 @@ namespace
 		return button;
 	}
 
+	std::vector<int> intArray(const nlohmann::json & value)
+	{
+		std::vector<int> values;
+		if (value.is_array())
+		{
+			for (const nlohmann::json & item : value)
+			{
+				if (item.is_number_integer())
+					values.push_back(item.get<int>());
+			}
+		}
+		return values;
+	}
+
+	std::vector<std::string> stringArray(const nlohmann::json & value)
+	{
+		std::vector<std::string> values;
+		if (value.is_array())
+		{
+			for (const nlohmann::json & item : value)
+			{
+				if (item.is_string())
+					values.push_back(item.get<std::string>());
+			}
+		}
+		return values;
+	}
+
 	tgui::Panel::Ptr createPanel()
 	{
 		tgui::Panel::Ptr panel = tgui::Panel::create();
@@ -122,7 +150,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	spellsPanel = createPanel();
 	gui->add(spellsPanel);
 	spellPicker.reset(new tw::SpellPicker(textFont, tw::SpellPicker::Layout::LIST));
-	spellPicker->onChange = [this]() { refreshLock(); };
+	spellPicker->onChange = [this]() { refreshLock(); sendDraft(); };
 	gui->add(spellPicker->getWidget());
 
 	nlohmann::json message = nlohmann::json::parse(selection, nullptr, false);
@@ -162,6 +190,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 				selectedAppearance = id;
 			appearanceHint = unlocked ? sf::String() : name + L" : à débloquer (" + condition + L")";
 			refreshAppearances();
+			sendDraft();
 		});
 		gui->add(swatch);
 		appearanceButtons.push_back(swatch);
@@ -176,7 +205,7 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	talentPicker.reset(new tw::TalentPicker(gui, font));
 	talentPicker->setSlots(message.value("talents", 0));
 	talentPicker->setChosen(ClientConfig::get().talentChoice);
-	talentPicker->onChange = [this]() { refreshLock(); };
+	talentPicker->onChange = [this]() { refreshLock(); sendDraft(); };
 	gui->add(talentPicker->getButton());
 
 	lockButton = createButton(font, L"Verrouiller mon choix", 20);
@@ -201,6 +230,15 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	banLabel->setVisible(banMode);
 	gui->add(banLabel);
 
+	selectionRemaining = message.contains("seconds") ? (float)message.value("seconds", 0) : -1.f;
+	timerLabel = tgui::Label::create();
+	timerLabel->setInheritedFont(textFont);
+	timerLabel->setTextSize(17);
+	timerLabel->getRenderer()->setTextOutlineColor(sf::Color::Black);
+	timerLabel->getRenderer()->setTextOutlineThickness(1);
+	timerLabel->setVisible(false);
+	gui->add(timerLabel);
+
 	// Coéquipier : affiché dès que le serveur en donne l'état.
 	matePanel = createPanel();
 	mateTitle = tgui::Label::create();
@@ -223,8 +261,20 @@ ClassSelectionScreen::ClassSelectionScreen(tgui::Gui * gui, const std::string & 
 	matePanel->setVisible(false);
 	gui->add(matePanel);
 
-	showClass(0);
+	// Préférences de l'écran d'attente : la classe préférée, ses sorts et les talents rangés par
+	// préférence (rien n'est verrouillé). Pendant un bannissement, la liste part de la première.
+	showClass(banMode ? 0 : preferredIndex());
 	refreshAppearances();
+}
+
+int ClassSelectionScreen::preferredIndex() const
+{
+	for (int i = 0; i < (int)classesInstances.size(); i++)
+	{
+		if (classesInstances[i]->getClassId() == ClientConfig::get().preferredClass)
+			return i;
+	}
+	return 0;
 }
 
 void ClassSelectionScreen::refreshAppearances()
@@ -320,11 +370,69 @@ void ClassSelectionScreen::showClass(int index)
 		layout(windowSize);
 
 	// Le coéquipier voit la classe regardée (tant que le choix n'est pas verrouillé).
-	if (!locked && classDef != NULL && classDef->id != viewSent)
+	sendDraft();
+}
+
+void ClassSelectionScreen::sendDraft()
+{
+	// Classe affichée (montrée au coéquipier), sorts, talents et apparence en cours : retenus par le
+	// serveur si le délai expire avant le verrouillage.
+	if (classesInstances.empty() || (locked && !forMate) || (forMate && mateSent))
+		return;
+	nlohmann::json draft = { { "class", currentClassId() }, { "spells", spellPicker->getChosen() },
+		{ "talents", talentPicker->getChosen() }, { "appearance", selectedAppearance } };
+	if (forMate)
+		draft["teammate"] = true;
+	std::string message = "PV" + draft.dump();
+	if (message == draftSent)
+		return;
+	draftSent = message;
+	LinkToServer::getInstance()->Send(message);
+}
+
+void ClassSelectionScreen::showOwnChoice()
+{
+	for (int i = 0; i < (int)classesInstances.size(); i++)
 	{
-		viewSent = classDef->id;
-		LinkToServer::getInstance()->Send("PV" + nlohmann::json({ { "class", classDef->id } }).dump());
+		if (classesInstances[i]->getClassId() == myClass)
+			showClass(i);
 	}
+	const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(myClass);
+	if (classDef != NULL)
+		spellPicker->setClass(classDef, mySpells);
+	talentPicker->setChosen(myTalents);
+	selectedAppearance = myAppearance;
+	appearanceHint = sf::String();
+	refreshAppearances();
+}
+
+void ClassSelectionScreen::refreshTimer()
+{
+	// Refus du serveur pendant quelques secondes, sinon compte à rebours du choix des classes.
+	sf::String text;
+	sf::Color color(255, 225, 120);
+	if (noticeTime > 0)
+	{
+		text = notice;
+		color = sf::Color(255, 130, 110);
+	}
+	else if (!banMode && selectionRemaining >= 0)
+	{
+		int seconds = (int)std::ceil(selectionRemaining);
+		bool waiting = (locked && !forMate) || (forMate && mateSent);
+		if (seconds <= 0)
+			text = L"Délai écoulé : le combat commence dès que les deux équipes sont là.";
+		else if (waiting)
+			text = L"Début du combat dans " + num(seconds) + L" s au plus.";
+		else
+			text = L"Sans verrouillage, la classe affichée sera retenue dans " + num(seconds) + L" s.";
+		if (seconds <= 10 && !waiting)
+			color = sf::Color(255, 160, 90);
+	}
+	timerLabel->setVisible(!text.isEmpty());
+	if (timerLabel->getText() != text)
+		timerLabel->setText(text);
+	timerLabel->getRenderer()->setTextColor(color);
 }
 
 void ClassSelectionScreen::refreshMate()
@@ -358,8 +466,8 @@ void ClassSelectionScreen::refreshMate()
 			text += (i == 0 ? sf::String() : i + 1 == names.size() ? sf::String(L" ou ") : sf::String(L", ")) + fromServerText(names[i]);
 		return text;
 	};
-	// Pendant le choix pour le second personnage : entre la classe verrouillée et celle affichée.
-	int mine = forMate ? myClass : currentClassId();
+	// Classe verrouillée (aussi pendant le choix pour le second personnage), sinon celle affichée.
+	int mine = locked ? myClass : currentClassId();
 	int other = forMate ? currentClassId() : mateLocked ? mateClass : mateViewing;
 	// Le joueur joue les deux personnages (seul, ou coéquipier absent) : il pose la marque et frappe.
 	bool playsBoth = mateStandIn || !matePresent;
@@ -393,7 +501,7 @@ void ClassSelectionScreen::refreshLock()
 	{
 		// Le premier bannissement de l'équipe compte : celui du coéquipier aussi.
 		lockButton->setEnabled(!banSent && bannedClass == 0);
-		lockButton->setText(bannedClass != 0 ? L"Bannissement fait" : banSent ? L"Bannissement envoyé" : L"Bannir cette classe");
+		setLockText(bannedClass != 0 ? L"Bannissement fait" : banSent ? L"Bannissement envoyé" : L"Bannir cette classe");
 		return;
 	}
 	bool forbidden = forbiddenClass != 0 && currentClassId() == forbiddenClass;
@@ -401,16 +509,23 @@ void ClassSelectionScreen::refreshLock()
 	if (forMate)
 	{
 		lockButton->setEnabled(complete && !forbidden && !mateSent);
-		lockButton->setText(mateSent ? L"Choix envoyé" : forbidden ? L"Interdite par l'adversaire"
+		setLockText(mateSent ? L"Choix envoyé" : forbidden ? L"Interdite par l'adversaire"
 			: complete ? (mateStandIn ? sf::String(L"Verrouiller le 2e personnage") : L"Verrouiller pour " + mateName)
 			: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez ses talents");
 		return;
 	}
 	lockButton->setEnabled(!locked && complete && !forbidden);
-	lockButton->setText(locked ? (mateLocked && !matePresent ? sf::String(mateStandIn ? L"Vos deux personnages sont prêts" : L"Choix verrouillés pour vous deux")
-		: sf::String(L"Choix verrouillé"))
+	setLockText(locked ? (mateLocked && !matePresent ? sf::String(mateStandIn ? L"Vos deux personnages sont prêts" : L"Choix verrouillés pour vous deux")
+		: !chosenBy.isEmpty() ? L"Choisi pour vous par " + chosenBy : sf::String(L"Choix verrouillé"))
 		: forbidden ? L"Interdite par l'adversaire" : complete ? L"Verrouiller mon choix"
 		: !spellPicker->isComplete() ? L"Choisissez 4 sorts" : L"Choisissez vos talents");
+}
+
+void ClassSelectionScreen::setLockText(const sf::String & text)
+{
+	// Texte long (choix pour deux, nom du coéquipier) : plus petit, pour tenir dans le bouton.
+	lockButton->setTextSize(text.getSize() > 24 ? 16 : 20);
+	lockButton->setText(text);
 }
 
 void ClassSelectionScreen::updateMatePick()
@@ -425,12 +540,17 @@ void ClassSelectionScreen::updateMatePick()
 	talentPicker->setLocked(!forMate);
 	previousButton->setVisible(forMate);
 	nextButton->setVisible(forMate);
-	// Le second personnage part d'une autre classe que le premier (hors classe interdite).
+	// Le second personnage part d'une autre classe que le premier (hors classe interdite). Le choix
+	// fait (ou le coéquipier revenu), l'écran montre de nouveau la classe du joueur.
 	if (forMate)
 	{
 		showClass(indexClass + 1);
 		if (forbiddenClass != 0 && currentClassId() == forbiddenClass)
 			showClass(indexClass + 1);
+	}
+	else
+	{
+		showOwnChoice();
 	}
 	refreshBan();
 	refreshLock();
@@ -489,6 +609,9 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	float bottom = banLabel->isVisible() ? lockY - 40 : lockY;
 	banLabel->setSize(width - 2 * margin, 32);
 	banLabel->setPosition(margin, lockY - 38);
+	// Compte à rebours : à droite du bouton de verrouillage (sur deux lignes au besoin).
+	timerLabel->setPosition(width / 2 + 214, lockY + 4);
+	timerLabel->setMaximumTextWidth(std::max(160.f, width / 2 - 214 - margin));
 
 	// Gauche : sorts (lignes ajustées à la hauteur disponible), puis talents.
 	float leftWidth = width * 0.36f;
@@ -535,7 +658,9 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 	appearanceLabel->setMaximumTextWidth(std::max(120.f, rightX - swatchX - 12));
 	float rightWidth = width - rightX - margin;
 	statsPanel->setPosition(rightX, top);
-	statsPanel->setSize(rightWidth, 200);
+	// Caractéristiques à la hauteur de leur texte : la description, dessous, garde le reste.
+	float statsHeight = statsLabel->getSize().y + 24;
+	statsPanel->setSize(rightWidth, statsHeight);
 	descriptionLabel->setMaximumTextWidth(rightWidth - 28);
 	// Coéquipier, sous la description.
 	float mateHeight = 0;
@@ -551,8 +676,17 @@ void ClassSelectionScreen::layout(const sf::Vector2u & size)
 		matePanel->setPosition(rightX, bottom - 16 - mateHeight);
 		mateHeight += 12;
 	}
-	descriptionPanel->setPosition(rightX, top + 214);
-	descriptionPanel->setSize(rightWidth, std::max(120.f, bottom - 16 - mateHeight - (top + 214)));
+	float descriptionTop = top + statsHeight + 12;
+	descriptionPanel->setPosition(rightX, descriptionTop);
+	float descriptionHeight = std::max(80.f, bottom - 16 - mateHeight - descriptionTop);
+	descriptionPanel->setSize(rightWidth, descriptionHeight);
+	// Peu de place (coéquipier affiché, petite fenêtre) : description et passif en plus petit.
+	for (unsigned int size : { 18u, 16u, 14u })
+	{
+		descriptionLabel->setTextSize(size);
+		if (descriptionLabel->getSize().y + 16 <= descriptionHeight)
+			break;
+	}
 
 	lockButton->setSize(400, 54);
 	lockButton->setPosition(width / 2 - 200, lockY);
@@ -606,6 +740,12 @@ void ClassSelectionScreen::update(float deltatime)
 			refreshBan();
 		}
 	}
+	if (selectionRemaining > 0)
+		selectionRemaining = std::max(0.f, selectionRemaining - deltatime);
+	if (noticeTime > 0)
+		noticeTime -= deltatime;
+	refreshTimer();
+
 	if (banRequested)
 	{
 		banRequested = false;
@@ -664,19 +804,37 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 	// L'état des joueurs est géré par PlayerStatusView (widget autonome).
 	if (m.substring(0, 2) == "PO")
 	{
-		// Choix verrouillé (aussi au retour après une déconnexion) : la classe retenue est montrée.
-		int classId = std::atoi(m.substring(2).toAnsiString().c_str());
+		// Choix verrouillé (aussi au retour après une déconnexion) : la classe retenue est montrée, avec
+		// les sorts, talents et apparence gardés par le serveur et le nom du coéquipier qui a choisi
+		// pendant une absence. Ancien format : PO<classId>.
+		std::string body = msg.substr(2);
+		nlohmann::json chosen = nlohmann::json::parse(body, nullptr, false);
+		if (!chosen.is_object())
+			chosen = { { "class", std::atoi(body.c_str()) } };
+		locked = true;
+		myClass = chosen.value("class", 0);
 		for (int i = 0; i < (int)classesInstances.size(); i++)
 		{
-			if (classesInstances[i]->getClassId() == classId)
+			if (classesInstances[i]->getClassId() == myClass)
 				showClass(i);
 		}
-		locked = true;
-		myClass = classId;
+		const tw::battle::ClassDef * classDef = ClientGameData::get().findClass(myClass);
+		if (classDef != NULL && chosen.contains("spells"))
+			spellPicker->setClass(classDef, intArray(chosen["spells"]));
+		if (chosen.contains("talents"))
+			talentPicker->setChosen(stringArray(chosen["talents"]));
+		if (chosen.contains("appearance") && chosen["appearance"].is_string() && !chosen["appearance"].get<std::string>().empty())
+			selectedAppearance = chosen["appearance"].get<std::string>();
+		chosenBy = chosen.contains("by") && chosen["by"].is_string() ? fromServerText(chosen["by"].get<std::string>()) : sf::String();
+		mySpells = spellPicker->getChosen();
+		myTalents = talentPicker->getChosen();
+		myAppearance = selectedAppearance;
 		spellPicker->setLocked(true);
 		talentPicker->setLocked(true);
 		previousButton->setVisible(false);
 		nextButton->setVisible(false);
+		appearanceHint = sf::String();
+		refreshAppearances();
 		refreshLock();
 		updateMatePick();
 	}
@@ -712,19 +870,44 @@ void ClassSelectionScreen::onMessageReceived(std::string msg)
 		if (ban.is_object())
 		{
 			bannedClass = ban.value("banned", 0);
+			// Fin du bannissement : retour à la classe préférée.
+			if (banMode && ban.value("done", false) && !locked)
+				showClass(preferredIndex());
 			if (ban.value("done", false))
 			{
 				banMode = false;
 				banDone = true;
 				forbiddenClass = ban.value("forbidden", 0);
+				if (ban.contains("seconds"))
+					selectionRemaining = (float)ban.value("seconds", 0);
 			}
-			// La classe affichée est interdite : on montre la suivante.
+			// La classe affichée est interdite : on montre la suivante (la préférence ne passe pas outre).
 			if (banDone && !locked && forbiddenClass != 0 && currentClassId() == forbiddenClass)
+			{
+				if (forbiddenClass == ClientConfig::get().preferredClass)
+				{
+					notice = L"Votre classe préférée est interdite pour ce match.";
+					noticeTime = 6;
+				}
 				showClass(indexClass + 1);
+			}
 			refreshBan();
 			refreshLock();
 			if (windowSize.x > 0)
 				layout(windowSize);
+		}
+	}
+	else if (m.substring(0, 2) == "ER")
+	{
+		// Choix refusé (délai écoulé, classe interdite, coéquipier revenu...) : message quelques secondes.
+		nlohmann::json error = nlohmann::json::parse(msg.substr(2), nullptr, false);
+		if (error.is_object())
+		{
+			if (error.value("op", std::string()) == "PC" && forMate)
+				mateSent = false;
+			notice = fromServerText(error.value("message", std::string()));
+			noticeTime = 5;
+			refreshLock();
 		}
 	}
 	else if (m.substring(0, 2) == "HG")

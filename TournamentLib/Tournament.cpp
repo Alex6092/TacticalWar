@@ -88,6 +88,7 @@ const char * tw::tournament::toString(ResultReason reason)
 	case ResultReason::FORFEIT: return "FORFEIT";
 	case ResultReason::ADMIN: return "ADMIN";
 	case ResultReason::BYE: return "BYE";
+	case ResultReason::SURRENDER: return "SURRENDER";
 	}
 	return "";
 }

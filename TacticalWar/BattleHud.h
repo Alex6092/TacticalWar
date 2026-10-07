@@ -26,6 +26,8 @@ public:
 	std::function<void(int)> onEmote;
 	// Options changées depuis l'aide (couleurs des personnages, taille du texte du bandeau).
 	std::function<void()> onOptionsChanged;
+	// Abandon confirmé dans la boîte de dialogue du bouton « Abandonner ».
+	std::function<void()> onSurrender;
 
 	void layout(const sf::Vector2u & windowSize);
 	void update(float deltatime);
@@ -56,6 +58,10 @@ public:
 	void setSpectator(const sf::String & banner);
 	// Bouton permanent pour quitter le combat (entraînement), dans le coin en bas à droite.
 	void showLeaveButton(const sf::String & text);
+	// Bouton « Abandonner » (combats en ligne seulement), au même endroit, pendant le placement et le
+	// combat ; et bandeau du vote d'abandon de l'équipe (texte vide : aucun vote en cours).
+	void allowSurrender(bool allowed);
+	void showSurrenderVote(const sf::String & text);
 	// Aide des commandes (bouton « ? » ou touche H).
 	void toggleHelp();
 	void hideHelp();
@@ -150,4 +156,10 @@ private:
 	tgui::Label::Ptr zoneLabel;
 	tgui::Button::Ptr leaveButton;
 	tgui::Label::Ptr cameraHelp;
+	bool surrenderAllowed = false;
+	tgui::Button::Ptr surrenderButton;
+	tgui::Label::Ptr surrenderLabel;
+	// Boîte de confirmation (gardée jusqu'à la suivante : elle se retire pendant son propre signal).
+	std::shared_ptr<tgui::MessageBox> surrenderBox;
+	void confirmSurrender();
 };

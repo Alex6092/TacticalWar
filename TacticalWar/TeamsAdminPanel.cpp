@@ -80,7 +80,7 @@ TeamsAdminPanel::TeamsAdminPanel(tgui::Gui * gui, const sf::Font & font)
 	form->add(tag);
 
 	form->add(createLabel(L"Tête de série"), "seedLabel");
-	seed = createEditBox("0 = non classée");
+	seed = createEditBox(L"0 = non classée");
 	seed->setInputValidator("[0-9]*");
 	form->add(seed);
 

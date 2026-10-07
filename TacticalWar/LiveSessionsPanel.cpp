@@ -75,6 +75,22 @@ LiveSessionsPanel::LiveSessionsPanel(tgui::Gui * gui, const sf::Font & font)
 	refreshButton->connect("pressed", []() { LinkToServer::getInstance()->SendRaw("SL{}"); });
 	group->add(refreshButton);
 
+	shrinkButton = tgui::Button::create(L"Rétrécir la carte");
+	shrinkButton->setInheritedFont(font);
+	shrinkButton->setTextSize(16);
+	shrinkButton->setVisible(false);
+	shrinkButton->connect("pressed", [this]() {
+		int index = list->getSelectedItemIndex();
+		if (index < 0 || index >= (int)rowIds.size() || sessions[index].value("phase", std::string()) != "FIGHT")
+		{
+			setStatus(L"Sélectionnez un combat en cours (après le placement).");
+			return;
+		}
+		if (onShrink)
+			onShrink(rowIds[index]);
+	});
+	group->add(shrinkButton);
+
 	status = tgui::Label::create();
 	status->setInheritedFont(font);
 	status->setTextSize(16);
@@ -106,7 +122,10 @@ void LiveSessionsPanel::layout(const sf::Vector2u & windowSize, float top)
 	watchButton->setSize(200, 44);
 	refreshButton->setPosition(214, height - 48);
 	refreshButton->setSize(160, 44);
-	status->setPosition(390, height - 38);
+	shrinkButton->setVisible((bool)onShrink);
+	shrinkButton->setPosition(388, height - 48);
+	shrinkButton->setSize(220, 44);
+	status->setPosition(onShrink ? 622.f : 390.f, height - 38);
 }
 
 void LiveSessionsPanel::setStatus(const sf::String & value, const sf::Color & color)

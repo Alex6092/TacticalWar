@@ -45,6 +45,7 @@ namespace tw
 		tgui::ComboBox::Ptr map;
 		tgui::ComboBox::Ptr mode;
 	tgui::ComboBox::Ptr bonuses;
+	tgui::ComboBox::Ptr shrink;
 		tgui::ComboBox::Ptr difficulty;
 		tgui::ComboBox::Ptr talentCount;
 		tgui::Label::Ptr description;

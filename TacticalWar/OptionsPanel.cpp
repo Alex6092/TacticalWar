@@ -11,7 +11,7 @@ using namespace tw;
 namespace
 {
 	const float WIDTH = 620;
-	const float HEIGHT = 470;
+	const float HEIGHT = 560;
 	const int SCALES[3] = { 100, 115, 130 };
 
 	tgui::Label::Ptr note(const sf::Font & font, const sf::String & value)
@@ -105,6 +105,15 @@ OptionsPanel::OptionsPanel(tgui::Gui * gui, const sf::Font & titleFont)
 	alertNote->setPosition(62, y + 28);
 	panel->add(alertNote);
 
+	y += 90;
+	seeThrough = option(textFont, L"Voir à travers le décor");
+	seeThrough->setPosition(30, y);
+	panel->add(seeThrough);
+	tgui::Label::Ptr seeThroughNote = note(textFont, L"Un personnage caché derrière un arbre, un rocher ou un mur reste visible : "
+		L"l'élément devient transparent autour de lui.");
+	seeThroughNote->setPosition(62, y + 28);
+	panel->add(seeThroughNote);
+
 	tgui::Button::Ptr close = tgui::Button::create(L"Fermer");
 	close->setInheritedFont(titleFont);
 	close->setTextSize(16);
@@ -119,6 +128,8 @@ OptionsPanel::OptionsPanel(tgui::Gui * gui, const sf::Font & titleFont)
 	colorblind->connect("Unchecked", [this]() { changed(); });
 	turnAlert->connect("Checked", [this]() { changed(); });
 	turnAlert->connect("Unchecked", [this]() { changed(); });
+	seeThrough->connect("Checked", [this]() { changed(); });
+	seeThrough->connect("Unchecked", [this]() { changed(); });
 
 	gui->add(panel);
 	refresh();
@@ -131,6 +142,7 @@ void OptionsPanel::refresh()
 	sound->setChecked(config.soundSaved());
 	colorblind->setChecked(config.colorblind);
 	turnAlert->setChecked(config.turnAlert);
+	seeThrough->setChecked(config.seeThrough);
 	for (int i = 0; i < 3; i++)
 	{
 		bool selected = config.textScale == SCALES[i];
@@ -154,6 +166,7 @@ void OptionsPanel::changed()
 	}
 	config.colorblind = colorblind->isChecked();
 	config.turnAlert = turnAlert->isChecked();
+	config.seeThrough = seeThrough->isChecked();
 	palette::setColorblind(config.colorblind);
 	config.save();
 	refresh();

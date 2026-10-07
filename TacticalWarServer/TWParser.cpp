@@ -1,4 +1,5 @@
 ﻿#include "TWParser.h"
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <stdexcept>
@@ -129,7 +130,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 	}
 
 	// Actions de combat (contenu JSON) :
-	if (op == "CP" || op == "Cs" || op == "Cm" || op == "CL" || op == "Ct" || op == "CE" || op == "CG" || op == "BR")
+	if (op == "CP" || op == "Cs" || op == "Cm" || op == "CL" || op == "Ct" || op == "CE" || op == "CG" || op == "CQ" || op == "BR")
 	{
 		tw::protocol::Message message;
 		nlohmann::json body = nlohmann::json::object();
@@ -137,6 +138,8 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 			message.parseJson(body);
 		if (op == "CG")
 			handlePing(client, body);
+		else if (op == "CQ")
+			handleSurrender(client, body);
 		else
 			handleBattleAction(client, op, body);
 		return;
@@ -150,6 +153,17 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
 			message.parseJson(body);
 		handleChallengeMessage(client, op, body);
+		return;
+	}
+
+	// Rétrécissement de la carte d'un combat (admin) :
+	if (op == "SK")
+	{
+		tw::protocol::Message message;
+		nlohmann::json body = nlohmann::json::object();
+		if (tw::protocol::Message::decode(toParse, message) && message.hasJsonPayload())
+			message.parseJson(body);
+		handleShrink(client, body);
 		return;
 	}
 
@@ -280,7 +294,7 @@ void TWParser::handleMessage(ClientState * client, const std::string & toParse)
 									if (session != NULL)
 										sendBanState(session, client, p);
 									if (session != NULL && session->chosenClass(p) != 0)
-										send(client, "PO" + std::to_string(session->chosenClass(p)) + "\n");
+										send(client, classChoiceMessage(session, p));
 								}
 
 								notifyMatchConnectedPlayerChanged(match);
@@ -675,6 +689,54 @@ void TWParser::onMatchStatusChanged(tw::Match * match, tw::MatchStatus oldStatus
 	}
 }
 
+void TWParser::cancelFriendly(FriendlyMatch & friendly)
+{
+	BattleSession * session = sessionOfMatch(friendly.match);
+	friendly.cancelled = true;
+	if (session != NULL)
+		cancelSession(session);
+	else
+		friendly.match->setWinnerTeam(0);
+}
+
+void TWParser::cancelFriendlyMatchesForTournament(const std::string & reason)
+{
+	bool any = false;
+	for (FriendlyMatch & friendly : friendlyMatches)
+	{
+		if (friendly.cancelled || friendly.match->getStatus() == tw::MatchStatus::FINISHED)
+			continue;
+		std::cout << "Match amical annulé (" << friendly.name << ") : " << reason << std::endl;
+		cancelFriendly(friendly);
+		// Après le retour à l'attente (HW) : le message s'affiche sur l'écran d'attente.
+		std::string message = tw::protocol::Message::encode("DR", { { "ok", false },
+			{ "message", u8"Match amical annulé : " + reason }, { "from", friendly.teamA }, { "to", friendly.teamB } });
+		sendToTeam(friendly.teamA, message);
+		sendToTeam(friendly.teamB, message);
+		any = true;
+	}
+	if (any)
+	{
+		notifyFriendlyMatches();
+		notifyPlayingMatchList();
+		notifyPlanifiedAndPlayingMatch(admin);
+	}
+}
+
+bool TWParser::teamInRunningTournament(int teamId)
+{
+	for (int id : tournaments.ids())
+	{
+		const tw::tournament::TournamentEngine * engine = tournaments.find(id);
+		if (engine == NULL || engine->get().status != tw::tournament::TournamentStatus::RUNNING)
+			continue;
+		const std::vector<int> & teams = engine->get().teamIds;
+		if (std::find(teams.begin(), teams.end(), teamId) != teams.end())
+			return true;
+	}
+	return false;
+}
+
 tw::Match * TWParser::createFriendlyMatch(const std::string & rawName, int teamA, int teamB, int mapId, std::string & error)
 {
 	std::string name = rawName;
@@ -695,6 +757,11 @@ tw::Match * TWParser::createFriendlyMatch(const std::string & rawName, int teamA
 		if (players == teamIdToPlayerList.end() || players->second.size() < 2)
 		{
 			error = u8"Équipe inconnue ou incomplète : " + std::to_string(team) + ".";
+			return NULL;
+		}
+		if (teamInRunningTournament(team))
+		{
+			error = teamName(team) + u8" joue le tournoi en cours : pas de match amical.";
 			return NULL;
 		}
 		if (isTeamAvailableForMatchCreation(team) != 0)
@@ -828,12 +895,7 @@ void TWParser::handleFriendlyAdminMessage(ClientState * client, const std::strin
 			error = u8"Ce match est déjà terminé.";
 		else
 		{
-			BattleSession * session = sessionOfMatch(found->match);
-			found->cancelled = true;
-			if (session != NULL)
-				cancelSession(session);
-			else
-				found->match->setWinnerTeam(0);
+			cancelFriendly(*found);
 			success = u8"Match annulé : " + found->name + ".";
 		}
 	}

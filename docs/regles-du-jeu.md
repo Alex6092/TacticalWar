@@ -82,12 +82,13 @@ possibles du joueur sont en vert.
 
 ## Réserve de temps
 
-Un tour dure 40 secondes. Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout
-le combat :
-- au-delà des 40 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
+Un tour dure 25 secondes (`"turnSeconds"` dans les règles de `assets/data/gamedata.json` ; 40 avant la
+séance de test d'octobre 2026, trop long pour finir les poules d'un tournoi de 16 équipes en une heure).
+Chaque combattant dispose en plus d'une **réserve de 30 secondes** pour tout le combat :
+- au-delà des 25 secondes, le minuteur passe en orange, « réserve 22 s », et la réserve s'entame ;
 - le temps utilisé est perdu pour les tours suivants ; la réserve restante figure dans les détails du
   combattant (« Réserve 18 s ») ;
-- réserve épuisée : le tour s'arrête à la fin des 40 secondes, comme avant ;
+- réserve épuisée : le tour s'arrête à la fin des 25 secondes, comme avant ;
 - un joueur absent (5 secondes par tour) n'utilise pas sa réserve, sauf si son coéquipier le pilote.
 
 Réglage : `"timeBankSeconds"` dans les règles de `assets/data/gamedata.json` (0 : pas de réserve).
@@ -119,8 +120,31 @@ classe que regarde son coéquipier, puis celle qu'il a verrouillée, et s'il est
 Glyphe de givre ou Prison de glace, puis votre coéquipier frappe avec Taillade... »). Les adversaires
 ne voient rien de ces choix.
 
-Messages : `PV{"class"}` (classe regardée) et `PT{"name", "class", "viewing", "locked", "present"}`,
-relayé aux seuls coéquipiers.
+Messages : `PV{"class", "spells", "talents", "appearance"}` (brouillon de l'écran, voir plus bas) et
+`PT{"name", "class", "viewing", "locked", "present"}`, relayé aux seuls coéquipiers.
+
+**Délai et verrouillage** (depuis la séance de test d'octobre 2026) :
+- un compte à rebours, à droite du bouton, annonce « Sans verrouillage, la classe affichée sera retenue
+  dans 23 s » ;
+- l'écran envoie à chaque changement la classe affichée, ses sorts, les talents et l'apparence ; à la fin
+  du délai, chaque joueur non verrouillé garde ce brouillon (la classe au hasard ne sert plus qu'à un
+  joueur jamais connecté) ;
+- un verrouillage refusé (délai écoulé, classe interdite, déjà verrouillée) affiche la raison ;
+- après avoir choisi pour un coéquipier absent, l'écran revient à sa propre classe ; le coéquipier qui
+  revient voit la classe choisie pour lui, ses vrais sorts et « Choisi pour vous par Léa ». Les bots
+  attendent 10 s d'absence avant de choisir pour leur coéquipier.
+
+## Préférences de l'écran d'attente
+
+En attendant un match, le panneau **« Mes préférences »** (à droite de « Défier une équipe ») règle la
+classe préférée, ses 4 sorts (description au survol), 3 talents par ordre de préférence et l'apparence.
+Tout est enregistré dans `client.json`.
+
+L'écran de choix de classe s'ouvre ensuite sur la classe préférée, avec ces sorts, les premiers talents
+(autant que le match en autorise) et l'apparence. **Rien n'est verrouillé d'avance** : le joueur peut
+changer d'avis, et sans verrouillage la classe affichée est retenue à la fin du délai. Une classe
+interdite par le bannissement reste interdite : l'écran passe à la classe suivante et le signale
+(« Votre classe préférée est interdite pour ce match »).
 
 ## Coéquipier absent : un joueur, deux personnages
 
@@ -227,6 +251,10 @@ Certaines cartes ont des cases qui changent le combat :
 | Braises | Praticable ; 8 dégâts au début du tour de qui s'y trouve (le bouclier absorbe d'abord) |
 | Source | Praticable ; +6 PV au début du tour de qui s'y trouve |
 | Hautes herbes | Praticable, mais bloque la ligne de vue : on s'y cache des tirs |
+
+Les obstacles bloquent le passage ; rochers et arbres bloquent aussi la vue, mais pas le **buisson**
+(un petit arbre rond) ni l'eau : on tire par-dessus. Au survol d'un obstacle, la ligne d'aide le dit
+(« Buisson : bloque le passage, pas la vue (on tire par-dessus) »).
 
 - L'effet s'applique au début du tour, après les poisons et les glyphes ; la mort subite reste en
   dernier. Traverser une case pendant un déplacement ne déclenche rien.
@@ -507,6 +535,44 @@ reste celle de l'équipe, pour que les équipes restent reconnaissables) et une 
 - Hors ligne (entraînement), les apparences de la dernière connexion et celles des énigmes du poste
   restent disponibles.
 
+## Abandonner
+
+Bouton **« Abandonner »** en bas à droite, pendant le placement et le combat (pas à l'entraînement, au
+tutoriel ni aux énigmes), avec une boîte de confirmation :
+- seul joueur présent de son équipe (seul inscrit, ou coéquipier déconnecté) : l'abandon est immédiat ;
+- deux joueurs présents : le coéquipier voit « Léa veut abandonner (25 s) - Cliquez « Abandonner » pour
+  confirmer ». Sans sa confirmation dans les 30 s, le vote est annulé ; une connexion ou une
+  déconnexion l'annule aussi.
+
+L'autre équipe gagne ; le résultat porte la raison **abandon** (distincte du forfait d'une équipe
+absente) dans le tournoi, les rediffusions, l'administration et la page projetée. Ni « Intouchable »
+ni « Victoire éclair » ne sont décernés. Messages : `CQ{"vote"}` et `BQ{"from", "votes", "needed",
+"expiresIn", "voted"}`.
+
+## Carte qui rétrécit
+
+Pour que les combats ne s'éternisent pas, à partir d'un tour réglable, **un anneau de cases se ferme à
+chaque tour complet**, depuis le bord de la carte :
+- les cases fermées sont assombries (hachurées en mode daltonien) et deviennent infranchissables ; les
+  tirs passent toujours au-dessus ;
+- les murs, orbes et cases de glyphe de l'anneau disparaissent ;
+- un combattant sur l'anneau **glisse** vers la case libre la plus proche, côté centre, sans dégâts ;
+- la zone centrale (celle du mode « zone à tenir ») ne se ferme jamais, et il reste toujours au moins
+  12 cases ouvertes autour d'elle ;
+- le journal et le commentateur l'annoncent (« La carte rétrécit ! ») ; la mosaïque de la page
+  projetée montre les cases fermées en noir.
+
+Réglages : tournoi, champ « Rétrécir au tour » (12 par défaut, 0 : jamais) ; matchs amicaux,
+`"shrinkRound"` dans `server.json` (12 par défaut) ; entraînement, liste « Rétrécissement ». L'admin peut
+aussi faire rétrécir la carte d'un combat qui dure trop : bouton « Rétrécir la carte » de l'onglet
+Combats, ou « Rétrécir » de l'onglet Tournoi (un anneau tout de suite, puis un par tour ; message `SK`).
+
+## Voir à travers le décor
+
+Un personnage caché derrière un grand arbre, un rocher, un buisson, des hautes herbes ou un bloc de mur
+reste visible : l'élément de devant devient transparent dans un ovale autour de lui. Option « Voir à
+travers le décor » de l'écran Options (activée par défaut).
+
 ## Accessibilité : écran Options
 
 Bouton **Options** de l'écran de connexion, et bouton « Options » de l'aide en combat (touche H).
@@ -522,6 +588,7 @@ Les réglages s'appliquent tout de suite et sont enregistrés dans `client.json`
   l'aide, les descriptions des sorts, l'ordre du tour et le nom des personnages.
 - **Alerte de fin de tour** : pendant les 5 dernières secondes de son tour (temps normal, puis
   réserve), le minuteur clignote et un tic sonne chaque seconde.
+- **Voir à travers le décor** : ovale transparent dans les éléments qui cachent un personnage.
 
 ## Onglet Matchs de l'administration
 
@@ -541,12 +608,15 @@ l'écran d'attente (panneau « Défier une équipe », actualisé toutes les 5 s
   joueur qui répond décide. Sans réponse, le défi expire au bout de 30 s.
 - Une équipe n'a qu'un défi à la fois. Défi accepté : match amical, choix des classes habituel.
 - Les défis en attente sont annulés quand un match ou un tournoi commence. Les bots refusent les défis.
+- **Un tournoi qui démarre annule les matchs amicaux** prévus ou en cours (leurs joueurs reviennent à
+  l'attente avec « Match amical annulé : le tournoi commence ») et lance tout de suite ses premiers
+  matchs. Pendant le tournoi, ses équipes ne peuvent pas jouer de match amical.
 
 ## Mise à jour des clients
 
 À la connexion, le client envoie la version du protocole. Un client d'une autre version que le
-serveur est refusé avec un message clair (« Ce jeu (version 6) ne correspond pas au serveur
-(version 7) ») et l'adresse de la page de téléchargement, avec un bouton **Ouvrir la page**.
+serveur est refusé avec un message clair (« Ce jeu (version 7) ne correspond pas au serveur
+(version 8) ») et l'adresse de la page de téléchargement, avec un bouton **Ouvrir la page**.
 
 La page `http://<serveur>:8080/telecharger.html` (lien « Télécharger le jeu » de la vue projetée)
 donne la version et le zip du client, avec les étapes : télécharger, dézipper, lancer. Le zip est
@@ -564,8 +634,20 @@ importante d'abord ; les nouvelles lignes sont mises en surbrillance.
 
 Onglet **Combats** de la vue projetée, en premier dès qu'un combat est en cours (et dans la rotation
 `?rotate=`) : une mini-carte vue de dessus par combat, avec les pions aux couleurs des équipes (initiale
-de la classe, anneau de PV, combattant actif cerclé d'or), les murs, les orbes, la zone, le tour, le
-score de zone et les PV de chaque équipe.
+de la classe, anneau de PV, combattant actif cerclé d'or), les murs, les orbes, la zone, les cases
+fermées par le rétrécissement (en noir), le tour, le score de zone et les PV de chaque équipe.
+
+## Vue projetée : onglets et défilement
+
+La colonne de droite est faite d'onglets, un seul affiché à la fois sur toute la hauteur : **En direct**
+(avec le nombre de combats), **Commentaire** (12 phrases), **Derniers combats** (6), **À venir** et
+**Classement**. Un onglet vide est masqué.
+
+Chaque zone (gauche et droite) peut faire défiler ses onglets toute seule : `?rotate=20` à gauche,
+`?rotate-side=12` à droite, `?carousel=1` pour les deux (20 s et 12 s), ou le bouton **« Défilement »**
+de chaque zone (retenu par le navigateur). Un clic sur un onglet suspend le défilement de sa zone une
+minute ; un nouveau commentaire ne change pas d'onglet ; à la fin du tournoi, la cérémonie reste
+affichée à gauche.
 
 ## Temps forts automatiques
 
@@ -573,5 +655,16 @@ score de zone et les PV de chaque équipe.
 coup, retournement, dernier debout) et garde jusqu'à trois extraits d'environ 7 secondes dans la
 rediffusion.
 
-Le **mode réalisateur** du spectateur les rejoue quand aucun combat n'est en cours, l'un après l'autre,
-avec le bandeau « Temps fort : Double KO de Léa », et repasse en direct dès qu'un combat commence.
+Le **mode réalisateur** du spectateur choisit à chaque retour sur la liste, dans l'ordre :
+1. **un moment d'un combat en cours** pas encore vu (moins de 3 minutes) : le serveur le détecte
+   pendant le combat et le propose environ 4 s après ; il est rejoué en **léger différé** (bandeau
+   « À l'instant : KO de Léa par Tom ») ;
+2. le combat en cours le plus serré, **en direct** ; toutes les 10 s, le réalisateur regarde s'il y a un
+   nouveau moment dans un autre combat, et y passe au plus une fois par minute ;
+3. les temps forts des rediffusions pas encore joués, **un combat après l'autre** (le meilleur moment de
+   chaque combat, puis le deuxième...), puis il recommence.
+
+Les extraits s'enchaînent sans attente (silences de 0,8 s au plus). Messages : `HL` (moments en direct
+avec `session` et leur âge, puis ceux des rediffusions) et `RP{"session", "from", "to"}` pour un
+extrait d'un combat en cours. Les calculs de l'ordinateur « Difficile » se font en tâche de fond dans
+les combats locaux (entraînement) : l'image ne saccade plus (`--frame-stats` affiche la pire image).

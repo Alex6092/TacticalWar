@@ -12,17 +12,22 @@
 #include <TGUI/TGUI.hpp>
 #include "ClientConfig.h"
 #include <algorithm>
+#include <iostream>
 
 int main(int argc, char** argv)
 {
 	ClientConfig & config = ClientConfig::get();
 	config.applyCommandLine(argc, argv);
 
+	// Plein écran si client.json le demande (paquet de l'événement) ; une taille de fenêtre donnée en
+	// ligne de commande (captures, débogage) garde la fenêtre.
 	sf::VideoMode mode = sf::VideoMode::getDesktopMode();
-	if (config.windowWidth > 0 && config.windowHeight > 0)
+	bool windowed = config.windowWidth > 0 && config.windowHeight > 0;
+	if (windowed)
 		mode = sf::VideoMode(config.windowWidth, config.windowHeight);
+	sf::Uint32 style = config.fullscreen && !windowed ? sf::Style::Fullscreen : sf::Style::Default;
 
-	sf::RenderWindow window(mode, "Tactical War"/*, sf::Style::Fullscreen*/);
+	sf::RenderWindow window(mode, "Tactical War", style);
 	tgui::Gui gui{ window };
 	window.setVerticalSyncEnabled(true);
 	if (config.fxGallery)
@@ -32,13 +37,21 @@ int main(int argc, char** argv)
 	else if (config.classScreenTalents >= 0)
 	{
 		std::string selection = "{\"talents\": " + std::to_string(config.classScreenTalents) + ", \"ban\": " + std::to_string(config.classScreenBan)
-			+ ", \"team\": " + std::to_string(config.classScreenTeam) + "}";
+			+ ", \"team\": " + std::to_string(config.classScreenTeam)
+			+ (config.classScreenSeconds >= 0 ? ", \"seconds\": " + std::to_string(config.classScreenSeconds) : std::string()) + "}";
 		ClassSelectionScreen * screen = new ClassSelectionScreen(&gui, selection);
 		tw::ScreenManager::getInstance()->setCurrentScreen(screen);
 		if (config.classScreenSolo)
 		{
 			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 0, \"viewing\": 0, \"locked\": false, \"present\": false}");
 			screen->onMessageReceived("PO4");
+			if (config.classScreenSoloDone)
+				screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 2, \"viewing\": 2, \"locked\": true, \"present\": false}");
+		}
+		if (config.classScreenChosenBy)
+		{
+			screen->onMessageReceived("PT{\"name\": \"Camille\", \"class\": 4, \"viewing\": 4, \"locked\": true, \"present\": true}");
+			screen->onMessageReceived("PO{\"class\": 2, \"spells\": [3, 4, 5, 6], \"talents\": [], \"appearance\": \"braise\", \"by\": \"Camille\"}");
 		}
 		if (config.classScreenAlone > 0)
 		{
@@ -98,14 +111,31 @@ int main(int argc, char** argv)
 	sf::Clock deltaClock;
 	sf::Clock runningClock;
 	bool firstFrame = true;
+	// --frame-stats : pires durées sur les 5 dernières secondes.
+	sf::Clock statsClock;
+	float worstFrame = 0;
+	float worstWork = 0;
 
 	while (window.isOpen())
 	{
+		float frame = deltaClock.restart().asSeconds();
+		sf::Clock workClock;
 		tw::ScreenManager::getInstance()->getCurrentScreen()->handleEvents(&window, &gui);
-		tw::ScreenManager::getInstance()->getCurrentScreen()->update(deltaClock.restart().asSeconds());
+		tw::ScreenManager::getInstance()->getCurrentScreen()->update(frame);
 		window.clear();
 		tw::ScreenManager::getInstance()->getCurrentScreen()->render(&window);
 		gui.draw();
+		if (config.frameStats && !firstFrame)
+		{
+			worstFrame = std::max(worstFrame, frame);
+			worstWork = std::max(worstWork, workClock.getElapsedTime().asSeconds());
+			if (statsClock.getElapsedTime().asSeconds() >= 5)
+			{
+				std::cout << "Images (5 s) : pire " << (int)(worstFrame * 1000) << " ms, calcul le plus long " << (int)(worstWork * 1000) << " ms" << std::endl;
+				worstFrame = worstWork = 0;
+				statsClock.restart();
+			}
+		}
 
 		// Capture d'écran demandée en ligne de commande (outil de développement) :
 		if (!config.screenshotPath.empty() && !firstFrame && runningClock.getElapsedTime().asSeconds() >= config.screenshotDelaySeconds)

@@ -41,25 +41,17 @@ void PlayerStatusView::onMessageReceived(std::string msg)
 	// Status des joueurs du match :
 	if (m.substring(0, 2) == "PS")
 	{
-		std::string toDisplay = "";
-		std::vector<std::string> payloadData = StringUtils::explode(m.substring(2), ';');
+		// Noms en UTF-8 (serveur), textes en caractères larges : pas de conversion par la page de code.
+		sf::String toDisplay;
+		std::vector<std::string> payloadData = StringUtils::explode(msg.substr(2), ';');
 
 		for (int i = 0; i < payloadData.size(); i++)
 		{
 			std::vector<std::string> playerInfo = StringUtils::explode(payloadData[i], ',');
 			std::string name = playerInfo[0];
 			int state = std::atoi(playerInfo[1].c_str());
-			std::string stateStr = "";
-			if (state == 1)
-			{
-				stateStr = "Connecté";
-			}
-			else
-			{
-				stateStr = "En attente";
-			}
-
-			toDisplay += " - " +  name + " (" + stateStr + ")" + "\n";
+			sf::String stateStr = state == 1 ? L"Connecté" : L"En attente";
+			toDisplay += L" - " + fromServerText(name) + L" (" + stateStr + L")\n";
 		}
 
 		tgui::Label::Ptr playerLabel = get<tgui::Label>("playerLabel");

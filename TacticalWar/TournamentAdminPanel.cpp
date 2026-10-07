@@ -57,6 +57,7 @@ namespace
 		if (reason == "ROUND_LIMIT") return L"décision PV";
 		if (reason == "OBJECTIVE") return L"zone";
 		if (reason == "FORFEIT") return L"forfait";
+		if (reason == "SURRENDER") return L"abandon";
 		if (reason == "ADMIN") return L"arbitrage";
 		if (reason == "BYE") return L"exempt";
 		return fromServerText(reason);
@@ -154,6 +155,9 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	// Talents de tournoi : un par match joué, au plus ce nombre (0 : désactivés).
 	talentsLabel = createLabel(L"Talents (max, 0 = aucun)");
 	maxTalents = createNumberBox("3");
+	// Carte qui rétrécit : un anneau de cases se ferme à chaque tour à partir de ce tour (0 : jamais).
+	shrinkLabel = createLabel(L"Rétrécir au tour (0 = jamais)");
+	shrinkRound = createNumberBox("12");
 	// Bannissement : chaque équipe interdit une classe à l'autre avant le match.
 	bansLabel = createLabel(L"Bannissement");
 	bans = tgui::ComboBox::create();
@@ -180,7 +184,7 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 	bonuses->setChecked(false);
 
 	for (const tgui::Widget::Ptr & widget : std::vector<tgui::Widget::Ptr>{ poolCountLabel, poolCount, qualifiersLabel, qualifiers,
-		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, bansLabel, bans, mapsLabel, maps, bonuses })
+		thirdPlace, grandFinalReset, swissRoundsLabel, swissRounds, topCutLabel, topCut, modeLabel, mode, zonePointsLabel, zonePoints, talentsLabel, maxTalents, shrinkLabel, shrinkRound, bansLabel, bans, mapsLabel, maps, bonuses })
 		settings->add(widget);
 
 	settings->add(createLabel(L"Équipes inscrites (sélection multiple, ordre = têtes de série)"), "teamsLabel");
@@ -289,7 +293,24 @@ TournamentAdminPanel::TournamentAdminPanel(tgui::Gui * gui, const sf::Font & fon
 		}
 		status->setText(L"Sélectionnez un match en cours.");
 	});
-	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, webButton, diplomasButton, guideButton })
+	// Combat qui dure trop : la carte rétrécit (un anneau tout de suite, puis un par tour).
+	shrinkButton = createButton(L"Rétrécir");
+	shrinkButton->connect("pressed", [this]() {
+		int matchId = selectedMatchId();
+		for (const nlohmann::json & session : liveSessions)
+		{
+			if (matchId != 0 && session.value("tournament", 0) == selectedId && session.value("match", 0) == matchId)
+			{
+				if (session.value("phase", std::string()) == "FIGHT")
+					send("SK", { { "session", session.value("session", 0) } });
+				else
+					status->setText(L"Le combat n'a pas encore commencé.");
+				return;
+			}
+		}
+		status->setText(L"Sélectionnez un match en cours.");
+	});
+	for (const tgui::Button::Ptr & button : { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, shrinkButton, webButton, diplomasButton, guideButton })
 		group->add(button);
 
 	standings = createLabel("", 13);
@@ -388,9 +409,9 @@ void TournamentAdminPanel::layout(const sf::Vector2u & windowSize, float top)
 	float right = margin + 380 + margin;
 	float rightWidth = width - right - margin;
 	header->setPosition(right, top);
-	float buttonWidth = (rightWidth - 50) / 6;
-	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton };
-	for (int i = 0; i < 6; i++)
+	float buttonWidth = (rightWidth - 60) / 7;
+	tgui::Button::Ptr buttons[] = { pauseButton, winAButton, winBButton, stopButton, replayButton, watchButton, shrinkButton };
+	for (int i = 0; i < 7; i++)
 	{
 		buttons[i]->setPosition(right + i * (buttonWidth + 10), top + 32);
 		buttons[i]->setSize(buttonWidth, 32);
@@ -469,6 +490,10 @@ float TournamentAdminPanel::layoutSettings(float w)
 	maxTalents->setPosition(x + 318, y);
 	maxTalents->setSize(42, 26);
 	y += 34;
+	shrinkLabel->setPosition(x, y + 4);
+	shrinkRound->setPosition(x + 318, y);
+	shrinkRound->setSize(42, 26);
+	y += 34;
 	bansLabel->setPosition(x, y + 4);
 	bans->setPosition(x + 160, y);
 	bans->setSize(w - 160, 26);
@@ -542,6 +567,12 @@ void TournamentAdminPanel::onTournamentState(const nlohmann::json & body)
 	state = body;
 	refreshForm();
 	refreshMatches();
+}
+
+void TournamentAdminPanel::showMessage(const sf::String & text, bool ok)
+{
+	status->setText(text);
+	status->getRenderer()->setTextColor(ok ? sf::Color(140, 255, 140) : sf::Color(255, 140, 120));
 }
 
 void TournamentAdminPanel::onSessionList(const nlohmann::json & body)
@@ -622,6 +653,7 @@ void TournamentAdminPanel::refreshForm()
 		mode->setSelectedItemById(settings.value("mode", std::string("KO")) == "ZONE" ? "ZONE" : "KO");
 		zonePoints->setText(num(settings.value("zonePoints", 5)));
 		maxTalents->setText(num(settings.value("maxTalents", 3)));
+		shrinkRound->setText(num(settings.value("shrinkRound", 12)));
 		std::string banMode = settings.value("bans", std::string("NONE"));
 		bans->setSelectedItemById(banMode == "FINALS" || banMode == "ALL" ? banMode : "NONE");
 		std::string mapPool = settings.value("maps", std::string("CLASSIC"));
@@ -674,6 +706,7 @@ void TournamentAdminPanel::refreshForm()
 	mode->setEnabled(draft);
 	zonePoints->setEnabled(draft);
 	maxTalents->setEnabled(draft);
+	shrinkRound->setEnabled(draft);
 	bans->setEnabled(draft);
 	maps->setEnabled(draft);
 	bonuses->setEnabled(draft);
@@ -779,6 +812,7 @@ nlohmann::json TournamentAdminPanel::readSettings() const
 		{ "mode", mode->getSelectedItemId().toAnsiString() },
 		{ "zonePoints", number(zonePoints) },
 		{ "maxTalents", number(maxTalents) },
+		{ "shrinkRound", number(shrinkRound) },
 		{ "bans", bans->getSelectedItemId().toAnsiString() },
 		{ "maps", maps->getSelectedItemId().toAnsiString() },
 		{ "bonuses", bonuses->isChecked() }

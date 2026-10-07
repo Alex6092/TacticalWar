@@ -17,6 +17,7 @@ IsometricRenderer::IsometricRenderer(sf::RenderWindow * window)
 	shader.loadFromFile("./assets/shaders/vertex.vert", "./assets/shaders/fragment.frag");
 	liquidShaderReady = sf::Shader::isAvailable() && liquidShader.loadFromFile("./assets/shaders/liquid.vert", "./assets/shaders/liquid.frag");
 	reflectionsAvailable = liquidShaderReady;
+	seeThroughReady = sf::Shader::isAvailable() && seeThroughShader.loadFromFile("./assets/shaders/liquid.vert", "./assets/shaders/seethrough.frag");
 	reflectionsDrawn = false;
 	reflections = NULL;
 
@@ -57,6 +58,47 @@ namespace
 	// Les reflets sont symétriques par rapport à une ligne un peu sous le pied des personnages.
 	const float REFLECTION_AXIS = 20.f;
 	const float REFLECTION_STRENGTH = 0.45f;
+	// Tuiles qui s'élèvent au-dessus du sol (point d'ancrage plus haut que celui d'un sol, 45) : elles
+	// peuvent cacher un personnage placé derrière.
+	const float TALL_TILE_ANCHOR = 55.f;
+	const int MAX_HOLES = 8;
+}
+
+bool IsometricRenderer::drawSeeThrough(const sf::Sprite & sprite, int depth)
+{
+	sf::FloatRect bounds = sprite.getGlobalBounds();
+	sf::Glsl::Vec2 centers[MAX_HOLES];
+	sf::Glsl::Vec2 radii[MAX_HOLES];
+	int count = 0;
+	for (const Hole & hole : holes)
+	{
+		sf::FloatRect area(hole.center - hole.radius, hole.radius * 2.f);
+		if (hole.depth >= depth || !bounds.intersects(area) || count >= MAX_HOLES)
+			continue;
+		centers[count] = hole.center;
+		radii[count] = hole.radius;
+		count++;
+	}
+	if (count == 0)
+		return false;
+
+	if (seeThroughReady)
+	{
+		seeThroughShader.setUniform("texture", sf::Shader::CurrentTexture);
+		seeThroughShader.setUniformArray("u_holes", centers, MAX_HOLES);
+		seeThroughShader.setUniformArray("u_radii", radii, MAX_HOLES);
+		seeThroughShader.setUniform("u_count", count);
+		window->draw(sprite, &seeThroughShader);
+	}
+	else
+	{
+		sf::Sprite faded(sprite);
+		sf::Color color = sprite.getColor();
+		color.a = (sf::Uint8)(color.a * 110 / 255);
+		faded.setColor(color);
+		window->draw(faded);
+	}
+	return true;
 }
 
 void IsometricRenderer::manageEvents(Environment * environment, std::vector<BaseCharacterModel*> & characters)
@@ -88,6 +130,15 @@ void IsometricRenderer::manageEvents(Environment * environment, std::vector<Base
 			break;
 
 		case sf::Event::MouseButtonPressed:
+			// Clic molette (signal « Ici ») : la case survolée devient celle du clic, avant que l'écran ne
+			// reçoive l'événement (sans dépendre du survol de l'image précédente).
+			if (e.mouseButton.button == sf::Mouse::Middle)
+			{
+				sf::Vector2f world = window->mapPixelToCoords(sf::Vector2i(e.mouseButton.x, e.mouseButton.y));
+				sf::Vector2i isoCoords = screenCoordinatesToIsoGridCoordinates(world.x, world.y);
+				if (isoCoords.x >= 0 && isoCoords.x < environment->getWidth() && isoCoords.y >= 0 && isoCoords.y < environment->getHeight())
+					notifyCellHover(isoCoords.x, isoCoords.y);
+			}
 			if (e.mouseButton.button == sf::Mouse::Left)
 			{
 				int x = e.mouseButton.x;
@@ -239,7 +290,7 @@ void IsometricRenderer::drawCell(Environment * environment, int x, int y)
 			liquidShader.setUniform("u_reflection", reflections->getTexture());
 		window->draw(tileSprite, &liquidShader);
 	}
-	else
+	else if (!(anchorY >= TALL_TILE_ANCHOR && drawSeeThrough(tileSprite, x + y)))
 	{
 		window->draw(tileSprite);
 	}
@@ -335,6 +386,22 @@ void IsometricRenderer::render(Environment* environment, std::vector<BaseCharact
 		}
 	}
 
+	// Personnages à garder visibles derrière le décor : ellipse sur le corps (des pieds, au centre de
+	// la case, jusqu'au haut du sprite).
+	holes.clear();
+	if (seeThrough)
+	{
+		for (int d = 0; d < diagonals; d++)
+		{
+			for (BaseCharacterModel * model : byDepth[d])
+			{
+				float height = std::max(60.f, getCharacterView(model).getHeight());
+				sf::Vector2f feet = Camera::cellToWorld(model->getInterpolatedX(), model->getInterpolatedY());
+				holes.push_back({ sf::Vector2f(feet.x, feet.y - height * 0.5f), sf::Vector2f(40.f, std::max(50.f, height * 0.6f)), d });
+			}
+		}
+	}
+
 	// Objets posés sur les cases (blocs de mur) : avec le décor de leur diagonale.
 	std::vector<std::vector<const Prop*>> propsByDepth(diagonals);
 	for (const Prop & prop : props)
@@ -383,7 +450,8 @@ void IsometricRenderer::drawProp(const Prop & prop)
 	sf::Sprite sprite(*prop.texture);
 	sprite.setPosition(std::floor(centerX - prop.anchorX), std::floor(centerY - prop.anchorY));
 	sprite.setColor(sf::Color(255, 255, 255, prop.alpha));
-	window->draw(sprite);
+	if (!drawSeeThrough(sprite, (int)std::lround(prop.x) + (int)std::lround(prop.y)))
+		window->draw(sprite);
 }
 
 void IsometricRenderer::drawPropBar(const Prop & prop)
@@ -575,13 +643,20 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 
 	float lifeBgY = isoY + 30 - height - pseudoTxt->getGlobalBounds().height - lifeBg->getGlobalBounds().height + 20;
 	lifeBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0), lifeBgY);
-	lifeTxt->setPosition(isoX + 60 - (lifeTxt->getGlobalBounds().width / 2.0), lifeBgY + lifeBg->getGlobalBounds().height / 2.0 - lifeTxt->getGlobalBounds().height / 2.0 - 8);
+	// PV centrés sur le cœur d'après leurs limites réelles (le « 1 » de Neuropol a une marge à gauche),
+	// avec un contour sombre ; dessinés après l'étoile des PA et le carré des PM, qui ne les cachent plus.
+	sf::FloatRect lifeBounds = lifeTxt->getLocalBounds();
+	lifeTxt->setOutlineColor(sf::Color(40, 0, 0));
+	lifeTxt->setOutlineThickness(1);
+	lifeTxt->setPosition(std::round(isoX + 60 - lifeBounds.width / 2.0f - lifeBounds.left),
+		std::round(lifeBgY + lifeBg->getGlobalBounds().height / 2.0f - 4 - lifeBounds.height / 2.0f - lifeBounds.top));
 	window->draw(*lifeBg);
-	window->draw(*lifeTxt);
 
+	// Étoile des PA un peu à gauche du cœur, pour ne pas toucher le premier chiffre des PV.
+	const float paShift = 6;
 	paBg->setScale(0.75, 0.75);
-	paBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paBg->getGlobalBounds().width / 2.0) + 2, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0));
-	paTxt->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paTxt->getGlobalBounds().width / 2.0) + 2, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0) + (paBg->getGlobalBounds().height / 2.0) - (paTxt->getGlobalBounds().height / 2.0));
+	paBg->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paBg->getGlobalBounds().width / 2.0) + 2 - paShift, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0));
+	paTxt->setPosition(isoX + 60 - (lifeBg->getGlobalBounds().width / 2.0) - (paTxt->getGlobalBounds().width / 2.0) + 2 - paShift, lifeBgY - 5 + (paBg->getGlobalBounds().height / 2.0) + (paBg->getGlobalBounds().height / 2.0) - (paTxt->getGlobalBounds().height / 2.0));
 	window->draw(*paBg);
 	window->draw(*paTxt);
 
@@ -590,6 +665,7 @@ void IsometricRenderer::drawCharacterOverlay(BaseCharacterModel * m)
 	pmTxt->setPosition(isoX + 60 + (lifeBg->getGlobalBounds().width / 2.0) - (pmTxt->getGlobalBounds().width / 2.0), lifeBgY - 5 + (pmBg->getGlobalBounds().height / 2.0) + (pmBg->getGlobalBounds().height / 2.0) - (pmTxt->getGlobalBounds().height / 2.0));
 	window->draw(*pmBg);
 	window->draw(*pmTxt);
+	window->draw(*lifeTxt);
 
 	// Bouclier : écusson bleu avec sa valeur, posé sur le haut du cœur (il absorbe les dégâts en premier).
 	if (m->getCurrentShield() > 0 && m->getCurrentLife() > 0)

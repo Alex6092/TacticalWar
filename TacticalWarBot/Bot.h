@@ -40,8 +40,9 @@ private:
 	void onBattleEvent(const nlohmann::json & event);
 	// Classe (celle demandée, sinon au hasard parmi les autorisées), 4 sorts et talents au hasard.
 	void pickClass(int forbiddenClass, bool forTeammate = false);
-	// Coéquipier absent : le bot choisit aussi sa classe, puis joue son personnage.
-	void pickForAbsentMate();
+	// Coéquipier absent depuis 10 s (une coupure brève ne compte pas), ou second personnage d'un bot
+	// seul dans son équipe : le bot choisit aussi sa classe, puis joue son personnage.
+	void pickForAbsentMate(std::int64_t now);
 	void act(std::int64_t now);
 	void log(const std::string & text);
 
@@ -64,6 +65,8 @@ private:
 	int forbidden = 0;			// Classe interdite à l'équipe (bannissement)
 	bool ownPicked = false;
 	bool mateAbsent = false;
+	std::int64_t mateAbsentSince = 0;
+	bool mateStandIn = false;
 	bool mateLocked = false;
 	bool matePickSent = false;
 };

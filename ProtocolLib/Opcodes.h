@@ -7,7 +7,7 @@ namespace tw
 	namespace protocol
 	{
 		// Version du protocole : le client et le serveur doivent être mis à jour ensemble.
-		const int PROTOCOL_VERSION = 7;
+		const int PROTOCOL_VERSION = 8;
 
 		const int DEFAULT_GAME_PORT = 12345;
 		const int DEFAULT_HTTP_PORT = 8080;
@@ -51,7 +51,7 @@ namespace tw
 			// Connexion / changement d'écran
 			{ "HG", Direction::BOTH, Role::ANY, "C->S : login;password;v<version du protocole> (identifiants vides = spectateur ; sans version : ancien client, accepté). S->C : entrer en combat sur la carte <id>" },
 			{ "HV", Direction::SERVER_TO_CLIENT, Role::ANY, "Version du client différente de celle du serveur (connexion refusée) : HV{server, client, httpPort, page : page de téléchargement du client}" },
-			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), team: équipe du joueur (1 ou 2, couleur de l'aperçu)}" },
+			{ "HC", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à la sélection de classe : HC{talents: nombre de talents de tournoi à choisir, ban: secondes de bannissement restantes (absent : pas de bannissement en cours), seconds: secondes restantes pour choisir (pendant le choix des classes), team: équipe du joueur (1 ou 2, couleur de l'aperçu)}" },
 			{ "HS", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller au mode spectateur" },
 			{ "HW", Direction::SERVER_TO_CLIENT, Role::ANY, "Aller à l'attente de match" },
 			{ "HK", Direction::SERVER_TO_CLIENT, Role::ANY, "Identifiants refusés" },
@@ -84,6 +84,7 @@ namespace tw
 			{ "UF", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Imposer un vainqueur {id, match, winner, cascade}" },
 			{ "US", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Arrêter un combat en cours (décision aux PV) {id, match}" },
 			{ "UX", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Rejouer un match en cours {id, match}" },
+			{ "SK", Direction::BOTH, Role::ADMIN, "Faire rétrécir la carte d'un combat en cours (un anneau tout de suite, puis un par tour). C->S : SK{session} ; S->C : SK{ok, message}" },
 			{ "UA", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Résultat d'une opération sur un tournoi {ok, message, id}" },
 
 			// Mode spectateur (contenu JSON)
@@ -91,9 +92,9 @@ namespace tw
 			{ "SW", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Regarder un combat {session} (réponse : HG puis BI, puis le flux BV)" },
 			{ "SU", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Arrêter de regarder (combat ou rediffusion)" },
 			{ "RL", Direction::BOTH, Role::SPECTATOR, "Rediffusions des combats terminés (S->C : {replays})" },
-			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort), suivi de RE" },
-			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} : RE{}" },
-			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts des dernières rediffusions. C->S : HL{} ; S->C : HL{highlights:[{replay, match, title, kind, score, from, to}]}, les mieux notés d'abord" },
+			{ "RP", Direction::CLIENT_TO_SERVER, Role::SPECTATOR, "Revoir un combat {id} (réponse : MP, HG, BI puis les lots BV au rythme du combat). Avec {id, from, to} : seulement l'extrait (indices des lots, temps fort, silences de 0,8 s au plus), suivi de RE. Avec {session, from, to} : extrait d'un combat en cours (léger différé)" },
+			{ "RE", Direction::SERVER_TO_CLIENT, Role::SPECTATOR, "Fin de l'extrait demandé par RP{id, from, to} ou RP{session, from, to} : RE{}" },
+			{ "HL", Direction::BOTH, Role::SPECTATOR, "Temps forts. C->S : HL{} ; S->C : HL{highlights:[...]} : d'abord les moments des combats en cours {session, match, title, kind, score, from, to, at, live: true, age: secondes}, les plus récents d'abord ; puis ceux des dernières rediffusions {replay, match, title, kind, score, from, to}, un combat après l'autre" },
 
 			// Création de match manuelle
 			{ "CM", Direction::CLIENT_TO_SERVER, Role::ADMIN, "Créer un match : nom;equipe1;equipe2" },
@@ -106,9 +107,9 @@ namespace tw
 			{ "CF", Direction::SERVER_TO_CLIENT, Role::ADMIN, "Même équipe deux fois" },
 
 			// Choix de classe
-			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC<classId> : sorts par défaut)" },
-			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO<classId>" },
-			{ "PV", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Classe affichée sur l'écran de choix, montrée au coéquipier : PV{class}" },
+			{ "PC", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Choisir une classe, ses sorts et ses talents : PC{class, spells:[4 indices dans les sorts de la classe], talents:[identifiants], appearance, teammate: true pour le coéquipier absent ou le second personnage d'un joueur seul} (PC<classId> : sorts par défaut). Refus : ER{op: PC, message}" },
+			{ "PO", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Classe verrouillée : PO{class, spells, talents, appearance, by: nom du coéquipier qui a choisi pendant une absence (absent : le joueur lui-même)}" },
+			{ "PV", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Brouillon de l'écran de choix : PV{class, spells, talents, appearance, teammate: true pour le coéquipier absent}. La classe est montrée au coéquipier ; le tout est retenu si le délai expire sans verrouillage" },
 			{ "PT", Direction::SERVER_TO_CLIENT, Role::PLAYER, "État d'un coéquipier pendant le choix des classes : PT{name, class (verrouillée, 0 sinon), viewing, locked, appearance, present, standIn : second personnage d'un joueur seul dans son équipe}" },
 			{ "PB", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Bannir une classe pour l'équipe adverse : PB{class} (le premier choix de l'équipe compte)" },
 			{ "DL", Direction::BOTH, Role::PLAYER, "Équipes à défier (match amical hors tournoi). C->S : DL{} ; S->C : DL{teams:[{id, name, online:[noms], allowed, reason}], closed: motif si aucun défi n'est possible}" },
@@ -118,7 +119,7 @@ namespace tw
 			{ "DR", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Résultat d'un défi : DR{ok, message, from, to}" },
 			{ "PZ", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Énigmes réussies sur ce poste, pour débloquer des apparences : PZ{solved:[identifiants]}" },
 			{ "PA", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Apparences du joueur : PA{unlocked:[identifiants], selected, new:[débloquées à l'instant], progress:{wins, mvp, puzzles, achievements}}" },
-			{ "BB", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin)}" },
+			{ "BB", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Bannissement : BB{banned: classe interdite par son équipe (0 : aucune), done: phase terminée, forbidden: classe interdite par l'adversaire (à la fin), seconds: secondes restantes pour choisir (à la fin)}" },
 			{ "PS", Direction::SERVER_TO_CLIENT, Role::ANY, "Statut de connexion des joueurs" },
 			{ "GD", Direction::SERVER_TO_CLIENT, Role::ANY, "Données de jeu (contenu de assets/data/gamedata.json)" },
 			{ "MP", Direction::SERVER_TO_CLIENT, Role::ANY, "Carte du combat (format v2 avec les règles des tuiles), envoyée avant HG" },
@@ -135,6 +136,8 @@ namespace tw
 			{ "Ct", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Fin de tour" },
 			{ "CE", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Émote prédéfinie {id} (liste dans BattleEngineLib/Emotes.h), diffusée par l'événement emote" },
 			{ "CG", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Signal à son équipe sur une case {x, y, kind : 0 ici, 1 attaquez, 2 repli, 3 danger} (3 au plus toutes les 5 s)" },
+			{ "CQ", Direction::CLIENT_TO_SERVER, Role::PLAYER, "Abandon (placement ou combat) : CQ{vote: true} propose ou confirme l'abandon de son équipe, CQ{vote: false} retire son vote. Seul joueur présent de l'équipe : abandon immédiat ; sinon chaque joueur présent doit voter dans les 30 s" },
+			{ "BQ", Direction::SERVER_TO_CLIENT, Role::PLAYER, "Vote d'abandon de son équipe : BQ{from: nom du dernier votant, votes, needed: joueurs présents de l'équipe, expiresIn: secondes restantes, voted: le destinataire a voté, expired: vote expiré} (votes 0 : plus de vote en cours)" },
 			{ "BG", Direction::SERVER_TO_CLIENT, Role::ANY, "Signal d'un coéquipier {f, x, y, kind} : jamais envoyé aux adversaires ni aux spectateurs" },
 		};
 

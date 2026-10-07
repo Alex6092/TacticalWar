@@ -95,7 +95,8 @@ Copy-Tree $assets (Join-Path $client "assets") @("equipe.txt", "scoreEnd.txt")
 Remove-Item -Recurse -Force (Join-Path $client "assets\web")
 # Les peintures d'origine (plusieurs Mo) ne servent qu'au générateur de tuiles.
 Get-ChildItem (Join-Path $client "assets\tiles") -File -Filter *.png | Remove-Item -Force
-Write-Utf8 (Join-Path $client "client.json") (@{ serverHost = $ServerHost; serverPort = 12345; sound = $true } | ConvertTo-Json)
+# Plein écran pour l'événement (« fullscreen »: false dans client.json, ou TacticalWar.exe --windowed, pour une fenêtre).
+Write-Utf8 (Join-Path $client "client.json") (@{ serverHost = $ServerHost; serverPort = 12345; sound = $true; fullscreen = $true } | ConvertTo-Json)
 Write-Utf8 (Join-Path $client "Spectateur-realisateur.bat") "@echo off`ncd /d %~dp0`nstart """" TacticalWar.exe --director`n"
 Write-Utf8 (Join-Path $client "Demonstration.bat") "@echo off`ncd /d %~dp0`nstart """" TacticalWar.exe --training-autoplay`n"
 Write-Utf8 (Join-Path $client "LISEZMOI.txt") @"
