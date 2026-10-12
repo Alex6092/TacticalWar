@@ -132,7 +132,12 @@ BattleScreen::BattleScreen(tgui::Gui * gui, int environmentId, Mode mode)
 	};
 	hud->onReady = [this](bool ready) { sendToServer("Cs", { { "ready", ready } }); };
 	hud->onEmote = [this](int id) { sendEmote(id); };
-	hud->onClose = [this]() { closeRequested = true; };
+	hud->onClose = [this]() {
+		// Spectateur qui quitte à la main : le réalisateur s'arrête (sinon il enchaînerait aussitôt).
+		if (this->mode == Mode::SPECTATOR)
+			SpectatorModeScreen::stopDirector();
+		closeRequested = true;
+	};
 	hud->onOptionsChanged = [this]() { applyOptions(); };
 	// Abandon : seulement pour un joueur d'un combat en ligne (les combats locaux le retirent).
 	hud->onSurrender = [this]() { sendToServer("CQ", { { "vote", true } }); };
@@ -557,9 +562,9 @@ void BattleScreen::onMessageReceived(std::string msg)
 	}
 	else if (message.op == "RE")
 	{
-		// Fin d'un extrait (temps fort rejoué) : retour à la liste ; le réalisateur enchaîne aussitôt.
+		// Fin d'un extrait (temps fort rejoué) : retour à la liste après un instant sur la dernière action.
 		if (mode == Mode::SPECTATOR)
-			autoCloseRemaining = SpectatorModeScreen::isDirectorMode() ? 0.5f : 2.5f;
+			autoCloseRemaining = 2.5f;
 	}
 	else if (message.op == "PA")
 	{
@@ -573,7 +578,7 @@ void BattleScreen::onMessageReceived(std::string msg)
 	}
 	else if (message.op == "HL")
 	{
-		// Réalisateur en direct : un moment d'un autre combat, pas encore vu, l'emporte (une fois par minute).
+		// Réalisateur en direct : un moment d'un autre combat, pas encore vu, l'emporte (après 90 s de direct).
 		json list;
 		if (mode == Mode::SPECTATOR && SpectatorModeScreen::watchingLive() && message.parseJson(list)
 			&& SpectatorModeScreen::onLiveHighlights(list) && shown.phase != battle::BattlePhase::ENDED && autoCloseRemaining <= 0)

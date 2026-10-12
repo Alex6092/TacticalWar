@@ -13,8 +13,9 @@ namespace
 {
 	// Un moment d'un combat en cours est proposé pendant 3 minutes.
 	const int LIVE_MOMENT_MAX_AGE = 180;
-	// Le réalisateur quitte un direct pour un moment d'un autre combat au plus une fois par minute.
-	const float LIVE_SWITCH_SECONDS = 60.f;
+	// Le réalisateur reste au moins 90 secondes sur un direct avant de le quitter pour un moment d'un
+	// autre combat.
+	const float LIVE_SWITCH_SECONDS = 90.f;
 }
 
 bool SpectatorModeScreen::directorMode = false;
@@ -23,6 +24,7 @@ float SpectatorModeScreen::highlightsAge = 1e9f;
 std::set<std::string> SpectatorModeScreen::played;
 int SpectatorModeScreen::liveSession = 0;
 float SpectatorModeScreen::lastSwitch = -1e9f;
+bool SpectatorModeScreen::afterExtract = false;
 sf::Clock SpectatorModeScreen::directorClock;
 sf::String SpectatorModeScreen::currentTab = L"En direct";
 
@@ -93,7 +95,7 @@ SpectatorModeScreen::SpectatorModeScreen(tgui::Gui * gui)
 	LinkToServer::getInstance()->SendRaw("SL{}");
 	if (!tabs->select(currentTab))
 		tabs->select(0);
-	// Réalisateur : choix suivant dès l'arrivée des listes (enchaînement sans attente).
+	// Réalisateur : choix suivant dès l'arrivée des listes.
 	liveSession = 0;
 	if (directorMode)
 	{
@@ -145,6 +147,14 @@ void SpectatorModeScreen::direct()
 		LinkToServer::getInstance()->SendRaw("HL{}");
 	}
 
+	// Après un extrait, retour au direct : pas deux extraits à la suite pendant les combats.
+	int session = sessionsPanel->mostContestedSession();
+	if (afterExtract && session > 0)
+	{
+		watchLive(session);
+		return;
+	}
+
 	// 1. Le meilleur moment pas encore vu des combats en cours (léger différé).
 	const nlohmann::json * best = nullptr;
 	for (const nlohmann::json & highlight : highlights)
@@ -161,14 +171,9 @@ void SpectatorModeScreen::direct()
 	}
 
 	// 2. Le combat en cours le plus serré, en direct.
-	int session = sessionsPanel->mostContestedSession();
 	if (session > 0)
 	{
-		sessionsPanel->setStatus(L"Mode réalisateur : connexion au combat le plus serré...", sf::Color(200, 220, 255));
-		std::cout << "Realisateur : combat " << session << " en direct" << std::endl;
-		watch(session);
-		liveSession = session;
-		lastSwitch = directorClock.getElapsedTime().asSeconds();
+		watchLive(session);
 		return;
 	}
 
@@ -189,10 +194,21 @@ void SpectatorModeScreen::direct()
 	sessionsPanel->setStatus(L"Mode réalisateur : en attente d'un combat...", sf::Color(200, 220, 255));
 }
 
+void SpectatorModeScreen::watchLive(int session)
+{
+	sessionsPanel->setStatus(L"Mode réalisateur : connexion au combat le plus serré...", sf::Color(200, 220, 255));
+	std::cout << "Realisateur : combat " << session << " en direct" << std::endl;
+	watch(session);
+	liveSession = session;
+	afterExtract = false;
+	lastSwitch = directorClock.getElapsedTime().asSeconds();
+}
+
 void SpectatorModeScreen::playExtract(const nlohmann::json & highlight)
 {
 	played.insert(keyOf(highlight));
 	liveSession = 0;
+	afterExtract = true;
 	bool live = highlight.value("live", false);
 	std::string title = highlight.value("title", std::string());
 	sessionsPanel->setStatus((live ? sf::String(L"Mode réalisateur : à l'instant, « ") : sf::String(L"Mode réalisateur : temps fort « "))

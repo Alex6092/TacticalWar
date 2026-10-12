@@ -50,8 +50,9 @@
      « Défilement » de chaque zone l'arrête ou le relance. À la fin du tournoi, la page reste sur la
      « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
    - combats en direct : `Spectateur-realisateur.bat`. Il enchaîne les **moments forts des combats en
-     cours** en léger différé (quelques secondes après), le combat le plus serré en direct, et les temps
-     forts des derniers combats, en variant les combats ;
+     cours** en léger différé (quelques secondes après, à vitesse normale), le combat le plus serré en
+     direct (au moins 90 s avant d'en changer), et les temps forts des derniers combats, en variant les
+     combats. « Quitter » arrête le mode réalisateur (case « Mode réalisateur » pour le relancer) ;
    - la page projetée montre aussi la **mosaïque** de tous les combats en cours (onglet « Combats ») et
      le **commentaire** automatique ;
    - rediffusions complètes : chaque combat est enregistré (`data\replays\`) et peut être revu depuis
