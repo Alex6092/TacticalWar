@@ -110,6 +110,11 @@ int tw::tournament::talentSlots(const Tournament & tournament, int teamId)
 	return std::max(0, std::min(tournament.settings.maxTalents, matchesPlayed(tournament, teamId)));
 }
 
+int tw::tournament::matchTalentSlots(const Tournament & tournament, int teamA, int teamB)
+{
+	return std::min(talentSlots(tournament, teamA), talentSlots(tournament, teamB));
+}
+
 bool tw::tournament::hasBanPhase(const Tournament & tournament, const TMatch & match)
 {
 	if (tournament.settings.bans == BanMode::ALL)

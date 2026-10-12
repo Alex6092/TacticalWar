@@ -181,8 +181,9 @@ Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour 
 **un talent par match joué** par son équipe (victoire, défaite ou exempt), jusqu'à 3 (réglable).
 
 - Au premier match, personne n'a de talent ; au deuxième, chacun en a 1 ; au troisième, 2.
-- Deux équipes qui se rencontrent ont presque toujours autant de matchs joués, donc autant de talents :
-  pas d'effet boule de neige.
+- Dans un match, **l'équipe qui a joué le moins de matchs fixe le nombre de talents pour tous** : en
+  poules, une équipe qui a déjà joué peut rencontrer une équipe qui n'a pas encore joué ; personne n'a
+  alors de talent. Pas d'effet boule de neige.
 - Les talents se **choisissent librement avant chaque match**, comme les sorts : bouton « Talents (0/2) »
   sous la liste des sorts de l'écran de choix de classe. « Verrouiller mon choix » attend que les sorts
   et les talents soient choisis. Le dernier choix est retenu (`client.json`) et proposé la fois suivante.

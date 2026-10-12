@@ -572,8 +572,14 @@ TEST_CASE("Teams earn one talent per finished match, up to the tournament maximu
 	tournament.settings.maxTalents = 2;
 	CHECK(talentSlots(tournament, 1) == 2);
 	CHECK(talentSlots(tournament, 2) == 1);
+	// Dans un match, l'équipe qui a le moins de talents fixe le nombre pour les deux équipes.
+	CHECK(matchTalentSlots(tournament, 1, 2) == 1);
+	CHECK(matchTalentSlots(tournament, 2, 1) == 1);
+	CHECK(matchTalentSlots(tournament, 1, 4) == 0);
+	CHECK(matchTalentSlots(tournament, 1, 3) == 1);
 	tournament.settings.maxTalents = 0;
 	CHECK(talentSlots(tournament, 1) == 0);
+	CHECK(matchTalentSlots(tournament, 1, 2) == 0);
 
 	// Réglage enregistré avec le tournoi, borné entre 0 et 5 ; 3 par défaut (anciens tournois).
 	Settings settings;

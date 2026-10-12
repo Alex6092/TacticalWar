@@ -59,7 +59,8 @@
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
-   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
+   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun). Dans
+   un match, les deux équipes ont autant de talents que celle qui a joué le moins de matchs.
    Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
    finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
    Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.
