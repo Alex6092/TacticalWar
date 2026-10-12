@@ -434,7 +434,7 @@ PAGE = """<!doctype html>
         <ul>
           <li>choisissez votre <b>classe</b> : le bloc « Votre coéquipier » montre la sienne et vos combinaisons possibles ;</li>
           <li>emportez <b>4 sorts sur les %(spell_count)s</b> de la classe ;</li>
-          <li>choisissez vos <b>talents</b> : un par match déjà joué par votre équipe (3 au plus) ;</li>
+          <li>choisissez vos <b>talents</b> : un par match déjà joué (3 au plus), selon l'équipe qui en a joué le moins ;</li>
           <li>parfois, un <b>bannissement</b> d'abord : chaque équipe interdit une classe à l'autre ;</li>
           <li>puis « Verrouiller mon choix » (sinon, la classe affichée est retenue).</li>
         </ul>

@@ -17,13 +17,11 @@
 
 namespace
 {
-	// Entre deux lots, l'attente est plafonnée (les longues réflexions ne sont pas rejouées). Les
-	// extraits du réalisateur s'enchaînent sans temps morts.
+	// Entre deux lots, l'attente est plafonnée (les longues réflexions ne sont pas rejouées) ; les
+	// extraits du réalisateur suivent le même rythme, sans accélérer les actions.
 	const std::int64_t PLAYBACK_START_DELAY_MS = 800;
 	const std::int64_t PLAYBACK_MIN_GAP_MS = 30;
 	const std::int64_t PLAYBACK_MAX_GAP_MS = 2500;
-	const std::int64_t EXTRACT_START_DELAY_MS = 400;
-	const std::int64_t EXTRACT_MAX_GAP_MS = 800;
 	// Moments d'un combat en cours : les plus récents, au plus ce nombre par combat.
 	const std::size_t LIVE_HIGHLIGHTS = 8;
 	// Temps forts des rediffusions proposés au réalisateur.
@@ -209,13 +207,12 @@ void TWParser::handleReplayMessage(ClientState * client, const std::string & op,
 		playback.extract = true;
 	}
 
-	std::int64_t due = playback.extract ? EXTRACT_START_DELAY_MS : PLAYBACK_START_DELAY_MS;
-	std::int64_t maxGap = playback.extract ? EXTRACT_MAX_GAP_MS : PLAYBACK_MAX_GAP_MS;
+	std::int64_t due = PLAYBACK_START_DELAY_MS;
 	std::int64_t previous = 0;
 	for (const auto & batch : playback.replay.batches)
 	{
 		if (!playback.due.empty())
-			due += std::max(PLAYBACK_MIN_GAP_MS, std::min(maxGap, batch.first - previous));
+			due += std::max(PLAYBACK_MIN_GAP_MS, std::min(PLAYBACK_MAX_GAP_MS, batch.first - previous));
 		playback.due.push_back(due);
 		previous = batch.first;
 	}

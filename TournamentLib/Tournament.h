@@ -241,6 +241,9 @@ namespace tw
 		int matchesPlayed(const Tournament & tournament, int teamId);
 		// Talents de l'équipe pour son prochain match : un par match joué, au plus settings.maxTalents.
 		int talentSlots(const Tournament & tournament, int teamId);
+		// Talents des deux équipes d'un match : ceux de l'équipe qui en a le moins (en poules, une équipe
+		// qui a déjà joué peut rencontrer une équipe qui n'a pas encore joué).
+		int matchTalentSlots(const Tournament & tournament, int teamA, int teamB);
 		// Le match commence par une phase de bannissement (réglage settings.bans).
 		bool hasBanPhase(const Tournament & tournament, const TMatch & match);
 		// Une carte (avec ou sans cases spéciales) fait partie des cartes du réglage.

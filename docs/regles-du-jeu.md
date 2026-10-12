@@ -181,8 +181,9 @@ Au fil du tournoi, chaque joueur gagne des **talents**, des bonus valables pour 
 **un talent par match joué** par son équipe (victoire, défaite ou exempt), jusqu'à 3 (réglable).
 
 - Au premier match, personne n'a de talent ; au deuxième, chacun en a 1 ; au troisième, 2.
-- Deux équipes qui se rencontrent ont presque toujours autant de matchs joués, donc autant de talents :
-  pas d'effet boule de neige.
+- Dans un match, **l'équipe qui a joué le moins de matchs fixe le nombre de talents pour tous** : en
+  poules, une équipe qui a déjà joué peut rencontrer une équipe qui n'a pas encore joué ; personne n'a
+  alors de talent. Pas d'effet boule de neige.
 - Les talents se **choisissent librement avant chaque match**, comme les sorts : bouton « Talents (0/2) »
   sous la liste des sorts de l'écran de choix de classe. « Verrouiller mon choix » attend que les sorts
   et les talents soient choisis. Le dernier choix est retenu (`client.json`) et proposé la fois suivante.
@@ -658,13 +659,16 @@ rediffusion.
 Le **mode réalisateur** du spectateur choisit à chaque retour sur la liste, dans l'ordre :
 1. **un moment d'un combat en cours** pas encore vu (moins de 3 minutes) : le serveur le détecte
    pendant le combat et le propose environ 4 s après ; il est rejoué en **léger différé** (bandeau
-   « À l'instant : KO de Léa par Tom ») ;
+   « À l'instant : KO de Léa par Tom »), jamais deux à la suite tant qu'un combat est en cours ;
 2. le combat en cours le plus serré, **en direct** ; toutes les 10 s, le réalisateur regarde s'il y a un
-   nouveau moment dans un autre combat, et y passe au plus une fois par minute ;
+   nouveau moment dans un autre combat, et y passe après au moins 90 s de direct ;
 3. les temps forts des rediffusions pas encore joués, **un combat après l'autre** (le meilleur moment de
    chaque combat, puis le deuxième...), puis il recommence.
 
-Les extraits s'enchaînent sans attente (silences de 0,8 s au plus). Messages : `HL` (moments en direct
+Les extraits sont rejoués au rythme des rediffusions : les longues réflexions sont raccourcies (2,5 s
+au plus entre deux actions), les actions ne sont pas accélérées. Ils restent 2,5 s sur la dernière
+action avant le choix suivant. Quitter un combat à la main (« Quitter », « Retour à la liste ») arrête
+le mode réalisateur ; la case « Mode réalisateur » le relance. Messages : `HL` (moments en direct
 avec `session` et leur âge, puis ceux des rediffusions) et `RP{"session", "from", "to"}` pour un
 extrait d'un combat en cours. Les calculs de l'ordinateur « Difficile » se font en tâche de fond dans
 les combats locaux (entraînement) : l'image ne saccade plus (`--frame-stats` affiche la pire image).

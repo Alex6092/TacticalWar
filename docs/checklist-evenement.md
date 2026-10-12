@@ -50,8 +50,9 @@
      « Défilement » de chaque zone l'arrête ou le relance. À la fin du tournoi, la page reste sur la
      « Cérémonie » (podium, MVP du tournoi, hauts faits rares) ;
    - combats en direct : `Spectateur-realisateur.bat`. Il enchaîne les **moments forts des combats en
-     cours** en léger différé (quelques secondes après), le combat le plus serré en direct, et les temps
-     forts des derniers combats, en variant les combats ;
+     cours** en léger différé (quelques secondes après, à vitesse normale), le combat le plus serré en
+     direct (au moins 90 s avant d'en changer), et les temps forts des derniers combats, en variant les
+     combats. « Quitter » arrête le mode réalisateur (case « Mode réalisateur » pour le relancer) ;
    - la page projetée montre aussi la **mosaïque** de tous les combats en cours (onglet « Combats ») et
      le **commentaire** automatique ;
    - rediffusions complètes : chaque combat est enregistré (`data\replays\`) et peut être revu depuis
@@ -59,7 +60,8 @@
 4. Administration (client connecté en `admin`) : onglet Tournoi pour créer et démarrer le tournoi.
    Les matchs se lancent automatiquement dès que les deux équipes sont libres. Réglage « Combats » :
    au KO, ou « Zone à tenir » (premier au nombre de points choisi, voir `docs/regles-du-jeu.md`).
-   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun).
+   Réglage « Talents par joueur » : un talent gagné par match joué, 3 au plus par défaut (0 : aucun). Dans
+   un match, les deux équipes ont autant de talents que celle qui a joué le moins de matchs.
    Réglage « Bannissement » : chaque équipe interdit une classe à l'autre avant le match (aucun, phase
    finale ou tous les matchs) ; prévoir 20 s de plus par match concerné.
    Réglage « Cartes » : classiques, à cases spéciales (braises, sources, hautes herbes) ou toutes.

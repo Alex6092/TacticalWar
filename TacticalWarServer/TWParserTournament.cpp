@@ -442,7 +442,8 @@ void TWParser::dispatchTournamentMatches()
 		session->setZonePoints(tournament.settings.zoneMode ? tournament.settings.zonePoints : 0);
 		session->setMapBonuses(tournament.settings.mapBonuses);
 		session->setShrinkRound(tournament.settings.shrinkRound);
-		session->setTalentSlots(tw::tournament::talentSlots(tournament, request.teamA), tw::tournament::talentSlots(tournament, request.teamB));
+		int talents = tw::tournament::matchTalentSlots(tournament, request.teamA, request.teamB);
+		session->setTalentSlots(talents, talents);
 		if (tw::tournament::hasBanPhase(tournament, *match))
 			session->startBanPhase(nowMs() + (std::int64_t)config.banSeconds * 1000);
 		tournaments.markLaunched(request, session->getId());
